@@ -233,16 +233,19 @@ if(a>b){
 #TASK: Using an IF statment, modify the FOR loop above so that the last verse is correct (there are many ways to do this).
 #Hint: Try making a character string ("bottle"/"bottles") that is assigned inside an IF statement, then pasted into the print command along with 'i'.
 
-for(i in 99:1){
-  print(paste(i,b,'of beer on the wall.',sep=' '))
-  print(paste(i,b,'of beer.',sep=' '))
-  print('Take one down, pass it around.')
-  if(i-1==1){
+bottleFun <- function(x){
+  if(x==1){
     b  <- 'bottle'
   } else {
     b <- 'bottles'
   } 
-  print(paste(i-1,b,'of beer on the wall.',sep=' '))
+}
+
+for(i in 99:1){
+  print(paste(i,bottleFun(i),'of beer on the wall.',sep=' '))
+  print(paste(i,bottleFun(i),'of beer.',sep=' '))
+  print('Take one down, pass it around.')
+  print(paste(i-1,bottleFun(i-1),'of beer on the wall.',sep=' '))
   print('-------------------')
 }
 
