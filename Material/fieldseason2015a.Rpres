@@ -1,0 +1,205 @@
+```{r echo=F}
+  setwd("C:\\Users\\Samuel\\Documents\\Projects\\Presentations\\Pres for Bayer 2015")  
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+prestheme=theme(legend.position='right',
+                legend.text=element_text(size=15),
+                axis.text=element_text(size=15), 
+                axis.title=element_text(size=20),
+                title=element_text(size=20))
+                #panel.grid.major=element_line(size=0.5,colour='black',linetype='dotted'),
+                #panel.grid.minor=NULL,
+                #panel.border=element_rect(size=1,colour='black')                
+theme_set(theme_classic(base_size = 50)) #Sets graph theme to B/Ws + prestheme
+load("seedfieldData.RData")
+```
+
+Field Season 2015
+========================================================
+author: Sam Robinson
+date: Feb 29, 2016
+transition: none
+
+Questions
+========================================================
+
+- How does honey bee visitation decay away from hives? 
+- Are there differences between visitation in male/female bays?
+  - Is the foraging behaviour different?
+- Does visitation differ between the center and edge of the female bays?
+- How does leafcutter visitation change with distance from their shelters?
+  - How does this influence honey bee visitation?
+- How does this feeback into pollen deposition
+
+Methods
+========================================================
+left:35%
+
+- Used 15 seed fields near Taber & Scandia
+- 3 pollination treatments:
+  - Control
+  - Double tent
+  - Double tent + bees
+  
+***
+
+![alt text](fieldmap.jpg)
+
+Methods (cont.)
+========================================================
+left:60%
+
+![alt text](transect5_2015.png)
+
+*** 
+
+- Surveyed M/F plots at 5, 20, 100, 400m from bee yard
+- Center and edge of F bays (5, 400m)
+- Recorded distance to leafcutter shelters
+
+Methods (cont.)
+========================================================
+
+![alt text](plotframe.jpg)
+- Counted visitors & recorded honeybee behaviour
+
+***
+![alt text](pollen1.jpg)
+- Collected Stigmas, counted pollen
+
+
+Methods (cont.)
+========================================================
+left:50%
+
+- Collected plants from F bays at end of season
+
+***
+![alt text](mowedbay.jpg)
+
+Results - honeybee visits
+========================================================
+```{r fig.height=8, fig.width=15, fig.cap="Honeybee visits",echo=F, out.width="960px",height="700px"}
+p1 + theme(axis.text.x=element_text(size=30),strip.text=element_text(size=35),
+            legend.text=element_text(size=25),legend.title=element_text(size=30))
+```
+- Distance effect, but no effect of bay
+
+Results - honeybee visits
+========================================================
+
+```{r fig.height=8, fig.width=15, fig.cap="Honeybee count", echo=F, out.width="960px",height="700px"}
+p1a + theme(axis.text.x=element_text(size=30),strip.text=element_text(size=35),
+            legend.text=element_text(size=25),legend.title=element_text(size=30))
+```
+- No effect of pollination treatment
+
+Results - foraging behaviour
+========================================================
+left:65%
+
+```{r fig.height=12, fig.width=15, echo=F, out.width="960px",height="700px"}
+  group_by(hbees,Behaviour,Bay) %>%
+  summarize(Visits=sum(Visits,na.rm=T),Counts=sum(Count,na.rm=T)) %>%
+  gather("type","n",Visits:Counts) %>%
+  ggplot(aes(Behaviour,n,fill=Bay))+geom_bar(stat='identity',position="dodge")+
+  facet_wrap(~type,ncol=1,scale='free_y')+
+  scale_fill_manual(values=c('red','blue'))+
+  theme(axis.text.x=element_text(size=30),axis.title.x=element_blank())+
+  ylab('Number')
+```
+***
+
+- Pollen foragers uncommon overall
+- Nectar foragers common in F bay
+- Side-workers and pollen foragers uncommon in F bay
+
+Results - foraging behaviour
+========================================================
+
+```{r fig.height=8, fig.width=15,echo=F, out.width="960px",height="700px"}
+p4 + theme(axis.text.x=element_text(size=30),strip.text=element_text(size=35),
+            legend.text=element_text(size=25),legend.title=element_text(size=30))
+```
+
+- No difference between top-feeding nectar foragers in M & F bays
+
+Results - bay position
+========================================================
+left:65%
+```{r fig.height=10, fig.width=12, echo=F, out.width="960px",height="700px"}
+
+  group_by(hbees,Behaviour,EdgeCent,Bay) %>%
+  filter(Bay=='F',Distance!=20,Distance!=100) %>% 
+  summarize(Visits=sum(Visits,na.rm=T),Counts=sum(Count,na.rm=T)) %>%
+  gather("type","n",Visits:Counts) %>%
+  ggplot(aes(Behaviour,n,fill=EdgeCent))+geom_bar(stat='identity',position="dodge")+
+  facet_wrap(~type,ncol=1,scale='free_y')+
+  scale_fill_manual(values=c('purple','green'))+
+  theme(axis.text.x=element_text(size=30),axis.title.x=element_blank(),
+        legend.text=element_text(size=25),legend.title=element_text(size=30))+
+  labs(y='Number',x=NULL,fill='Position')
+```
+
+***
+
+- Nectar foragers common across F bay
+- Many visits to center of bay
+
+Results - bay position
+========================================================
+left:65%
+
+```{r fig.height=10, fig.width=12, echo=F, out.width="960px",height="700px"}
+p5 +theme(legend.text=element_text(size=25),legend.title=element_text(size=30))
+```
+
+***
+
+- No significant difference between center and edge of F bay
+
+Results - pollen deposition
+========================================================
+
+```{r fig.height=8, fig.width=15, fig.cap="Honeybee visits",echo=F, out.width="960px",height="700px"}
+p6 
+```
+
+- Significant effect of distance and pollination treatment
+
+Results - pollen deposition
+========================================================
+left:65%
+
+```{r fig.height=10, fig.width=12, echo=F, out.width="960px",height="700px"}
+p7 +theme(legend.text=element_text(size=25),legend.title=element_text(size=30))
+```
+
+***
+
+- Significant effect of distance, marginal effect of bay (p = 0.1)
+
+Summary 
+========================================================
+
+- Visitation decreases with distance; bay doesn't change this
+  - Pollination changes with distance
+  - Some changes with pollen treatment
+- Top-visiting nectar foragers the most common
+  - Side-workers & pollen foragers appear to be "spillover" from M bay
+- Visitation similar between center and edge of F bays
+  - Pollination slightly better at edge
+
+Future work 
+========================================================
+
+- Investigate leafcutter visitation patterns
+- Investigate leafcutter-honeybee visitation patterns
+- Relate visitation to pollen deposition to seed yield
+
+Field work:
+
+- Sample nectar standing crop
+- Continue survey in 2016 (possibly with more fields)
