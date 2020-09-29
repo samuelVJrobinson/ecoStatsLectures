@@ -19,7 +19,7 @@ theme_set(theme_classic())
 Normal data manipulation in R
 ---
 ```{r, echo=T, tidy=T, eval=F}
-#Changes spp to factor
+#Changes species to factor
 plants$Species <- as.factor(plants$Species) 
 #Changes plant code to factor
 plants$Plant.Code <- as.factor(plants$Plant.Code) 
