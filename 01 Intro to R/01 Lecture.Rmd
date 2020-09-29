@@ -1,57 +1,80 @@
-Introduction to R
-========================================================
-author: Samuel Robinson, Ph.D.
-date: Oct 1, 2020
-autosize: true
+---
+title: "Introduction to R"
+subtitle: '"How do you turn this thing on?"'
+author: "Samuel Robinson, Ph.D."
+date: "October 1, 2020"
+output:
+  ioslides_presentation:
+    incremental: true
+    transition: 0
+    smaller: true
+    background-color: 'white'
+df_print: kable
+---
 
-Motivation
-========================================================
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-"Why do I need to learn R?"
-- Free, powerful, and very common
-- Interfaces with other languages (e.g. C++), and can help you learn other languages
+## Motivation {.build}
+
+__"Why do I need to learn R?"__
+
+  - Free, powerful, and very common
+
+  - Interfaces with other languages (e.g. C++), and can help you learn other languages
 
 "What is R good at?"
-- Displaying data, running models, and processing data*
-- Writing presentations and papers
-- _Keeping a record of what you've done_
+
+  - Displaying data, running models, and processing data*
+
+  - Writing presentations and papers
+
+  - _Keeping a record of what you've done_
 
 "What is R bad at?"
-- No point-and-click interface
-- Simple quick-fixes take more time
-- Can be slow if datasets are large*
+
+  - No point-and-click interface; simple things can take more time
+
+  - Can be slow if datasets are large*
 
 __I am not here to teach you programming, but some basic techniques are useful__
 
-Console and Scripts
-========================================================
+## Console and Scripts
 
-- The _Console_ is the main input into R (where you tell it to do things)
-- _Scripts_ are lists of commands that get passed into the console
+- The __Console__ is the main input into R (where you tell it to do things)
+- __Scripts__ are lists of commands that get passed into the console
 - If you're using RStudio, 2 of the 4 panes will be dedicated to the console and scripts
 
-My (personalized) RStudio layout
-========================================================
+--------------------------
 
+![](screenshot.png){width=100%}
+My (custom) RStudio setup
 
-Objects and Functions
-========================================================
+## Objects and Functions {.build}
 
-Everything in R is either an __Object__ or a __Function__. All must have a _unique_ name, or else the Steve Problem* occurs.
+Everything in R is either an __Object__ or a __Function__. All must have a unique name, or else the _Steve Problem_* occurs.
 
-Some common objects (things stored in memory):
+Some common __objects__ (things stored in memory):
+
   - Strings, Logicals, & Numerics
+  
   - Vectors & Matrices
+  
   - Dataframes & Lists*
   
-Some common functions (things done to objects):
-  - mean, sd, median, quantile, c, paste
-  - plot, summary   
-    - Polymorphic functions: do different things depending on what object they're given
+Some common __functions__ (things done to objects):
+
+  - _mean_, _sd_, _median_, _quantile_, _c_, _paste_
+  
+  - _plot_, _summary_ 
+    
+    - these are polymorphic functions: they do different things to different types of objects
+    
   - Control flow - _if_ and _for_
     
-Objects
-========================================================
+## Objects {.build}
+
 Let's make some objects. These are all single objects:
 
 ```{r}
@@ -73,8 +96,7 @@ howLong <- c(length(myStringVec), length(myNumericVec), length(myLogicalVec))
 howLong #This executes the `print` command on `howLong`
 ```
 
-Vectors
-========================================================
+## Vectors {.build}
 
 How do I get stuff out of the vectors I just made?
 
@@ -85,8 +107,7 @@ myStringVec[c(2,3)] #Uses a vector of numerics
 myStringVec[c(TRUE,FALSE,TRUE)] #Uses a logical vector of same length
 ```
 
-Matrices
-========================================================
+## Matrices {.build}
 
 Matrices are rectangular structures that hold values inside them:
 
@@ -100,8 +121,8 @@ myMatrix[1,3] #1st row, 3rd col
 myMatrix[,3] #All rows, 3rd column
 ```
 
-Dataframes
-========================================================
+## Dataframes
+
 Dataframes look similar to matrices, but can hold different data types in each column:
 
 ```{r}
@@ -112,8 +133,8 @@ myDF
 summary(myDF) #This function summarizes each column
 ```
 
-Lists
-========================================================
+## Lists
+
 Lists look similar to vectors, but can hold anything in each slot, including other lists. 
 
 LOTS of things in R (e.g. model output) are specially-structured lists at their core
@@ -124,8 +145,8 @@ myList <- list(stringSlot=myStringVec, numSlot=myNumericVec,
 myList
 ```
 
-Accessing Dataframes 
-========================================================
+## Accessing Dataframes 
+
 Dataframes can be accessed numerically, by their name slots, or with a mixture of the two:
 ```{r}
 myDF[1,2]
@@ -133,8 +154,8 @@ myDF$numCol #This gets all of the column "numCol"
 myDF[1,"numCol"]
 ```
 
-Accessing Lists 
-========================================================
+## Accessing Lists 
+
 Similarly, lists can be accessed numerically (see below), or by their name slots:
 ```{r}
 myList[[2]] #Needs 2 square brackets to isolate object
@@ -143,8 +164,7 @@ myList$numSlot
 myList[[4]][,3] #Same as myList$dfSlot$logCol
 ```
 
-Functions
-========================================================
+## Functions
 
 Functions take objects as __arguments__ (input) and return other __objects__ (output)
 
@@ -154,49 +174,45 @@ meanVec <- mean(myNumericVec) #Arithmetic mean (average)
 sdVec <- sd(myNumericVec) #Standard deviation (sqrt(variance))
 meanSdVec <- c(meanVec,sdVec) #Joins mean and SD into a vector
 meanSdVec
-?median #If you can remember how a command works, use "?"
+?median #If you can't remember how a command works, use "?" to access the help files
 ```
 
-Homemade Functions
-========================================================
+## Homemade Functions
 
-You can make your own functions! This is useful if you have to do the same thing to multiple sets of input.
+You can make your own functions! This is useful if you have to do the same thing to many different input objects.
 ```{r}
-myFun <- function(input){ #Takes a vector
+myFun <- function(input){ #Takes a vector of numbers
   A <- mean(input) #Take the mean of INPUT
   B <- sd(input) #Take the SD of INPUT
   C <- c(A,B) #Join A and B into a vector C
-  return(C) #Return (output) C, and end the function
+  return(C) #Return (output) C, then end the function
 }
 myFun(myNumericVec) #Same as previous slide
 myFun(myLogicalVec) #Logical vector is converted to 1 (TRUE) and 0 (FALSE)
 ```
 
-The things inside of functions (A,B,C in the one above) disappear after the function executes. However, functions can see objects in the outer environment, so beware of the Steve Problem*
+The objects inside of functions (A,B,C in the one above) disappear after the function runs. However, functions can see objects in the outer environment, so beware of the Steve Problem*
 
-Plotting
-========================================================
+## Plotting
 
 The _plot_ command is useful for quickly looking at sets of data. The following CO2 dataset is built-in to R. To see others, type data()
 
-```{r}
-#Makes a plot of the uptake and conc columns of CO2, and make the axis labels prettier
+```{r fig.height = 4, fig.width = 5}
+#Makes a plot of the uptake and conc columns of CO2, and customize axis labels
 plot(CO2$conc, CO2$uptake, xlab='Concentration (ppm)', ylab='Uptake (g)')
 ```
 
-Plotting (cont.)
-========================================================
+## Plotting (cont.)
 
 The boxplot command can summarize _continuous_ and _categorical_ data
 
-```{r}
+```{r fig.height = 4, fig.width = 5}
 boxplot(CO2$uptake, CO2$Type,
         names=unique(CO2$Type),  #Uses unique values of Type for names
         xlab='Type', ylab='Concentration (ppm)')
 ```
 
-Summary statistics
-========================================================
+## Summary statistics
 
 Often we want to get the mean of one columns, but split up by other things in the dataframe. Using the CO2 plant example, how does _uptake_ differ between _Type_?
 
@@ -208,18 +224,17 @@ tapply(CO2$uptake,list(CO2$Type,CO2$Treatment),mean)
 It's annoying and repetitive to type "CO2" over and over again. You can use _with_ to avoid this:
 ```{r}
 #Runs command inside the name space of the CO2 object
-with(CO2, 
-     tapply(uptake,list(Type,Treatment),sd)
+with(CO2, tapply(uptake,list(Type,Treatment),sd)
      )
 
 ```
+
 What functions are being run using _tapply_?
 
-if statements
-========================================================
+## if statements
+
 R can be told to do things only _if_ certain conditions apply. This is useful inside of functions for error handling
 ```{r}
-class(myStringVec)
 myFun2 <- function(x){
   xClass <- class(x) #What class is x? (Numeric, character, boolean)
   
@@ -234,8 +249,8 @@ myFun2(myNumericVec)
 
 ```
 
-for loops
-========================================================
+## for loops
+
 R can be told to do things _repeatedly_, using an index:
 ```{r}
 classVec <- rep('',length(myList)) #Storage vector
@@ -249,8 +264,7 @@ for(i in 1:length(myList)){
 classVec
 ```
 
-Reading csv files
-========================================================
+## Reading csv files
 One very common practice is to read in your own data from a csv file. Excel files can be read in directly, but present other problems. 
 
 ```{r}
@@ -261,12 +275,16 @@ head(testDat) #head shows only first 6 rows of dataframe
 R can't handle spaces or other special characters in the column headers (replaces them with periods). It also tries to guess the proper data type for each column, but sometimes gets this wrong.
 
 
-A challenger approaches!
-========================================================
-1. Your supervisor has just given you a dataset recorded by two undergrads (_test_results.csv_). However, these poor undergrads were in a big rush, and have made some mistakes (Sam, in particular).
-  - Fix any mistakes that have been made. Bonus if you do this without using Excel! 
-  - Plot the concentration data by treatment group, then plot it by time of day. Does there look like much of a difference?
-  - Some useful commands will be: __boxplot__
+## A challenger approaches!
 
-2. Make R sing "99 bottles of beer on the wall". Bonus points if you can use a function that you built! 
-  - Some useful commands will be: __for__, __if__, __paste__
+- Your supervisor has just given you a dataset (_test_results.csv_) recorded by two undergrads. However, these undergrads were in a big hurry, and have made some mistakes.
+  
+  - Read the _csv_ file and fix any mistakes. Bonus if you do this without using Excel!
+  
+  - Plot the concentration data by treatment group, then plot it for each undergrad. Does there look like much of a difference?
+  
+  - Some useful commands will be: __boxplot__, __grepl__, __gsub__, __as.numeric__
+
+- Make R sing "99 bottles of beer on the wall". Bonus points if you can use a function that you built! 
+  
+  - Some useful commands will be: __for__, __if__, __paste__, __print__
