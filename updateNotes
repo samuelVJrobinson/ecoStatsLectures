@@ -1,0 +1,13 @@
+Notes for updating lectures:
+- Oct 1, 2020: Intro to R lecture
+  - Too long, took ~40 mins
+  - First problem was fine, 2nd one probably too advanced (unless more examples shown)
+  - Try to focus on _immediately_ practical techniques; programming must be immediately useful
+  - Things to cut:
+    - Lists (probably not necessary here)
+    - Matrices (move to Lecture 2)
+    - Motivation could take 1/2 time or less
+    - Object/Function could be trimmed
+  - Things to add:
+    - Example re: working directory for reading csv files
+    - Replacement example (i.e. how do I replace value x in column y?)
