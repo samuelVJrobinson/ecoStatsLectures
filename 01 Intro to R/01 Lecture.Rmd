@@ -215,20 +215,19 @@ boxplot(CO2$uptake ~ CO2$Type, #Formula where uptake depends on (~) groups
 
 ## Summary statistics {.build}
 
-Often we want to get the mean of one columns, but split up by other things in the dataframe. Using the CO2 plant example, how does _uptake_ differ between _Type_?
+Often we want to get the mean of one columns, but split it up by other things in the dataframe. Using the CO2 plant example, how does _uptake_ differ between _Type_?
 
 ```{r}
 #Split up uptake by Type and Treatment, then take the mean
 tapply(CO2$uptake,list(CO2$Type,CO2$Treatment),mean)
 ```
 
-It's annoying and repetitive to type "CO2" over and over again. You can use _with_ to avoid this:
+It's annoying and repetitive to type "CO2" over and over again. You can use _with_ to avoid this (avoid using _attach_):
 ```{r}
 #Runs command inside the name space of the CO2 object
 with(CO2, tapply(uptake,list(Type,Treatment),sd))
 ```
 
-What functions are being run using _tapply_?
 
 ## if statements {.build}
 
@@ -281,8 +280,10 @@ R can't handle spaces or other special characters in the column headers (replace
   
   - Plot the concentration data by treatment group, then plot it for each undergrad. Does there look like much of a difference?
   
-  - Some useful commands will be: __boxplot__, __grepl__, __gsub__, __as.numeric__
+  - Some useful commands: __boxplot__, __grepl__, __gsub__, __as.numeric__
 
 - Make R sing "99 bottles of beer on the wall". Bonus points if you can use a function that you built! 
   
-  - Some useful commands will be: __for__, __if__, __paste__, __print__
+  - Some useful commands: __for__, __if__, __paste__, __print__
+  
+  - [Don't know the song?](https://en.wikipedia.org/wiki/99_Bottles_of_Beer)
