@@ -198,8 +198,8 @@ The objects inside of functions (A,B,C in the one above) disappear after the fun
 The _plot_ command is useful for quickly looking at sets of data. The following CO2 dataset is built-in to R. To see others, type data()
 
 ```{r fig.height = 4, fig.width = 5}
-#Makes a plot of the uptake and conc columns of CO2, and customize axis labels
-plot(CO2$conc, CO2$uptake, xlab='Concentration (ppm)', ylab='Uptake (g)')
+#Makes a plot of the uptake (y) and conc columns of CO2, and customize axis labels
+plot(x = CO2$conc, y = CO2$uptake, xlab = 'Concentration (ppm)', ylab = 'Uptake (g)')
 ```
 
 ## Plotting (cont.) {.build}
@@ -207,8 +207,9 @@ plot(CO2$conc, CO2$uptake, xlab='Concentration (ppm)', ylab='Uptake (g)')
 The boxplot command can summarize _continuous_ and _categorical_ data
 
 ```{r fig.height = 4, fig.width = 5}
-boxplot(CO2$uptake, CO2$Type,
-        names=unique(CO2$Type),  #Uses unique values of Type for names
+#Boxplot uses a formula rather than x,y vectors 
+#Note: plot can also use formulas in lieu of x,y
+boxplot(CO2$uptake ~ CO2$Type, #Formula where uptake depends on (~) groups
         xlab='Type', ylab='Uptake (g)')
 ```
 
