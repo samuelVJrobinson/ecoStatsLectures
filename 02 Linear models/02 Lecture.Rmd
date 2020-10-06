@@ -3,16 +3,10 @@ title: "Linear models"
 subtitle: "How do they work?"
 author: "Samuel Robinson, Ph.D."
 date: "October 1, 2020"
-output:
-  ioslides_presentation:
-    incremental: true
-    transition: 0
-    smaller: true
-    background-color: 'white'
+output: beamer_presentation
 df_print: kable
 header-includes: 
-  \usepackage{color}
-  \usepackage{xcolor}  
+  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
 ---
 
 ```{r setup, include=FALSE}
@@ -26,14 +20,14 @@ library(ggpubr)
 #Plots of mtcars data
 
 #Continuous
-p1 <- ggplot(mtcars,aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='red')
+p1 <- ggplot(mtcars,aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
 
 #Categorical
 p2 <- ggplot(mtcars,aes(x=factor(am,labels=c('auto','manual')),y=mpg))+ 
   geom_point(position=position_jitter(width=0.05))+labs(x='trans')+
-  geom_pointrange(stat='summary',fun.data=mean_se,fun.args = list(mult = 2),col='red')
+  geom_pointrange(stat='summary',fun.data=mean_se,fun.args = list(mult = 2),col='orange')
 
-#Interaction
+#Interaction - use this next lecture
 p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(am,labels=c('auto','manual'))))+geom_point()+labs(col='trans')+
   geom_smooth(formula=y~x,method='lm',se=FALSE)+
   scale_colour_manual(values=c('blue','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
@@ -45,56 +39,98 @@ modp3 <- lm(mpg~disp*am,data=mtcars)
 
 ```
 
+
 ## Motivation
 
 - _I have some bivariate data (2 things measured per row), and I want to know if they're related to each other_
 
 - _I have 2+ groups of data, and I want to know whether the means are different_
 
-- _I have 2+ groups of bivariate data, and I want to know whether the relationships differ between groups_
+<!-- Use this next lecture -->
+<!-- - _I have 2+ groups of bivariate data, and I want to know whether the relationships differ between groups_ -->
 
 ```{r examplePlots, echo=FALSE, fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
-ggarrange(p1,p2,p3,ncol=3) #Display mtcars data
+ggarrange(p1,p2,ncol=2) #Display mtcars data
 ```
 
 ## Model terminology {.build}
 
 - All linear models take the form:
-$$ \hat{y} = b_0 + b_1x_1 + b_2x_2 ... + b_ix_i $$
-$$ y \sim Normal(\hat{y},\sigma) $$ 
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} + \textcolor{blue}{b_2}\textcolor{darkturquoise}{x_2} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
 
-- _y_ is the thing you're interested in predicting
-- $\hat{y}$ is the _predicted value_ of _y_
-- $x_1$ $...x_i$ are _predictors_ of _y_
-- $b_1$ $...b_i$ are _coefficients_ for each predictor $x_i$
-- $b_0$ is the _intercept_, a coefficient that doesn't depend on predictors
-- $y\sim Normal(\hat{y},\sigma)$ means "y follows a Normal distribution with mean $\hat{y}$ and SD $\sigma$"
+- $y$ is the thing you're interested in predicting
+- $\textcolor{orange}{\hat{y}}$ is the _predicted value_ of $y$
+- $\textcolor{darkturquoise}{x_1...x_i}$ are _predictors_ of _y_
+- $\textcolor{blue}{b_1...b_i}$ are _coefficients_ for each predictor $\textcolor{darkturquoise}{x_i}$
+- $\textcolor{blue}{b_0}$ is the _intercept_, a coefficient that doesn't depend on predictors
+- $y\sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})$ means:
+  - "$y$ follows a Normal distribution with mean $\textcolor{orange}{\hat{y}}$ and SD $\textcolor{red}{\sigma}$"
 
 This may look terrifying, but let's use a simple example:
 
-## It's actually not that scary!
+## Example
 
-<div style="float: left; width: 50%;">
+::: columns
+
+:::: column
 
 ```{r, fig.height=3, fig.width=3}
-  p1+xlim(0,NA)
+meanDisp <- mean(mtcars$disp) #Mean displacement
+y_meanDisp <- coef(modp1) %*% c(1,meanDisp) #Predicted y at mean displacement
+b0Lab <- paste('b[0] == ',round(coef(modp1)[1],3))
+b1Lab <- paste('b[1] == ',round(coef(modp1)[2],3)) 
 
+p1 + xlim(0,NA) + 
+  geom_hline(yintercept=coef(modp1)[1],linetype='dashed',col='blue') +
+  geom_abline(intercept=coef(modp1)[1],slope=coef(modp1)[2],col='orange',linetype='dashed') +
+  annotate('text', x=meanDisp, y = coef(modp1)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
+  annotate('segment', x = meanDisp, xend = meanDisp, y= y_meanDisp, yend = y_meanDisp*1.2,linetype='dashed',col='blue') +
+  annotate('text', x=meanDisp*1.05, y = y_meanDisp*1.25, col='blue', label=b1Lab, parse=TRUE) +
+  annotate('segment', x = (y_meanDisp*1.2-coef(modp1)[1])/coef(modp1)[2] , xend = meanDisp, y= y_meanDisp*1.2 ,yend = y_meanDisp*1.2,
+           linetype='dashed',col='blue') +
+
+    theme(axis.title.x.bottom=element_text(colour='darkturquoise'),axis.text.x.bottom=element_text(colour='darkturquoise'))
 ```
 
-$$ \hat{mpg} = b_0 + b_1{disp} \\
-mpg \sim Normal(\hat{mpg},\sigma) $$ 
+<!-- $$ \hat{mpg} = b_0 + b_1{disp} $$ -->
+<!-- $$ mpg \sim Normal(\hat{mpg},\sigma) $$  -->
 
-</div>
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{disp} \\
+mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
 
-<div style="float: right; width: 50%;">
-- $\textcolor{black}{mpg}$ is the thing you're interested in predicting
-- $\hat{mpg}$ is the _predicted value_ of mpg
-- $dist$ is the _predictor_ of _mpg_
-- $b_0$ is the _intercept_, $b_1$ is the _coefficient_ for _dist_
-- $mpg\sim Normal(\hat{mpg},\sigma)$ means "_mpg_ follows a Normal distribution with mean $\hat{mpg}$ and SD $\sigma$"
-</div>
+::::
 
+:::: column
 
+- $mpg$ is the thing you're interested in predicting
+- $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
+- $\textcolor{darkturquoise}{disp}$ is the _predictor_ of _mpg_
+- $\textcolor{blue}{b_0}$ is the _intercept_, $\textcolor{blue}{b_1}$ is the _coefficient_ for $\textcolor{darkturquoise}{disp}$
+- $mpg\sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})$ means:
+  - "$mpg$ follows a Normal distribution with mean $\textcolor{orange}{\hat{mpg}}$ and SD $\textcolor{red}{\sigma}$"
+- $\textcolor{red}{\sigma}$ isn't displayed on the figure. Where is it?
+
+::::
+
+:::
+
+## How do I get R to fit this model?
+
+`lm` is one of the main functions used for linear modeling:
+
+## A challenger approaches!
+
+- Simulate your own data with _3_ levels, rather than 2
+- Use `lm` to fit a model to the data you just simulated
 
 
 
