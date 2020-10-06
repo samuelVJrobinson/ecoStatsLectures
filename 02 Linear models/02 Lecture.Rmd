@@ -10,11 +10,140 @@ output:
     smaller: true
     background-color: 'white'
 df_print: kable
+header-includes: 
+  \usepackage{color}
+  \usepackage{xcolor}  
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggpubr)
+
+#Functions
+
+#Plots of mtcars data
+
+#Continuous
+p1 <- ggplot(mtcars,aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='red')
+
+#Categorical
+p2 <- ggplot(mtcars,aes(x=factor(am,labels=c('auto','manual')),y=mpg))+ 
+  geom_point(position=position_jitter(width=0.05))+labs(x='trans')+
+  geom_pointrange(stat='summary',fun.data=mean_se,fun.args = list(mult = 2),col='red')
+
+#Interaction
+p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(am,labels=c('auto','manual'))))+geom_point()+labs(col='trans')+
+  geom_smooth(formula=y~x,method='lm',se=FALSE)+
+  scale_colour_manual(values=c('blue','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
+
+#Fit models for later use
+modp1 <- lm(mpg~disp,data=mtcars)
+modp2 <- lm(mpg~am,data=mtcars)
+modp3 <- lm(mpg~disp*am,data=mtcars)
+
 ```
 
 ## Motivation
 
+- _I have some bivariate data (2 things measured per row), and I want to know if they're related to each other_
+
+- _I have 2+ groups of data, and I want to know whether the means are different_
+
+- _I have 2+ groups of bivariate data, and I want to know whether the relationships differ between groups_
+
+```{r examplePlots, echo=FALSE, fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
+ggarrange(p1,p2,p3,ncol=3) #Display mtcars data
+```
+
+## Model terminology {.build}
+
+- All linear models take the form:
+$$ \hat{y} = b_0 + b_1x_1 + b_2x_2 ... + b_ix_i $$
+$$ y \sim Normal(\hat{y},\sigma) $$ 
+
+- _y_ is the thing you're interested in predicting
+- $\hat{y}$ is the _predicted value_ of _y_
+- $x_1$ $...x_i$ are _predictors_ of _y_
+- $b_1$ $...b_i$ are _coefficients_ for each predictor $x_i$
+- $b_0$ is the _intercept_, a coefficient that doesn't depend on predictors
+- $y\sim Normal(\hat{y},\sigma)$ means "y follows a Normal distribution with mean $\hat{y}$ and SD $\sigma$"
+
+This may look terrifying, but let's use a simple example:
+
+## It's actually not that scary!
+
+<div style="float: left; width: 50%;">
+
+```{r, fig.height=3, fig.width=3}
+  p1+xlim(0,NA)
+
+```
+
+$$ \hat{mpg} = b_0 + b_1{disp} \\
+mpg \sim Normal(\hat{mpg},\sigma) $$ 
+
+</div>
+
+<div style="float: right; width: 50%;">
+- $\textcolor{black}{mpg}$ is the thing you're interested in predicting
+- $\hat{mpg}$ is the _predicted value_ of mpg
+- $dist$ is the _predictor_ of _mpg_
+- $b_0$ is the _intercept_, $b_1$ is the _coefficient_ for _dist_
+- $mpg\sim Normal(\hat{mpg},\sigma)$ means "_mpg_ follows a Normal distribution with mean $\hat{mpg}$ and SD $\sigma$"
+</div>
+
+
+
+
+
+## Why do we call them "linear models"?
+
+__To answer this, we need a brief review of matrix algebra__
+
+- This is a matrix: $$ A = \begin{bmatrix}
+  1 & 4 & 7 \\
+  2 & 5 & 8 \\
+  3 & 6 & 9
+ \end{bmatrix}
+$$
+
+- This is a vector $$ b = \begin{bmatrix}
+  1  \\
+  2 \\
+  3 
+ \end{bmatrix}
+$$
+
+- Multiplying them requires a _transposition_ (flipping along main diagonal, denoted by $^\top$)
+
+$$ A \times b = Ab^\top = 1 \times \begin{bmatrix}
+  1  \\
+  2 \\
+  3 
+ \end{bmatrix} + 2 \times \begin{bmatrix}
+  4  \\
+  5  \\
+  6 
+ \end{bmatrix} + 3 \times \begin{bmatrix}
+  7  \\
+  8 \\
+  9 
+ \end{bmatrix} = \begin{bmatrix}
+  30  \\
+  36 \\
+  42 
+ \end{bmatrix}$$
+ 
+
+
+
+## Test slide
+<div style="float: left; width: 50%;">
+Stuff here
+</div>
+
+<div style="float: right; width: 50%;">
+More stuff here 
+</div>
