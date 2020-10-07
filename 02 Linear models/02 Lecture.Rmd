@@ -2,11 +2,17 @@
 title: "Linear models"
 subtitle: "How do they work?"
 author: "Samuel Robinson, Ph.D."
-date: "October 1, 2020"
-output: beamer_presentation
+date: "October 8, 2020"
+output: 
+  beamer_presentation:
+    incremental: true
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
 df_print: kable
 header-includes: 
   \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  \useinnertheme{circles}
 ---
 
 ```{r setup, include=FALSE}
@@ -15,27 +21,28 @@ library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
 
-#Functions
+set.seed(123)
 
 #Plots of mtcars data
 
 #Continuous
-p1 <- ggplot(mtcars,aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
+p1 <- ggplot(arrange(mtcars,disp),aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
 
 #Categorical
-p2 <- ggplot(mtcars,aes(x=factor(am,labels=c('auto','manual')),y=mpg))+ 
-  geom_point(position=position_jitter(width=0.05))+labs(x='trans')+
-  geom_pointrange(stat='summary',fun.data=mean_se,fun.args = list(mult = 2),col='orange')
+p2 <- ggplot(arrange(mtcars,am,disp),aes(x=factor(am,labels=c('auto','manual')),y=mpg))+ 
+  geom_point(position=position_jitter(width=0.05))+labs(x='am')+
+  geom_point(aes(y=mpg),stat='summary',fun=mean,col='orange',size=3) #Mean only
+  # geom_pointrange(stat='summary',fun.data=mean_se,fun.args = list(mult = 2),col='orange') #Mean + 2 SE
 
-#Interaction - use this next lecture
-p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(am,labels=c('auto','manual'))))+geom_point()+labs(col='trans')+
-  geom_smooth(formula=y~x,method='lm',se=FALSE)+
-  scale_colour_manual(values=c('blue','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
+# #Interaction - use this next lecture
+# p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(am,labels=c('auto','manual'))))+geom_point()+labs(col='am')+
+#   geom_smooth(formula=y~x,method='lm',se=FALSE)+
+#   scale_colour_manual(values=c('blue','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
 
 #Fit models for later use
-modp1 <- lm(mpg~disp,data=mtcars)
-modp2 <- lm(mpg~am,data=mtcars)
-modp3 <- lm(mpg~disp*am,data=mtcars)
+modp1 <- lm(mpg~disp,data=arrange(mtcars,disp))
+modp2 <- lm(mpg~am,data=arrange(mtcars,am,disp))
+# modp3 <- lm(mpg~disp*am,data=mtcars)
 
 ```
 
@@ -97,8 +104,6 @@ p1 + xlim(0,NA) +
     theme(axis.title.x.bottom=element_text(colour='darkturquoise'),axis.text.x.bottom=element_text(colour='darkturquoise'))
 ```
 
-<!-- $$ \hat{mpg} = b_0 + b_1{disp} $$ -->
-<!-- $$ mpg \sim Normal(\hat{mpg},\sigma) $$  -->
 
 \begin{equation*} 
 \begin{split}
@@ -123,63 +128,175 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 :::
 
+
+## Example (cont.)
+
+$\textcolor{red}{\sigma}$ isn't displayed on the figure. Where is it?
+
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=3}
+
+modp1_sigma <- summary(modp1)$sigma #Residual SD
+
+d1 <- data.frame(disp=sort(mtcars$disp),pred=predict(modp1)) %>% #Predictions + residual SD
+  mutate(upr1=pred+modp1_sigma,lwr1=pred-modp1_sigma) %>% 
+  mutate(upr2=pred+modp1_sigma*2,lwr2=pred-modp1_sigma*2) 
+
+p1 + 
+  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr2,ymin=lwr2),fill='red',alpha=0.2)+
+  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr1,ymin=lwr1),fill='red',alpha=0.2)
+```
+
+::::
+
+:::: column
+
+- $\textcolor{red}{\sigma}$ is the "leftover" or "residual" variance
+- i.e. variation between samples that the model couldn't explain
+- Since $y\sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})$, this means that points are normally distributed around the _entire line_ of $\textcolor{orange}{\hat{y}}$
+
+::::
+
+:::
+
 ## How do I get R to fit this model?
 
 `lm` is one of the main functions used for linear modeling:
 
+\tiny
+```{r, echo=TRUE} 
+#Formula structure: y ~ x
+mod1 <- lm(mpg ~ disp, #mpg depends on disp
+           data = mtcars) #Name of the dataframe containing mpg & disp
+summary(mod1)
+```
+\normalsize
+For a detailed breakdown of `lm`'s output, click [here](https://stats.stackexchange.com/questions/5135/interpretation-of-rs-lm-output)
+
+## Simulate data
+
+Now that we know how linear models work, we can simulate our own data:
+
+:::{.columns}
+
+::::{.column width="50%"}
+\scriptsize
+
+```{r, echo=TRUE, out.width="100%"}
+#Parameters:
+
+b0 <- 1 #Intercept
+b1 <- 2 #Slope 
+sigma <- 3 #SD
+
+#Make up some data:
+
+x <- 0:30 #Predictor values
+
+#Predicted y values
+pred_y <- b0 + b1*x 
+
+#Add "noise" around pred_y
+actual_y <- rnorm(n = length(pred_y),
+                  mean = pred_y,
+                  sd= sigma)
+
+```
+::::
+
+::::{.column width="50%"}
+\scriptsize
+```{r, echo=TRUE, fig.width=5,fig.height=5}
+#Plot the data we just made
+plot(x,pred_y,col='orange',pch=19,
+     ylab='y') 
+points(x,actual_y,col='black',pch=19)
+```
+
+::::
+
+:::
+
+## Fit a model from simulated data
+\small
+How does R do at finding the coefficients?
+
+Remember: $b_0 = 1, b_1 = 2, \sigma = 3$
+\tiny
+```{r, echo=TRUE, fig.width=5,fig.height=5}
+#Put the simulated data into a dataframe
+fakeDat <- data.frame(x = x, y = actual_y, pred = pred_y) 
+mod1sim <- lm(y ~ x, data = fakeDat) #Fit a linear model
+summary(mod1sim)
+```
+
+## What about categorical data?
+
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=3}
+
+b0Lab <- paste('b[0] == ',round(coef(modp2)[1],2))
+b1Lab <- paste('b[1] == ',round(coef(modp2)[2],2)) 
+
+  p2 +
+    annotate('text', x=1.5, y = coef(modp2)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
+    geom_hline(yintercept=coef(modp2)[1],linetype='dashed',col='blue') +
+    
+    annotate('text', x=2.35, y = (coef(modp2)[1] + coef(modp2)[2])*1.05, col='blue', label=b1Lab, parse=TRUE)+
+    annotate('segment', x = 2.25, xend = 2.25, y= coef(modp2)[1], yend = coef(modp2)[1] + coef(modp2)[2],linetype='dashed',col='blue') +
+    
+    theme(axis.title.x.bottom=element_text(colour='darkturquoise'),
+            axis.text.x.bottom=element_text(colour='darkturquoise'))
+```
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{am} \\
+mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+This uses _exactly the same_ math!
+
+- $mpg$ is the thing you're interested in predicting
+- $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
+- $\textcolor{darkturquoise}{am}$ is the _predictor_ of _mpg_
+  - set of 0s and 1s, not continuous
+- $\textcolor{blue}{b_0}$ is the _intercept_, $\textcolor{blue}{b_1}$ is the _coefficient_ for $\textcolor{darkturquoise}{am}$
+
+Where is $\textcolor{red}{\sigma}$?
+
+::::
+
+:::
+
+## How do I get R to fit this model?
+
+Syntax is exactly the same for this model
+
+\tiny
+```{r, echo=TRUE} 
+#Formula structure: y ~ x
+mod2 <- lm(mpg ~ am, #mpg depends on am
+           data = mtcars) #Name of the dataframe containing mpg & am
+summary(mod2)
+```
+
 ## A challenger approaches!
 
-- Simulate your own data with _3_ levels, rather than 2
+- Simulate your own data with 2 discrete levels
+  - ~~Steal~~Borrow my code, and change the predictor from continuous to discrete
+  - Useful command: `rep` (replicate)
 - Use `lm` to fit a model to the data you just simulated
+  - How does R do at guessing your coefficients?
 
-
-
-## Why do we call them "linear models"?
-
-__To answer this, we need a brief review of matrix algebra__
-
-- This is a matrix: $$ A = \begin{bmatrix}
-  1 & 4 & 7 \\
-  2 & 5 & 8 \\
-  3 & 6 & 9
- \end{bmatrix}
-$$
-
-- This is a vector $$ b = \begin{bmatrix}
-  1  \\
-  2 \\
-  3 
- \end{bmatrix}
-$$
-
-- Multiplying them requires a _transposition_ (flipping along main diagonal, denoted by $^\top$)
-
-$$ A \times b = Ab^\top = 1 \times \begin{bmatrix}
-  1  \\
-  2 \\
-  3 
- \end{bmatrix} + 2 \times \begin{bmatrix}
-  4  \\
-  5  \\
-  6 
- \end{bmatrix} + 3 \times \begin{bmatrix}
-  7  \\
-  8 \\
-  9 
- \end{bmatrix} = \begin{bmatrix}
-  30  \\
-  36 \\
-  42 
- \end{bmatrix}$$
- 
-
-
-
-## Test slide
-<div style="float: left; width: 50%;">
-Stuff here
-</div>
-
-<div style="float: right; width: 50%;">
-More stuff here 
-</div>
