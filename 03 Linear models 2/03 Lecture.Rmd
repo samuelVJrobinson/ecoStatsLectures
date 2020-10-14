@@ -131,6 +131,63 @@ head(mod1Matrix,28) #Show first 28 rows of model matrix
 
 ## What about if 2 things are both important?
 
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=3}
+p3
+```
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{disp} \\
+&+ \textcolor{blue}{b_2}\textcolor{darkturquoise}{gears_4} + \textcolor{blue}{b_3}\textcolor{darkturquoise}{gears_5} \\
+mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+- This is very similar to the last example, that we've added $\textcolor{darkturquoise}{disp}$
+- $\textcolor{darkturquoise}{gears}$ now changes the intercept
+  - i.e. moves lines up and down
+- Does it look like $\textcolor{darkturquoise}{gear}$ is very important?
+
+::::
+
+:::
+
+
+## How do I get R to fit this model?
+
+\tiny
+```{r, echo=TRUE} 
+#mpg depends on disp and gears
+mod2 <- lm(mpg ~ disp+factor(gear), data = mtcars) 
+summary(mod2)
+```
+
+## Dummy variables
+\tiny
+```{r, echo=TRUE} 
+mod2Matrix <- model.matrix(mod2) #Get model matrix (columns used to predict mpg)
+colnames(mod2Matrix) <- gsub('factor\\(gear\\)','gear',colnames(mod2Matrix)) #Shorten colnames
+head(mod2Matrix,28) #Show first 28 rows of model matrix
+```
+
+## Interlude: problems with plotting raw data
+
+>- Say that I've fit the following model:  
+`mpg ~ disp + factor(gear)`
+>- All of the plots below are using raw data, but which one is "telling the truth"?
+>- Answer: __c__. _a_ and _b_ are hiding the effect of the other variable
+
+```{r, echo=FALSE, fig.height=3, fig.width=8} 
+ggarrange(p1,p2,p3,ncol=3,labels=letters[1:3])
+```
 
 ## How do I plot these model results?
 
@@ -138,42 +195,58 @@ head(mod1Matrix,28) #Show first 28 rows of model matrix
 
 :::: column
 
-- If you have _1 variable_ that you are using in your model, then boxplots and biplots of raw data are OK
-- \footnotesize{e.g. $mpg \sim disp$ or $mpg \sim gear$}
-- \normalsize{If you have \emph{2+ variables} in your model, then avoid plotting raw data, and consider a \textbf{partial effects plot} instead}
-- \footnotesize{e.g. $mpg \sim disp + gear$ or $mpg \sim disp * gear$}
+Rule for plotting model results:  
+
+1. If the model uses `N` variables, you should show all `N` effects _simultaneously_
+2. If this is impractical, you should use a __partial effects plot__
+
+Other names for partial effects:
+
+- _counterfactual_ plot, _predictor effect_ plot, _leverage_ plot
+- Try using \texttt{effects} or \texttt{ggeffects}. Requires the \texttt{effects} and \texttt{ggeffect} packages
+
+```{r include=FALSE}
+n <- 100; ncoef <- 5 #Number of data points and coefficients
+pred <- data.frame(replicate(n=ncoef,expr=rnorm(n,0,2))) #Predictor matrix
+beta <- runif(ncoef,-5,5) #Coefficients
+yhat <- as.matrix(pred) %*% beta #Predicted value
+y <- rnorm(n,yhat,2) #SD=2
+pred$y <- y
+```
 
 ::::
 
 :::: column
 
-This model only has 1 variable, so plots of raw data are fine:
+Incorrect example, using raw data:
 \tiny
-```{r, echo=TRUE} 
-#Fit a model with 1 variable
-mod3 <- lm(mpg~disp,data=mtcars) 
-
-#Plot raw data
-plot(mpg ~ disp, data=mtcars,pch=19) 
-
-#Plot model fit (single line)
-abline(mod3,col='red') 
+```{r echo=TRUE}
+#Fit model with 5 variables (all important)
+simMod <- lm(y~X1+X2+X3+X4+X5,data=pred) 
+#Incorrect way, using raw data 
+plot(y~X5,data=pred,pch=19,cex.lab=3) 
 ```
 
+\normalsize{The effect of \emph{X5} is actually \textbf{very} strong ($p>0.0001$), but it doesn't look like it from this plot!}
 ::::
 
 :::
 
+## Partial effects plots - using _effects_
+\tiny
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=5}
+library(effects) #Load effects package
+simModEff <- predictorEffects(simMod,partial.residuals=TRUE) #Calculate partial effects
+#Plot partial effects
+plot(simModEff,lines=list(col='red'), partial.residuals=list(pch=19,col='black',cex=0.25))
+```
 
-## Problems with plotting raw data
-
-- Say that I've fit the following model: `mpg ~ disp * gear`
-- All of the plots below are using raw data, but which one is "telling the truth"?
-
-```{r, echo=FALSE, fig.height=3, fig.width=8} 
-p4 <- ggplot(iris,aes(Petal.Length,Petal.Width))+geom_point(aes(col=Species))
-
-
+## Partial effects plots - using _ggpredict_
+\tiny
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=5}
+library(ggeffects) #Load ggeffects package
+simModEff2 <- ggeffect(simMod,terms=c('X1')) #Calculate partial effects for X1
+plot(simModEff2) #Plot effect of X1
 ```
 
 ## Interactions
@@ -239,12 +312,11 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 \tiny
 ```{r, echo=TRUE} 
-#Formula structure: y ~ x
-mod2 <- lm(mpg ~ disp*factor(gear), #mpg depends on disp interacted with gears
-           data = mtcars) #Name of the dataframe 
+#mpg depends on disp interacted (*) with gears
+mod2 <- lm(mpg ~ disp*factor(gear), data = mtcars) 
 summary(mod2)
 ```
-__Beware of fitting too many interactions, or else the _Bilbo effect_ occurs!__
+\small{Beware of fitting too many interactions, or else the \emph{Bilbo effect} occurs!}
 
 ## Dummy variables
 \tiny
@@ -254,4 +326,12 @@ colnames(mod2Matrix) <- gsub('factor\\(gear\\)','gear',colnames(mod2Matrix)) #Sh
 head(mod2Matrix,28) #Show first 28 rows of model matrix
 ```
 
+## A challenger approaches!
 
+- Since you're all bat folks, here's some bat data!
+  - `batDat.csv`
+- Data: 100 bat weights from 2 cities, recorded along with sex and age
+- How do these variables affect bat weight? 
+  - Think about how these variables might be related to weight using `your brain`
+  - Fit a model using `lm`
+  - Make some plots, using `effects` or `ggeffects`
