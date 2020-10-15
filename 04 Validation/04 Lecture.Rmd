@@ -1,0 +1,37 @@
+---
+title: "Linear models 3"
+subtitle: "Models behaving badly"
+author: "Samuel Robinson, Ph.D."
+date: "October 15, 2020"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggpubr)
+```
+
+
+## Motivation 
+
+- Are my model results reliable?
+  - Residual checks
+  - Transformations
+  - Scaling
+  - Collinearity
+- How do I tell if terms are important or not?
+  - Drop-1 ANOVA
+  - Wald t-tests
+- How much stuff should I put into my model?
+  - Causal modeling vs Machine learning
+  - Avoiding a fishing expedition (model weights, stepwise selection)
