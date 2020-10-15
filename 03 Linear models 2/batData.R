@@ -26,6 +26,8 @@ plot(batModEff,
      lines=list(col='red'), partial.residuals=list(pch=19,col='black',cex=0.25))
 
 #Same thing using ggeffects
+library(tidyverse)
+theme_set(theme_classic())
 library(ggeffects)
 
 batModEff1 <- ggpredict(batMod,terms=c('age','sex')) %>% data.frame()
