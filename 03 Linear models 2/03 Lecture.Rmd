@@ -151,10 +151,10 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 :::: column
 
-- This is very similar to the last example, that we've added $\textcolor{darkturquoise}{disp}$
-- $\textcolor{darkturquoise}{gears}$ now changes the intercept
-  - i.e. moves lines up and down
-- Does it look like $\textcolor{darkturquoise}{gear}$ is very important?
+>- Suppose that both $\textcolor{darkturquoise}{disp}$ and $\textcolor{darkturquoise}{gears}$ are important for predicting $mpg$?
+>- This is very similar to the last example, except that now we've added $\textcolor{darkturquoise}{disp}$
+>- $\textcolor{darkturquoise}{gears}$ now changes the intercept, while $\textcolor{darkturquoise}{disp}$ changes the slope of all the lines 
+>- Does it look like $\textcolor{darkturquoise}{gear}$ is very important?
 
 ::::
 
@@ -227,7 +227,8 @@ simMod <- lm(y~X1+X2+X3+X4+X5,data=pred)
 plot(y~X5,data=pred,pch=19,cex.lab=3) 
 ```
 
-\normalsize{The effect of \emph{X5} is actually \textbf{very} strong ($p>0.0001$), but it doesn't look like it from this plot!}
+\normalsize
+The effect of \emph{X5} is actually \textbf{very} strong ($p>0.0001$), but it doesn't look like it from this plot!
 ::::
 
 :::
@@ -245,8 +246,8 @@ plot(simModEff,lines=list(col='red'), partial.residuals=list(pch=19,col='black',
 \tiny
 ```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=5}
 library(ggeffects) #Load ggeffects package
-simModEff2 <- ggeffect(simMod,terms=c('X1')) #Calculate partial effects for X1
-plot(simModEff2) #Plot effect of X1
+simModEff2 <- ggeffect(simMod,terms=c('X5')) #Calculate partial effects for X5
+plot(simModEff2) #Plot effect of X5
 ```
 
 ## Interactions
@@ -304,6 +305,7 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 >- Interactions occur when predictors are _multiplied_
 >- In this case, $\textcolor{darkturquoise}{disp}$ is multiplied by $\textcolor{darkturquoise}{gears_4}$ and $\textcolor{darkturquoise}{gears_5}$
+>- $\textcolor{darkturquoise}{gears}$ now changes the intercept and the slope of the relationship between $mpg$ and $\textcolor{darkturquoise}{disp}$
 ::::
 
 :::
@@ -316,7 +318,8 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 mod2 <- lm(mpg ~ disp*factor(gear), data = mtcars) 
 summary(mod2)
 ```
-\small{Beware of fitting too many interactions, or else the \emph{Bilbo effect} occurs!}
+\small
+Beware of fitting too many interactions, or else the \emph{Bilbo effect} occurs!
 
 ## Dummy variables
 \tiny
@@ -332,6 +335,6 @@ head(mod2Matrix,28) #Show first 28 rows of model matrix
   - `batDat.csv`
 - Data: 100 bat weights from 2 cities, recorded along with sex and age
 - How do these variables affect bat weight? 
-  - Think about how these variables might be related to weight using `your brain`
+  - Think about how these variables might be related to weight using your `brain`
   - Fit a model using `lm`
   - Make some plots, using `effects` or `ggeffects`
