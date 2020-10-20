@@ -228,7 +228,7 @@ plot(y~X5,data=pred,pch=19,cex.lab=3)
 ```
 
 \normalsize
-The effect of \emph{X5} is actually \textbf{very} strong ($p>0.0001$), but it doesn't look like it from this plot!
+The effect of \emph{X5} is actually \textbf{very} strong ($p<0.0001$), but it doesn't look like it from this plot!
 ::::
 
 :::
