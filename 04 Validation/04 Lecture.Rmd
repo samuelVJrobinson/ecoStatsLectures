@@ -2,7 +2,7 @@
 title: "Linear models 3"
 subtitle: "Models behaving badly"
 author: "Samuel Robinson, Ph.D."
-date: "October 15, 2020"
+date: "October 23, 2020"
 output: 
   beamer_presentation:
     theme: "default"
@@ -19,6 +19,8 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
+library(knitr)
+library(kableExtra)
 
 set.seed(123)
 
@@ -42,34 +44,33 @@ modp3 <- lm(mpg~disp*factor(gear),data=mtcars)
 #Generate data that violate lm assumptions:
 n <- 100
 x <- runif(n,-10,10)
-yhat <- 3 - 1*x #Expected value
+corMat <- matrix(c(1,0.95,0.95,1),ncol=2) #Correlation matrix (r=0.95)
+x2 <- (cbind(x,runif(n,-10,10)) %*% chol(corMat))[,2] #Makes correlated predictor x2 via Cholesky matrix of corMat
+yhat <- 1 - 0.2*x #Expected value
 y0 <- yhat + rnorm(n,0,2) #OK
-y1 <- yhat + 0.5*x^2 + rnorm(n,0,2) #Polynomial function
+y1 <- yhat + 0.1*x^2 + rnorm(n,0,2) #Polynomial function
 y2 <- rpois(n,exp(yhat))  #Poisson process
 y3 <- rbinom(n,1,invLogit(yhat))  #Binomial process
-y4 <- yhat + rexp(n,0.5) #Exponential residuals
-y5 <- yhat + rnorm(n,0,exp(0.5+0.15*x)) #Non-constant variance
-d1 <- data.frame(x,yhat,y0,y1,y2,y3,y4,y5)
+d1 <- data.frame(x,x2,yhat,y0,y1,y2,y3)
+# rm(n,x,x2,yhat,y0,y1,y2,y3)
 
 ```
 
 
 ## Motivation 
 
-- Are my model results reliable?
-  - Residual checks
-  - Transformations
-  - Scaling
-  - Collinearity
-- How do I tell if terms are important or not?
-  - Drop-1 ANOVA
-  - Wald t-tests
+1. Are my model results reliable?
+- Residual checks
+- Transformations
+- Collinearity
+2. How do I tell if terms are important or not?
+- Drop-1 ANOVA
+- Wald t-tests
 - How much stuff should I put into my model?
-  - Causal modeling vs Machine learning
-  - Avoiding a fishing expedition (model weights, stepwise selection)
   
-## Are my model results reliable?
+# Are my model results reliable?
 
+## Assumptions of linear regression
 ::: columns
 
 :::: column
@@ -138,7 +139,11 @@ plot(mod1, which=c(1,2))
 :::: column
 
 ```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=FALSE,formula=y~x,col='orange')
+ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y1~x,data=d1)
 ```
 
 $y1$ clearly follows a hump-shaped relationship
@@ -156,3 +161,365 @@ plot(m1, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 ::::
 
 :::
+
+## Solution: use a polynomial model
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~poly(x,2),col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y1~poly(x,2),data=d1)
+```
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y1~poly(x,2),data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+Warning: Polynomials can do weird things, especially at the edges of the distribution. Consider whether this is biologically reasonable!
+
+## Problem 2a: Non-normal response
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+geom_hline(yintercept=0,linetype='dashed')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y2~x,data=d1)
+```
+
+$y2$ is count data (integers $\geq{0}$). _Very_ common in ecological data.
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y2~x,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Solution: transform data to meet assumptions
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,log(y2+1)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(log(y2+1)~x,data=d1)
+```
+Square-root transformations are also common
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(log(y2+1)~x,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Problem 2b: Non-normal response
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y3~x,data=d1)
+```
+
+$y3$ is binomial data (success/failure, 0 or 1). _Very_ common in ecological data.
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y3~x,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Solution: use a Generalized Linear Model (GLM)
+
+```{r, echo=FALSE, fig.width=5, fig.height=3} 
+ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
+```
+
+This is a topic for another lecture. Hold tight!
+
+## But wait... there's more (assumptions)!
+
+::: columns
+
+:::: column
+
+- Additional assumption for models with many predictors:
+
+4. If you have 2+ predictors in your model, the predictors are not related to each other
+
+- Say we have 2 predictors, $x$ and $x2$:
+
+```{r echo=TRUE, eval=FALSE}
+lm(y0~x+x2,data=d1)
+```
+
+- Model fits, and residuals look OK, but there's trouble ahead!
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y0~x+x2,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Here comes trouble!
+::: columns
+
+:::: column
+
+\tiny
+```{r, echo=TRUE, fig.width=4,fig.height=3} 
+#Function to print correlation (r) value
+corText <- function(x,y){
+  text(0.5,0.5,round(cor(x,y),3))
+} 
+
+#Pairplot of y0, x, and x2
+pairs(d1[,c('y0','x','x2')],lower.panel=corText)
+```
+
+::::
+
+:::: column
+
+- $x$ and $x2$ mean basically the same thing!
+- Also revealed using variance-inflation factors (VIFs):
+
+\small
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(car)
+#VIF scores:
+# 1 = no problem
+# 1-5 = some problems
+# 5+ = big problems!
+vif(m2) 
+```
+
+::::
+
+:::
+
+## Is this problem really that bad?
+
+::: columns
+
+:::: column
+
+\tiny
+```{r, echo=TRUE} 
+#Correct model
+m1 <- lm(y0~x,data=d1)
+```
+
+```{r, echo=FALSE,eval=TRUE} 
+kable(summary(m1)$coef[,-3]) %>% row_spec(2,color='red')
+```
+
+::::
+
+:::: column 
+
+\tiny
+```{r, echo=TRUE} 
+#Incorrect model
+m2 <- lm(y0~x+x2,data=d1)
+```
+
+```{r, echo=FALSE,eval=TRUE} 
+kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
+```
+
+::::
+
+:::
+
+- Increases SE of each term, so model may "miss" important terms
+- Gets worse with increasing correlation, or if many terms are correlated!
+
+## How do we fix this? Depends on your goals:
+
+::: columns
+
+:::: column
+
+1. I care about predicting things
+- Use dimensional reduction (e.g. PCA) and re-run model
+
+2. I care about what's causing things
+- Design experiment to separate cause and effect
+- Think about what is causing what. _Graphical models_ are helpful for this
+
+::::
+
+:::: column
+
+
+```{r echo=FALSE, out.width='80%',fig.cap='A simple graphical model'}  
+  include_graphics('./dag.png',dpi=NA)
+```
+
+::::
+
+:::
+
+# How do I tell if terms are important or not?
+
+## The mpg model, once again: 
+
+::: columns
+
+:::: column
+
+
+```{r, echo=TRUE}
+m2 <- lm(mpg~disp*factor(gear),
+         data=mtcars)
+```
+\tiny
+```{r, echo=FALSE,eval=TRUE} 
+kable(summary(m2)$coef[,-3],digits=4)
+```
+\vspace{12pt} 
+\normalsize
+- This tells us about individual coefficients (slopes and intercepts), but...
+- What if we're interested in entire factors?
+
+::::
+
+::::column
+```{r, fig.height=4, fig.width=4}
+p3
+```
+
+- e.g. "Is _gears_ important as a group for predicting _mpg_?"
+
+::::
+
+:::
+
+## Relative strength of terms:
+How do I check if the things that I put in my model are useful for predicting the thing that I'm interested in?
+
+1. drop-1 (Type III) ANOVA for \emph{entire factors}
+- e.g. "Does adding \emph{gear} matter for predicting \emph{mpg}?"
+- Tests for changes in sum of squares with factor
+2. Wald t-scores for \emph{levels of factors}
+- e.g. "Is the coefficient for \emph{gear3} different from \emph{gear4?}"
+- Tests whether a coefficient = 0, given the estimated value (mean) and the variablity (SE) of the coefficient
+
+__p-values are only meaningful if the model assumptions are valid!__
+
+## drop-1 ANOVA
+
+\tiny
+```{r, echo=TRUE} 
+#mpg depends on gears
+mod1 <- lm(mpg ~ factor(gear), data = mtcars)
+drop1(mod1,test='F') #Effect of gears is very strong
+```
+
+```{r, echo=TRUE} 
+#mpg depends on disp
+mod2 <- lm(mpg ~ disp, data = mtcars)
+drop1(mod2,test='F') #Effect of disp is also very strong
+```
+
+## drop-1 ANOVA
+\tiny
+```{r, echo=TRUE} 
+#mpg depends on disp and gear
+mod3 <- lm(mpg ~ disp + factor(gear), data = mtcars)
+drop1(mod3,test='F') #Effect of disp is very strong, and erases the effect of gear
+```
+
+```{r, echo=TRUE} 
+#mpg depends on disp interacted with gear
+mod4 <- lm(mpg ~ disp*factor(gear), data = mtcars)
+drop1(mod4,test='F') #Interaction effect is strong. Why are disp and gear not shown?
+```
+
+## Wald t-scores
+- Wald t-scores are shown in model `summary`
+- t-score = mean$\div$SD 
+- p-value comes from Student's t-distribution (similar to Normal, but has longer tails depending on sample size)
+
+\tiny
+
+```{r, echo=TRUE} 
+summary(mod1)
+```
+
+## Comparing between intercepts
+
+- If you've found that _gear_ is important, are the levels different from each other?
+- If number of levels = 3+, then you need to account for _multiple comparisons_
+- One common method: Bonferroni correction
+
+\tiny
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(multcomp) #Loads the multcomp package (needs to be installed first)
+mod1Comp <- glht(mod1, linfct = mcp('factor(gear)'='Tukey')) #Fits multcomp object using gear
+summary(mod1Comp,test=adjusted('bonferroni')) #gear4 different from gear3 only
+```
+
