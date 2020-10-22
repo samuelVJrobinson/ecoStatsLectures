@@ -46,12 +46,16 @@ n <- 100
 x <- runif(n,-10,10)
 corMat <- matrix(c(1,0.95,0.95,1),ncol=2) #Correlation matrix (r=0.95)
 x2 <- (cbind(x,runif(n,-10,10)) %*% chol(corMat))[,2] #Makes correlated predictor x2 via Cholesky matrix of corMat
+x3 <- x+1e5
 yhat <- 1 - 0.2*x #Expected value
 y0 <- yhat + rnorm(n,0,2) #OK
 y1 <- yhat + 0.1*x^2 + rnorm(n,0,2) #Polynomial function
 y2 <- rpois(n,exp(yhat))  #Poisson process
 y3 <- rbinom(n,1,invLogit(yhat))  #Binomial process
-d1 <- data.frame(x,x2,yhat,y0,y1,y2,y3)
+y4 <- (1 - 2e-4*(x3))+rnorm(n,0,1e-3)
+d1 <- data.frame(x,x2,x3,yhat,y0,y1,y2,y3,y4)
+d1$s.y4 <- scale(y4)
+d1$s.x3 <- scale(x3)
 # rm(n,x,x2,yhat,y0,y1,y2,y3)
 
 ```
@@ -162,7 +166,7 @@ plot(m1, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::
 
-## Solution: use a polynomial model
+## Solution: transform predictors
 
 ::: columns
 
@@ -289,6 +293,80 @@ ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,m
 
 This is a topic for another lecture. Hold tight!
 
+
+## Problem: variables are on different scales
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x3,y4))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+\small
+
+```{r echo=TRUE, eval=FALSE}
+lm(y4~x3,data=d1)
+```
+
+- $y4$ is tiny, while $x3$ is huge
+- This is fine for now, but can cause problems when fitting more complicated models
+  - e.g. GLMs, GLMMs
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y4~x3,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Solution: scale data/predictors before fitting
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(scale(x3),scale(y4)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+\small
+
+```{r echo=TRUE, eval=FALSE}
+#Subtracts mean, divides by SD
+d1$s.y4 <- scale(y4)
+d1$s.x3 <- scale(x3) 
+lm(s.y4~s.x3,data=d1) #Refit
+```
+
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=2, fig.height=2.5} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(s.y4~s.x3,data=d1)
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+\small
+
+- Residuals are the same as before
+- Coefficients are now related to _scaled_ data and predictor
+
+::::
+
+:::
+
+
 ## But wait... there's more (assumptions)!
 
 ::: columns
@@ -408,6 +486,7 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 2. I care about what's causing things
 - Design experiment to separate cause and effect
 - Think about what is causing what. _Graphical models_ are helpful for this
+  - Not all variables have to be included!
 
 ::::
 
@@ -421,105 +500,4 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 ::::
 
 :::
-
-# How do I tell if terms are important or not?
-
-## The mpg model, once again: 
-
-::: columns
-
-:::: column
-
-
-```{r, echo=TRUE}
-m2 <- lm(mpg~disp*factor(gear),
-         data=mtcars)
-```
-\tiny
-```{r, echo=FALSE,eval=TRUE} 
-kable(summary(m2)$coef[,-3],digits=4)
-```
-\vspace{12pt} 
-\normalsize
-- This tells us about individual coefficients (slopes and intercepts), but...
-- What if we're interested in entire factors?
-
-::::
-
-::::column
-```{r, fig.height=4, fig.width=4}
-p3
-```
-
-- e.g. "Is _gears_ important as a group for predicting _mpg_?"
-
-::::
-
-:::
-
-## Relative strength of terms:
-How do I check if the things that I put in my model are useful for predicting the thing that I'm interested in?
-
-1. drop-1 (Type III) ANOVA for \emph{entire factors}
-- e.g. "Does adding \emph{gear} matter for predicting \emph{mpg}?"
-- Tests for changes in sum of squares with factor
-2. Wald t-scores for \emph{levels of factors}
-- e.g. "Is the coefficient for \emph{gear3} different from \emph{gear4?}"
-- Tests whether a coefficient = 0, given the estimated value (mean) and the variablity (SE) of the coefficient
-
-__p-values are only meaningful if the model assumptions are valid!__
-
-## drop-1 ANOVA
-
-\tiny
-```{r, echo=TRUE} 
-#mpg depends on gears
-mod1 <- lm(mpg ~ factor(gear), data = mtcars)
-drop1(mod1,test='F') #Effect of gears is very strong
-```
-
-```{r, echo=TRUE} 
-#mpg depends on disp
-mod2 <- lm(mpg ~ disp, data = mtcars)
-drop1(mod2,test='F') #Effect of disp is also very strong
-```
-
-## drop-1 ANOVA
-\tiny
-```{r, echo=TRUE} 
-#mpg depends on disp and gear
-mod3 <- lm(mpg ~ disp + factor(gear), data = mtcars)
-drop1(mod3,test='F') #Effect of disp is very strong, and erases the effect of gear
-```
-
-```{r, echo=TRUE} 
-#mpg depends on disp interacted with gear
-mod4 <- lm(mpg ~ disp*factor(gear), data = mtcars)
-drop1(mod4,test='F') #Interaction effect is strong. Why are disp and gear not shown?
-```
-
-## Wald t-scores
-- Wald t-scores are shown in model `summary`
-- t-score = mean$\div$SD 
-- p-value comes from Student's t-distribution (similar to Normal, but has longer tails depending on sample size)
-
-\tiny
-
-```{r, echo=TRUE} 
-summary(mod1)
-```
-
-## Comparing between intercepts
-
-- If you've found that _gear_ is important, are the levels different from each other?
-- If number of levels = 3+, then you need to account for _multiple comparisons_
-- One common method: Bonferroni correction
-
-\tiny
-
-```{r echo=TRUE, message=FALSE, warning=FALSE}
-library(multcomp) #Loads the multcomp package (needs to be installed first)
-mod1Comp <- glht(mod1, linfct = mcp('factor(gear)'='Tukey')) #Fits multcomp object using gear
-summary(mod1Comp,test=adjusted('bonferroni')) #gear4 different from gear3 only
-```
 
