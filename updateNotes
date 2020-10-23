@@ -21,3 +21,6 @@ Notes for updating lectures:
   - Consider better example for independent effects example:
     - "a"
   - Consider better example for effects plot: maybe show a 3D plot so limits of plotting are clear?
+- Oct 23, 2020: Model validation
+  - A bit too long, 35-40 mins
+  - Could probably chop out reference to GLMs (not necessary yet?)

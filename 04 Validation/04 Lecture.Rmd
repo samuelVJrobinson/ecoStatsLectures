@@ -1,5 +1,5 @@
 ---
-title: "Linear models 3"
+title: "Model validation"
 subtitle: "Models behaving badly"
 author: "Samuel Robinson, Ph.D."
 date: "October 23, 2020"
@@ -354,7 +354,7 @@ lm(s.y4~s.x3,data=d1) #Refit
 ```{r, echo=FALSE, fig.width=2, fig.height=2.5} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(s.y4~s.x3,data=d1)
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0,cex=0.7)
 ```
 
 \small

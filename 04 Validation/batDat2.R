@@ -1,4 +1,5 @@
 #More simulated bat data, this time within a causal modeling framework
+setwd("./03 Linear models 2")
 
 set.seed(123)
 N <- 100

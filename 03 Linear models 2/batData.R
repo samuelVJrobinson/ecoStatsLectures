@@ -1,5 +1,5 @@
 # Generate some bat data
-setwd("~/Documents/ecoStats2020/03 Linear models 2")
+setwd("./03 Validation")
 
 set.seed(1)
 N <- 100 #Sample size
