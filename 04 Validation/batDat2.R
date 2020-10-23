@@ -23,6 +23,7 @@ bugEff <- bugs*0.01
 ybats <- tempEff + bugEff + lightEff
 bats <- rpois(N,exp(ybats))
 dat <- data.frame(bats,temp,humidity,clouds,light,bugs)
+write.csv(dat,file='batDat2.csv')
 
 mod1 <- lm(log(bats+0.1)~poly(temp,2)+light+bugs,data=dat)
 par(mfrow=c(2,1))

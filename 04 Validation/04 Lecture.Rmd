@@ -63,16 +63,13 @@ d1$s.x3 <- scale(x3)
 
 ## Motivation 
 
-1. Are my model results reliable?
+Are my model results reliable?
+
 - Residual checks
 - Transformations
 - Collinearity
-2. How do I tell if terms are important or not?
-- Drop-1 ANOVA
-- Wald t-tests
 - How much stuff should I put into my model?
   
-# Are my model results reliable?
 
 ## Assumptions of linear regression
 ::: columns
@@ -126,9 +123,9 @@ Some common ways of checking the assumptions: __residual plots__
 \tiny
 
 ```{r, echo=TRUE, out.width='100%', fig.asp=0.5} 
-mod1 <- lm(mpg~disp*factor(gear),data=mtcars)
-par(mfrow=c(1,2),mar=c(3,3,1,1)+1)
-plot(mod1, which=c(1,2))
+mod1 <- lm(mpg~disp*factor(gear),data=mtcars) #Fits model
+par(mfrow=c(1,2),mar=c(3,3,1,1)+1) #Splits plot into 2
+plot(mod1, which=c(1,2)) #1st and 2nd residual plots
 ```
 
 \normalsize
@@ -150,7 +147,7 @@ ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,co
 lm(y1~x,data=d1)
 ```
 
-$y1$ clearly follows a hump-shaped relationship
+$y1$ clearly follows a hump-shaped relationship, not a linear one
 
 ::::
 
@@ -179,6 +176,9 @@ ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~poly
 ```{r echo=TRUE, eval=FALSE}
 lm(y1~poly(x,2),data=d1)
 ```
+\small
+
+_log_ and _square-root_ transformations are common
 
 ::::
 
@@ -194,7 +194,8 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::
 
-Warning: Polynomials can do weird things, especially at the edges of the distribution. Consider whether this is biologically reasonable!
+\small
+- Warning: Polynomials can do weird things; consider whether this is biologically reasonable!
 
 ## Problem 2a: Non-normal response
 
@@ -291,7 +292,7 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
 ```
 
-This is a topic for another lecture. Hold tight!
+- This is a topic for another lecture. Hold tight!
 
 
 ## Problem: variables are on different scales
@@ -308,10 +309,8 @@ ggplot(d1,aes(x3,y4))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,c
 ```{r echo=TRUE, eval=FALSE}
 lm(y4~x3,data=d1)
 ```
-
 - $y4$ is tiny, while $x3$ is huge
-- This is fine for now, but can cause problems when fitting more complicated models
-  - e.g. GLMs, GLMMs
+- OK for now, but can cause problems when fitting complicated models (GLMs)
 
 ::::
 
@@ -326,6 +325,7 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 ::::
 
 :::
+
 
 ## Solution: scale data/predictors before fitting
 
@@ -373,7 +373,7 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::: column
 
-- Additional assumption for models with many predictors:
+One more assumption:
 
 4. If you have 2+ predictors in your model, the predictors are not related to each other
 
@@ -399,7 +399,7 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::
 
-## Here comes trouble!
+## Uh oh! Collinearity!
 ::: columns
 
 :::: column
@@ -414,6 +414,10 @@ corText <- function(x,y){
 #Pairplot of y0, x, and x2
 pairs(d1[,c('y0','x','x2')],lower.panel=corText)
 ```
+
+\normalsize
+
+`pairs()` is useful for looking at relations among your data
 
 ::::
 
@@ -437,17 +441,20 @@ vif(m2)
 
 :::
 
-## Is this problem really that bad?
+## Is collinearity really that bad?
 
 ::: columns
 
 :::: column
 
-\tiny
+\small
+
 ```{r, echo=TRUE} 
 #Correct model
 m1 <- lm(y0~x,data=d1)
 ```
+
+\tiny
 
 ```{r, echo=FALSE,eval=TRUE} 
 kable(summary(m1)$coef[,-3]) %>% row_spec(2,color='red')
@@ -457,11 +464,14 @@ kable(summary(m1)$coef[,-3]) %>% row_spec(2,color='red')
 
 :::: column 
 
-\tiny
+\small
+
 ```{r, echo=TRUE} 
 #Incorrect model
 m2 <- lm(y0~x+x2,data=d1)
 ```
+
+\tiny
 
 ```{r, echo=FALSE,eval=TRUE} 
 kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
@@ -493,11 +503,34 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 :::: column
 
 
-```{r echo=FALSE, out.width='80%',fig.cap='A simple graphical model'}  
+```{r echo=FALSE, out.width='80%'}  
   include_graphics('./dag.png',dpi=NA)
 ```
+
+- Simple graphical model, where the effect of A on D is _mediated_ by B.
+- "Correct" `lm` model of D:
+
+`lm(D ~ B + C)`
 
 ::::
 
 :::
 
+
+## A challenger approaches!
+
+- Guess what... more bat data! This time there are 6 variables that were measured. We're interested in predicting `bats` (counts of bats per night).
+- Formulate a causal model that seems reasonable
+  - Draw it out on paper/in PowerPoint using flow diagrams 
+- Fit an `lm` model of `bats` from your causal model, check the assumptions, and update as necessary
+
+
+## Here's the answer
+
+```{r echo=FALSE, out.width='70%'}  
+  include_graphics('./dag2.png',dpi=NA)
+```
+
+This is the __true__ process that generated the data. Model for `bats` should look like:
+
+`lm(log(bats+0.1)~poly(temp,2)+light+bugs,data=dat)`
