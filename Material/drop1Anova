@@ -1,0 +1,101 @@
+
+# How do I tell if terms are important or not?
+
+## The mpg model, once again: 
+
+::: columns
+
+:::: column
+
+
+```{r, echo=TRUE}
+m2 <- lm(mpg~disp*factor(gear),
+         data=mtcars)
+```
+\tiny
+```{r, echo=FALSE,eval=TRUE} 
+kable(summary(m2)$coef[,-3],digits=4)
+```
+\vspace{12pt} 
+\normalsize
+- This tells us about individual coefficients (slopes and intercepts), but...
+- What if we're interested in entire factors?
+
+::::
+
+::::column
+```{r, fig.height=4, fig.width=4}
+p3
+```
+
+- e.g. "Is _gears_ important as a group for predicting _mpg_?"
+
+::::
+
+:::
+
+## Relative strength of terms:
+How do I check if the things that I put in my model are useful for predicting the thing that I'm interested in?
+
+1. drop-1 (Type III) ANOVA for \emph{entire factors}
+- e.g. "Does adding \emph{gear} matter for predicting \emph{mpg}?"
+- Tests for changes in sum of squares with factor
+2. Wald t-scores for \emph{levels of factors}
+- e.g. "Is the coefficient for \emph{gear3} different from \emph{gear4?}"
+- Tests whether a coefficient = 0, given the estimated value (mean) and the variablity (SE) of the coefficient
+
+__p-values are only meaningful if the model assumptions are valid!__
+
+## drop-1 ANOVA
+
+\tiny
+```{r, echo=TRUE} 
+#mpg depends on gears
+mod1 <- lm(mpg ~ factor(gear), data = mtcars)
+drop1(mod1,test='F') #Effect of gears is very strong
+```
+
+```{r, echo=TRUE} 
+#mpg depends on disp
+mod2 <- lm(mpg ~ disp, data = mtcars)
+drop1(mod2,test='F') #Effect of disp is also very strong
+```
+
+## drop-1 ANOVA
+\tiny
+```{r, echo=TRUE} 
+#mpg depends on disp and gear
+mod3 <- lm(mpg ~ disp + factor(gear), data = mtcars)
+drop1(mod3,test='F') #Effect of disp is very strong, and erases the effect of gear
+```
+
+```{r, echo=TRUE} 
+#mpg depends on disp interacted with gear
+mod4 <- lm(mpg ~ disp*factor(gear), data = mtcars)
+drop1(mod4,test='F') #Interaction effect is strong. Why are disp and gear not shown?
+```
+
+## Wald t-scores
+- Wald t-scores are shown in model `summary`
+- t-score = mean$\div$SD 
+- p-value comes from Student's t-distribution (similar to Normal, but has longer tails depending on sample size)
+
+\tiny
+
+```{r, echo=TRUE} 
+summary(mod1)
+```
+
+## Comparing between intercepts
+
+- If you've found that _gear_ is important, are the levels different from each other?
+- If number of levels = 3+, then you need to account for _multiple comparisons_
+- One common method: Bonferroni correction
+
+\tiny
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(multcomp) #Loads the multcomp package (needs to be installed first)
+mod1Comp <- glht(mod1, linfct = mcp('factor(gear)'='Tukey')) #Fits multcomp object using gear
+summary(mod1Comp,test=adjusted('bonferroni')) #gear4 different from gear3 only
+```

@@ -1,5 +1,9 @@
 ---
+<<<<<<< HEAD
 title: "Validation"
+=======
+title: "Model validation"
+>>>>>>> f39557f54df1b04b118020fc073cc4b422e805a9
 subtitle: "Models behaving badly"
 author: "Samuel Robinson, Ph.D."
 date: "October 23, 2020"
@@ -46,12 +50,16 @@ n <- 100
 x <- runif(n,-10,10)
 corMat <- matrix(c(1,0.95,0.95,1),ncol=2) #Correlation matrix (r=0.95)
 x2 <- (cbind(x,runif(n,-10,10)) %*% chol(corMat))[,2] #Makes correlated predictor x2 via Cholesky matrix of corMat
+x3 <- x+1e5
 yhat <- 1 - 0.2*x #Expected value
 y0 <- yhat + rnorm(n,0,2) #OK
 y1 <- yhat + 0.1*x^2 + rnorm(n,0,2) #Polynomial function
 y2 <- rpois(n,exp(yhat))  #Poisson process
 y3 <- rbinom(n,1,invLogit(yhat))  #Binomial process
-d1 <- data.frame(x,x2,yhat,y0,y1,y2,y3)
+y4 <- (1 - 2e-4*(x3))+rnorm(n,0,1e-3)
+d1 <- data.frame(x,x2,x3,yhat,y0,y1,y2,y3,y4)
+d1$s.y4 <- scale(y4)
+d1$s.x3 <- scale(x3)
 # rm(n,x,x2,yhat,y0,y1,y2,y3)
 
 ```
@@ -59,16 +67,13 @@ d1 <- data.frame(x,x2,yhat,y0,y1,y2,y3)
 
 ## Motivation 
 
-1. Are my model results reliable?
+Are my model results reliable?
+
 - Residual checks
 - Transformations
 - Collinearity
-2. How do I tell if terms are important or not?
-- Drop-1 ANOVA
-- Wald t-tests
 - How much stuff should I put into my model?
   
-# Are my model results reliable?
 
 ## Assumptions of linear regression
 ::: columns
@@ -122,9 +127,9 @@ Some common ways of checking the assumptions: __residual plots__
 \tiny
 
 ```{r, echo=TRUE, out.width='100%', fig.asp=0.5} 
-mod1 <- lm(mpg~disp*factor(gear),data=mtcars)
-par(mfrow=c(1,2),mar=c(3,3,1,1)+1)
-plot(mod1, which=c(1,2))
+mod1 <- lm(mpg~disp*factor(gear),data=mtcars) #Fits model
+par(mfrow=c(1,2),mar=c(3,3,1,1)+1) #Splits plot into 2
+plot(mod1, which=c(1,2)) #1st and 2nd residual plots
 ```
 
 \normalsize
@@ -146,7 +151,7 @@ ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,co
 lm(y1~x,data=d1)
 ```
 
-$y1$ clearly follows a hump-shaped relationship
+$y1$ clearly follows a hump-shaped relationship, not a linear one
 
 ::::
 
@@ -162,7 +167,7 @@ plot(m1, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::
 
-## Solution: use a polynomial model
+## Solution: transform predictors
 
 ::: columns
 
@@ -175,6 +180,9 @@ ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~poly
 ```{r echo=TRUE, eval=FALSE}
 lm(y1~poly(x,2),data=d1)
 ```
+\small
+
+_log_ and _square-root_ transformations are common
 
 ::::
 
@@ -190,7 +198,8 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::
 
-Warning: Polynomials can do weird things, especially at the edges of the distribution. Consider whether this is biologically reasonable!
+\small
+- Warning: Polynomials can do weird things; consider whether this is biologically reasonable!
 
 ## Problem 2a: Non-normal response
 
@@ -287,7 +296,80 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
 ```
 
-This is a topic for another lecture. Hold tight!
+- This is a topic for another lecture. Hold tight!
+
+
+## Problem: variables are on different scales
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x3,y4))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+\small
+
+```{r echo=TRUE, eval=FALSE}
+lm(y4~x3,data=d1)
+```
+- $y4$ is tiny, while $x3$ is huge
+- OK for now, but can cause problems when fitting complicated models (GLMs)
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y4~x3,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+
+## Solution: scale data/predictors before fitting
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(scale(x3),scale(y4)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+\small
+
+```{r echo=TRUE, eval=FALSE}
+#Subtracts mean, divides by SD
+d1$s.y4 <- scale(y4)
+d1$s.x3 <- scale(x3) 
+lm(s.y4~s.x3,data=d1) #Refit
+```
+
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=2, fig.height=2.5} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(s.y4~s.x3,data=d1)
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0,cex=0.7)
+```
+
+\small
+
+- Residuals are the same as before
+- Coefficients are now related to _scaled_ data and predictor
+
+::::
+
+:::
+
 
 ## But wait... there's more (assumptions)!
 
@@ -295,7 +377,7 @@ This is a topic for another lecture. Hold tight!
 
 :::: column
 
-- Additional assumption for models with many predictors:
+One more assumption:
 
 4. If you have 2+ predictors in your model, the predictors are not related to each other
 
@@ -321,7 +403,7 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::
 
-## Here comes trouble!
+## Uh oh! Collinearity!
 ::: columns
 
 :::: column
@@ -336,6 +418,10 @@ corText <- function(x,y){
 #Pairplot of y0, x, and x2
 pairs(d1[,c('y0','x','x2')],lower.panel=corText)
 ```
+
+\normalsize
+
+`pairs()` is useful for looking at relations among your data
 
 ::::
 
@@ -359,17 +445,20 @@ vif(m2)
 
 :::
 
-## Is this problem really that bad?
+## Is collinearity really that bad?
 
 ::: columns
 
 :::: column
 
-\tiny
+\small
+
 ```{r, echo=TRUE} 
 #Correct model
 m1 <- lm(y0~x,data=d1)
 ```
+
+\tiny
 
 ```{r, echo=FALSE,eval=TRUE} 
 kable(summary(m1)$coef[,-3]) %>% row_spec(2,color='red')
@@ -379,11 +468,14 @@ kable(summary(m1)$coef[,-3]) %>% row_spec(2,color='red')
 
 :::: column 
 
-\tiny
+\small
+
 ```{r, echo=TRUE} 
 #Incorrect model
 m2 <- lm(y0~x+x2,data=d1)
 ```
+
+\tiny
 
 ```{r, echo=FALSE,eval=TRUE} 
 kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
@@ -408,118 +500,41 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 2. I care about what's causing things
 - Design experiment to separate cause and effect
 - Think about what is causing what. _Graphical models_ are helpful for this
+  - Not all variables have to be included!
 
 ::::
 
 :::: column
 
 
-```{r echo=FALSE, out.width='80%',fig.cap='A simple graphical model'}  
+```{r echo=FALSE, out.width='80%'}  
   include_graphics('./dag.png',dpi=NA)
 ```
 
-::::
+- Simple graphical model, where the effect of A on D is _mediated_ by B.
+- "Correct" `lm` model of D:
 
-:::
-
-# How do I tell if terms are important or not?
-
-## The mpg model, once again: 
-
-::: columns
-
-:::: column
-
-
-```{r, echo=TRUE}
-m2 <- lm(mpg~disp*factor(gear),
-         data=mtcars)
-```
-\tiny
-```{r, echo=FALSE,eval=TRUE} 
-kable(summary(m2)$coef[,-3],digits=4)
-```
-\vspace{12pt} 
-\normalsize
-- This tells us about individual coefficients (slopes and intercepts), but...
-- What if we're interested in entire factors?
-
-::::
-
-::::column
-```{r, fig.height=4, fig.width=4}
-p3
-```
-
-- e.g. "Is _gears_ important as a group for predicting _mpg_?"
+`lm(D ~ B + C)`
 
 ::::
 
 :::
 
-## Relative strength of terms:
-How do I check if the things that I put in my model are useful for predicting the thing that I'm interested in?
 
-1. drop-1 (Type III) ANOVA for \emph{entire factors}
-- e.g. "Does adding \emph{gear} matter for predicting \emph{mpg}?"
-- Tests for changes in sum of squares with factor
-2. Wald t-scores for \emph{levels of factors}
-- e.g. "Is the coefficient for \emph{gear3} different from \emph{gear4?}"
-- Tests whether a coefficient = 0, given the estimated value (mean) and the variablity (SE) of the coefficient
+## A challenger approaches!
 
-__p-values are only meaningful if the model assumptions are valid!__
+- Guess what... more bat data! This time there are 6 variables that were measured. We're interested in predicting `bats` (counts of bats per night).
+- Formulate a causal model that seems reasonable
+  - Draw it out on paper/in PowerPoint using flow diagrams 
+- Fit an `lm` model of `bats` from your causal model, check the assumptions, and update as necessary
 
-## drop-1 ANOVA
 
-\tiny
-```{r, echo=TRUE} 
-#mpg depends on gears
-mod1 <- lm(mpg ~ factor(gear), data = mtcars)
-drop1(mod1,test='F') #Effect of gears is very strong
+## Here's the answer
+
+```{r echo=FALSE, out.width='70%'}  
+  include_graphics('./dag2.png',dpi=NA)
 ```
 
-```{r, echo=TRUE} 
-#mpg depends on disp
-mod2 <- lm(mpg ~ disp, data = mtcars)
-drop1(mod2,test='F') #Effect of disp is also very strong
-```
+This is the __true__ process that generated the data. Model for `bats` should look like:
 
-## drop-1 ANOVA
-\tiny
-```{r, echo=TRUE} 
-#mpg depends on disp and gear
-mod3 <- lm(mpg ~ disp + factor(gear), data = mtcars)
-drop1(mod3,test='F') #Effect of disp is very strong, and erases the effect of gear
-```
-
-```{r, echo=TRUE} 
-#mpg depends on disp interacted with gear
-mod4 <- lm(mpg ~ disp*factor(gear), data = mtcars)
-drop1(mod4,test='F') #Interaction effect is strong. Why are disp and gear not shown?
-```
-
-## Wald t-scores
-- Wald t-scores are shown in model `summary`
-- t-score = mean$\div$SD 
-- p-value comes from Student's t-distribution (similar to Normal, but has longer tails depending on sample size)
-
-\tiny
-
-```{r, echo=TRUE} 
-summary(mod1)
-```
-
-## Comparing between intercepts
-
-- If you've found that _gear_ is important, are the levels different from each other?
-- If number of levels = 3+, then you need to account for _multiple comparisons_
-- One common method: Bonferroni correction
-
-\tiny
-
-```{r echo=TRUE, message=FALSE, warning=FALSE}
-library(multcomp) #Loads the multcomp package (needs to be installed first)
-mod1Comp <- glht(mod1, linfct = mcp('factor(gear)'='Tukey')) #Fits multcomp object using gear
-summary(mod1Comp,test=adjusted('bonferroni')) #gear4 different from gear3 only
-```
-
+`lm(log(bats+0.1)~poly(temp,2)+light+bugs,data=dat)`
