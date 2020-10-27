@@ -1,5 +1,5 @@
 ---
-title: "Linear models 3"
+title: "Validation"
 subtitle: "Models behaving badly"
 author: "Samuel Robinson, Ph.D."
 date: "October 23, 2020"
