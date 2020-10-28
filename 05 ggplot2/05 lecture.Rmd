@@ -1,0 +1,545 @@
+---
+title: "ggplot2"
+subtitle: "_Much_ funnier if you speak Mandarin"
+author: "Samuel Robinson, Ph.D."
+date: "October 29, 2020"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(ggpubr)
+# theme_set(theme_classic())
+presTheme <- theme(axis.title=element_text(size=30),axis.text=element_text(size=10))
+theme_set(presTheme)
+
+set.seed(123)
+```
+
+## Motivation 
+
+What is `ggplot2`?
+
+- `ggplot` philosophy
+- Simple plots
+- Useful techniques
+- More complicated plots
+  
+## What is `ggplot2`?
+
+- Updated version of `ggplot` (older `R` package)
+- Implementation of Wilkinson's _grammar of graphics_
+- Elements: data, transformations, elements, scale, guide, coordinates
+- Describes a [layered approach to building graphics](https://doi.org/10.1198/jcgs.2009.07098) beyond formulaic plots (e.g. "boxplot", "scatterplot")
+- Zillions of different extensions available [here](https://exts.ggplot2.tidyverse.org/gallery/)
+  
+Philosophy:
+
+- Data input centered around around `data frames`
+- Data display centered around `geoms` (geometric objects)
+- Columns from data frames are `mapped` into geoms using `aesthetics`
+- geoms are displayed according to `themes`
+
+## Simple example - scatterplot
+
+\tiny 
+
+```{r, echo=TRUE} 
+data(mtcars) # mtcars dataset (built into R)
+head(mtcars,5) # Show first 5 rows
+```
+
+::: columns
+
+:::: column
+
+```{r, eval=FALSE, echo = TRUE}
+# Load ggplot library
+library(ggplot2) 
+
+# Top line of code says: 
+# - data from mtcars dataframe
+# - aes = aesthetics from dataframe
+# - map disp to x-axis, mpg to y-axis
+ggplot(data = mtcars, aes(x = disp, y = mpg))+
+  geom_point() # Display data using points
+```
+
+::::
+
+:::: column
+
+```{r echo=FALSE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+geom_point()
+```
+
+::::
+
+:::
+
+## Simple example - bar plot
+
+\tiny 
+
+```{r, echo=TRUE} 
+data(mtcars) # mtcars dataset (built into R)
+head(mtcars,5) # Show first 5 rows
+```
+
+::: columns
+
+:::: column
+
+```{r, eval=FALSE, echo = TRUE}
+# Top line of code says: 
+# - map gear (number of gears as a factor) to x-axis
+ggplot(data = mtcars, aes(x = factor(gear)))+ 
+  geom_bar() 
+# Display number of data points for each factor level
+# Automatically uses stat='count' to group all factors
+```
+
+::::
+
+:::: column
+
+```{r echo=FALSE}
+ggplot(data=mtcars,aes(x=factor(gear)))+ 
+  geom_bar()
+```
+
+::::
+
+:::
+
+## Simple example - histogram
+
+\tiny 
+
+```{r, echo=TRUE} 
+data(mtcars) # mtcars dataset (built into R)
+head(mtcars,5) # Show first 5 rows
+```
+
+::: columns
+
+:::: column
+
+```{r eval=FALSE, echo=TRUE}
+# Top line of code says: 
+# - map disp (displacement) to x-axis
+ggplot(data = mtcars, aes(x = disp))+ 
+  # Group disp into bins, and display 
+  #   count in each bin
+  geom_histogram() 
+```
+
+::::
+
+:::: column
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data=mtcars,aes(x=disp))+ geom_histogram()
+```
+
+::::
+
+:::
+
+## Simple example - histograms and density plots
+
+\tiny
+
+::: columns
+
+:::: column
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Histogram
+ggplot(data=mtcars,aes(x=disp))+ 
+  geom_histogram() 
+```
+
+\normalsize
+
+Histogram
+
+::::
+
+:::: column
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Density plot
+ggplot(data=mtcars,aes(x=disp))+ 
+  geom_density() 
+```
+
+\normalsize
+
+Probability density plot
+
+$\int_{-\infty}^{\infty} x \,dx$
+
+::::
+
+:::
+
+## Colours in plots
+
+- Colours can be _mapped_ (via `aes`) or _set_ (outside of `aes`)
+ 
+\tiny 
+
+::: columns
+
+:::: column
+
+```{r, echo = TRUE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  # Maps gear to colour
+  geom_point(aes(col=factor(gear))) 
+```
+
+::::
+
+:::: column
+
+```{r echo=TRUE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  geom_point(colour='red') #Sets colour
+```
+
+::::
+
+:::
+
+\normalsize
+
+- Notice how `aes` was used twice in Figure 1? If used within the `ggplot` command, the rest of the geoms will remember it. Used within a geom, it will _update_ the aesthetic
+
+## What if I want different colours?
+
+::: columns
+
+:::: column
+
+- Default colour themes are pretty bad. Change them with `scale_colour_manual` 
+- Use `scale_fill_manual` for area-based colours (e.g. bar plots, polygons)
+- Remember, 10% of males are red-green colourblind!
+
+::::
+
+:::: column
+
+```{r echo=FALSE, eval = TRUE, fig.width=5, fig.height=5}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  geom_point(aes(col=factor(gear)))+
+  scale_colour_manual(values=c('blue','purple','red'))
+```
+
+::::
+
+:::
+
+\small
+
+```{r, echo = TRUE, eval = FALSE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  geom_point(aes(col=factor(gear)))+
+  scale_colour_manual(values=c('blue','purple','red'))
+```
+
+
+## Sizes in plots
+
+- Sizes can also be _mapped_ (via `aes`) or _set_ (outside of `aes`)
+ 
+\tiny 
+
+::: columns
+
+:::: column
+
+```{r, echo = TRUE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  # Maps gear to size
+  geom_point(aes(size=gear)) 
+```
+
+::::
+
+:::: column
+
+```{r echo=TRUE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  geom_point(size=10) #Sets size
+```
+
+::::
+
+:::
+
+\normalsize
+
+- Similar to colour choices, you can alter mapped sizes using `scale_size`
+
+## Change plot `theme`
+
+::: columns
+
+:::: column
+
+- `theme` controls almost all non-data elements of plots
+- Made up of _elements_: `element_line()`, `element_text()`, `element_rect()`
+- Let's make some changes:
+
+\tiny
+
+```{r, echo = TRUE, eval=FALSE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  # Maps gear to colour
+  geom_point(aes(col=factor(gear))) +
+  #Changes plot theme
+  theme(axis.title.x=element_text(size=40), 
+    legend.background=element_rect(fill='red'),
+    legend.position=c(0.8,0.8),
+    panel.grid.minor=element_line(colour='purple'),
+    panel.grid.major=element_line(colour='orange'))
+```
+
+::::
+
+:::: column
+
+```{r, echo = FALSE, eval=TRUE, fig.width=4,fig.height=5}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  # Maps gear to colour
+  geom_point(aes(col=factor(gear))) +
+  #Changes plot theme
+  theme(axis.title.x=element_text(size=40), 
+    legend.background=element_rect(fill='red'),
+    legend.position=c(0.8,0.8),
+    panel.grid.minor=element_line(colour='purple'),
+    panel.grid.major=element_line(colour='orange'))
+```
+
+\small 
+
+- This plot is hideous, but it gives you the idea!
+- Use `?theme` to see all options
+
+::::
+
+:::
+
+## Preset themes
+
+```{r, echo = FALSE, eval=TRUE, out.width='100%'}
+p <- ggplot(data=mtcars,aes(x=disp,y=mpg)) + geom_point() 
+p1 <- p + theme_grey() + annotate('text',y=30,x=400,label='theme_grey()') #Regular grey theme
+p2 <- p + theme_bw() + annotate('text',y=30,x=400,label='theme_bw()') #B/W
+p3 <- p + theme_classic() + annotate('text',y=30,x=400,label='theme_classic()') #Classic
+p4 <- p + theme_minimal() + annotate('text',y=30,x=400,label='theme_minimal()') #Minimalistic
+ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
+```
+
+## Make your own themes!
+
+::: columns
+
+:::: column
+
+- You can modify existing themes in order to create your own
+- Try using `theme_set()` at the start of your script to pre-set the theme for the rest of the script
+
+\tiny
+
+```{r, echo = TRUE, eval=FALSE}
+myTheme <- theme_classic()+ #Existing theme
+  #Makes axis text bigger
+  theme(axis.title=element_text(size=30),
+        axis.text=element_text(size=10),
+        legend.position='bottom')
+#Sets up this theme as "default"
+theme_set(myTheme)
+```
+
+::::
+
+:::: column
+
+```{r, echo = FALSE, eval=TRUE, fig.width=4, fig.height=4}
+myTheme <- theme_classic()+ #Existing theme
+  #Makes axis text bigger
+  theme(axis.title=element_text(size=30),
+        axis.text=element_text(size=10),
+        legend.position='bottom')
+
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  # Maps cyl to colour
+  geom_point(aes(col=factor(cyl))) +
+  myTheme
+
+theme_set(theme_grey())
+
+```
+
+::::
+
+:::
+
+## Complex plots - facets
+
+\small
+
+- It is possible to break up the plot into smaller `facets` that are mapped to a given variable
+- This can be combined with colour/size mappings
+
+\tiny
+```{r, echo = TRUE, eval = TRUE, fig.width=6, fig.height=3.5}
+ggplot(mtcars,aes(x=disp,y=mpg))+ geom_point(aes(col=wt))+
+  facet_grid(factor(am) ~ factor(gear))
+```
+
+## Complex plots - summary statistics (mean)
+
+\tiny
+```{r, echo = TRUE,fig.width=8,fig.height=5}
+ggplot(mtcars,aes(x=factor(am),y=mpg))+ 
+  geom_point(position=position_jitter(width=0.05))+ #Adds noise to data in x-dimension
+  geom_point(stat='summary',fun=mean,col='orange',size=3) #Mean only
+```
+
+## Complex plots - summary statistics (mean + SD)
+
+\tiny
+```{r, echo = TRUE,fig.width=8,fig.height=5}
+ggplot(arrange(mtcars,am,disp),aes(x=factor(am),y=mpg))+ 
+  geom_point(position=position_jitter(width=0.05))+
+  geom_pointrange(stat='summary',fun.data=mean_se,
+                  fun.args = list(mult = 2),col='orange') #Mean + 2 SE
+```
+
+## Complex plots - smoothers
+
+- You can add `lm` (or other model) predictions to your plots:
+
+::: columns
+
+:::: column
+\tiny 
+
+```{r, echo = TRUE, eval = FALSE}
+ggplot(mtcars,aes(x=disp,y=mpg))+ 
+  geom_point() + 
+  geom_smooth(method='lm',formula=y~x)
+```
+
+```{r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=6}
+ggplot(mtcars,aes(x=disp,y=mpg))+ 
+  annotate('text',y=30,x=400,label='linear model')+
+  geom_point() + geom_smooth(method='lm',formula=y~x)
+```
+
+::::
+
+:::: column
+
+\tiny 
+
+```{r, echo = TRUE, eval = FALSE}
+ggplot(mtcars,aes(x=disp,y=mpg))+ 
+  geom_point() + 
+  geom_smooth(method='gam',formula=y~s(x))
+```
+``` {r, echo = FALSE, eval = TRUE,fig.width=6,fig.height=6}
+ggplot(mtcars,aes(x=disp,y=mpg))+ 
+  annotate('text',y=30,x=400,label='GAM smoother')+
+  geom_point() + geom_smooth(method='gam',formula=y~s(x))
+```
+
+:::: 
+
+:::
+
+## Complex plots - transformations
+
+- You can show transformed data OR you can transform the axes themselves using `scale_*_log10` (x or y axis)
+
+::: columns
+
+:::: column
+\tiny 
+
+```{r echo = TRUE, eval = FALSE}
+ggplot(mtcars,aes(x=log(disp),y=log(mpg)))+ 
+  geom_point() + 
+  geom_smooth(method='lm',formula=y~x)
+# Harder to interpret, because people can't
+#     usually do log(x) in their head
+```
+
+```{r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=6}
+ggplot(mtcars,aes(x=log(disp),y=log(mpg)))+ 
+  geom_point() + 
+  geom_smooth(method='lm',formula=y~x)
+```
+
+::::
+
+:::: column
+
+\tiny 
+
+```{r, echo = TRUE, eval = FALSE}
+ggplot(mtcars,aes(x=disp,y=mpg))+ 
+  geom_point() + 
+  geom_smooth(method='lm',formula=y~x)+
+  scale_x_log10() + scale_y_log10() 
+# sqrt is also popular
+```
+
+```{r, echo = FALSE, eval = TRUE,fig.width=6,fig.height=6}
+ggplot(mtcars,aes(x=disp,y=mpg))+ 
+  geom_point() + 
+  geom_smooth(method='lm',formula=y~x)+
+  scale_x_log10() + scale_y_log10() # sqrt is also popular
+```
+
+:::: 
+
+:::
+
+## A challenger approaches:
+
+Make these figures! Datasets are found in `mpg`, `msleep`, `trees`, and `starwars` (built into the `ggplot2` and `dplyr` packages)
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+p1 <- ggplot(mpg,aes(x=displ,y=cty))+ 
+  geom_point() + geom_smooth(method='lm',formula=y~x)+
+  theme_classic()
+
+p2 <- ggplot(msleep,aes(x=bodywt,y=brainwt))+
+  geom_point(aes(col=vore))+
+  scale_x_log10()+scale_y_log10()+
+  labs(x='Body weight (kg)',y='Brain Weight (kg)',col='Feeding')+
+  theme_bw()
+
+p3 <- ggplot(trees,aes(x=Girth,y=Height,col=Volume,size=Volume))+
+  geom_point()+
+  theme_classic()
+
+p4 <- ggplot(starwars,aes(x=height))+geom_histogram()+facet_wrap(~sex)+ theme_minimal()
+
+ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
+
+```

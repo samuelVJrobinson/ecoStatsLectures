@@ -1,9 +1,5 @@
 ---
-<<<<<<< HEAD
 title: "Validation"
-=======
-title: "Model validation"
->>>>>>> f39557f54df1b04b118020fc073cc4b422e805a9
 subtitle: "Models behaving badly"
 author: "Samuel Robinson, Ph.D."
 date: "October 23, 2020"
