@@ -8,6 +8,7 @@ output:
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
+urlcolor: blue
 df_print: kable
 header-includes: 
   \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
@@ -31,7 +32,7 @@ What is `ggplot2`?
 
 - `ggplot` philosophy
 - Simple plots
-- Useful techniques
+- Some useful techniques
 - More complicated plots
   
 ## What is `ggplot2`?
@@ -40,11 +41,11 @@ What is `ggplot2`?
 - Implementation of Wilkinson's _grammar of graphics_
 - Elements: data, transformations, elements, scale, guide, coordinates
 - Describes a [layered approach to building graphics](https://doi.org/10.1198/jcgs.2009.07098) beyond formulaic plots (e.g. "boxplot", "scatterplot")
-- Zillions of different extensions available [here](https://exts.ggplot2.tidyverse.org/gallery/)
+- Many different extensions available [here](https://exts.ggplot2.tidyverse.org/gallery/)
   
 Philosophy:
 
-- Data input centered around around `data frames`
+- Data input centered around around `data.frames`
 - Data display centered around `geoms` (geometric objects)
 - Columns from data frames are `mapped` into geoms using `aesthetics`
 - geoms are displayed according to `themes`
@@ -101,11 +102,14 @@ head(mtcars,5) # Show first 5 rows
 
 ```{r, eval=FALSE, echo = TRUE}
 # Top line of code says: 
-# - map gear (number of gears as a factor) to x-axis
+# - map gear (number of gears) to x-axis
+#   - first converted to a factor
 ggplot(data = mtcars, aes(x = factor(gear)))+ 
   geom_bar() 
-# Display number of data points for each factor level
-# Automatically uses stat='count' to group all factors
+# Display number of data points for each factor
+
+# Automatically uses stat='count' to group
+#   data according to factor
 ```
 
 ::::
@@ -187,7 +191,7 @@ ggplot(data=mtcars,aes(x=disp))+
 
 Probability density plot
 
-$\int_{-\infty}^{\infty} x \,dx$
+$a\int_{-\infty}^{\infty} f(x) \,dx=1$
 
 ::::
 
@@ -309,7 +313,7 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
   # Maps gear to colour
   geom_point(aes(col=factor(gear))) +
   #Changes plot theme
-  theme(axis.title.x=element_text(size=40), 
+  theme(axis.title.x=element_text(size=10), 
     legend.background=element_rect(fill='red'),
     legend.position=c(0.8,0.8),
     panel.grid.minor=element_line(colour='purple'),
@@ -325,7 +329,7 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
   # Maps gear to colour
   geom_point(aes(col=factor(gear))) +
   #Changes plot theme
-  theme(axis.title.x=element_text(size=40), 
+  theme(axis.title.x=element_text(size=10), 
     legend.background=element_rect(fill='red'),
     legend.position=c(0.8,0.8),
     panel.grid.minor=element_line(colour='purple'),
@@ -383,10 +387,12 @@ myTheme <- theme_classic()+ #Existing theme
   theme(axis.title=element_text(size=30),
         axis.text=element_text(size=10),
         legend.position='bottom')
+  
 
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
   # Maps cyl to colour
   geom_point(aes(col=factor(cyl))) +
+  scale_colour_manual(values=c('blue','purple','red')) +
   myTheme
 
 theme_set(theme_grey())
@@ -416,7 +422,7 @@ ggplot(mtcars,aes(x=disp,y=mpg))+ geom_point(aes(col=wt))+
 ```{r, echo = TRUE,fig.width=8,fig.height=5}
 ggplot(mtcars,aes(x=factor(am),y=mpg))+ 
   geom_point(position=position_jitter(width=0.05))+ #Adds noise to data in x-dimension
-  geom_point(stat='summary',fun=mean,col='orange',size=3) #Mean only
+  geom_point(stat='summary',fun=mean,col='red',size=3) #Mean only
 ```
 
 ## Complex plots - summary statistics (mean + SD)
@@ -426,7 +432,7 @@ ggplot(mtcars,aes(x=factor(am),y=mpg))+
 ggplot(arrange(mtcars,am,disp),aes(x=factor(am),y=mpg))+ 
   geom_point(position=position_jitter(width=0.05))+
   geom_pointrange(stat='summary',fun.data=mean_se,
-                  fun.args = list(mult = 2),col='orange') #Mean + 2 SE
+                  fun.args = list(mult = 2),col='red') #Mean + 2 SE
 ```
 
 ## Complex plots - smoothers
@@ -519,26 +525,43 @@ ggplot(mtcars,aes(x=disp,y=mpg))+
 
 :::
 
+## Things to remember:
+
+- Simpler plots are often better. Try to keep it to 3 aesthetics per panel. Avoid 3D plots.
+- Making plots is iterative. Make a simple one and tweak it to improve it.
+- Avoid "non-data ink" (see [Edward Tufte's](https://www.amazon.ca/Visual-Display-Quantitative-Information/dp/1930824130) work)
+- Our eyes are good at estimating linear positions, but bad at estimating area, volume, colour shading, and angles:
+
+```{r, echo = FALSE, eval = TRUE,fig.width=12,fig.height=4}
+d1 <- data.frame(x=factor(c('a','b','c')),y=c(23,46,31))
+
+p1 <- ggplot(d1,aes(x=x,y=y))+geom_col()+theme_classic()
+p2 <- ggplot(d1,aes(x=x,y=1))+geom_point(aes(size=y))+theme_classic()+scale_size(range=c(5,15))
+p3 <- ggplot(d1, aes(x="", y=y, fill=x)) + geom_bar(width = 1, stat = "identity")+coord_polar("y") + theme_void() + theme(axis.text.x=element_text(size=0))
+
+ggarrange(p1,p2,p3,ncol=3)
+
+```
+
 ## A challenger approaches:
 
 Make these figures! Datasets are found in `mpg`, `msleep`, `trees`, and `starwars` (built into the `ggplot2` and `dplyr` packages)
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 p1 <- ggplot(mpg,aes(x=displ,y=cty))+ 
-  geom_point() + geom_smooth(method='lm',formula=y~x)+
+  geom_point() + geom_smooth(method='gam',formula=y~s(x),col='red')+
   theme_classic()
 
 p2 <- ggplot(msleep,aes(x=bodywt,y=brainwt))+
   geom_point(aes(col=vore))+
-  scale_x_log10()+scale_y_log10()+
+  scale_x_log10()+scale_y_log10()+geom_smooth(method='lm',formula=y~x,col='black')+
   labs(x='Body weight (kg)',y='Brain Weight (kg)',col='Feeding')+
   theme_bw()
 
 p3 <- ggplot(trees,aes(x=Girth,y=Height,col=Volume,size=Volume))+
-  geom_point()+
-  theme_classic()
+  geom_point()+theme_grey()
 
-p4 <- ggplot(starwars,aes(x=height))+geom_histogram()+facet_wrap(~sex)+ theme_minimal()
+p4 <- ggplot(starwars,aes(x=height))+geom_histogram()+facet_wrap(~sex)+ theme_minimal()+labs(x='Height of Star Wars Characters (cm)')
 
 ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
 
