@@ -549,12 +549,14 @@ Make these figures! Datasets are found in `mpg`, `msleep`, `trees`, and `starwar
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
 p1 <- ggplot(mpg,aes(x=displ,y=cty))+ 
-  geom_point() + geom_smooth(method='gam',formula=y~s(x),col='red')+
+  geom_point() + 
+  geom_smooth(method='gam',formula=y~s(x),col='red')+
   theme_classic()
 
 p2 <- ggplot(msleep,aes(x=bodywt,y=brainwt))+
   geom_point(aes(col=vore))+
-  scale_x_log10()+scale_y_log10()+geom_smooth(method='lm',formula=y~x,col='black')+
+  scale_x_log10()+scale_y_log10()+
+  geom_smooth(method='lm',formula=y~x,col='black')+
   labs(x='Body weight (kg)',y='Brain Weight (kg)',col='Feeding')+
   theme_bw()
 
