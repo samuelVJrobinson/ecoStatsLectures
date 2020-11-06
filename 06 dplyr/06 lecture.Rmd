@@ -166,7 +166,7 @@ head(irisTemp,3) #Chooses rows matching logical criteria
 ```{r,echo=T,eval=T,message=F}
 head(iris,3)
 irisTemp <- mutate(iris,P.Width2=Petal.Width^2)
-head(irisTemp,3) #Squares Petal.Width
+head(irisTemp,3) #Squares Petal.Width, adds new variable
 ```
 
 ## Basic verbs - make new variables
@@ -175,7 +175,7 @@ head(irisTemp,3) #Squares Petal.Width
 
 ```{r,echo=T,eval=T,message=F}
 head(irisTemp,3)
-irisTemp <- mutate(iris,P.Width2=(Petal.Width^2)*2)
+irisTemp <- mutate(iris,Petal.Width=Petal.Width^2)
 head(irisTemp,3) #Alters variable in place
 ```
 
