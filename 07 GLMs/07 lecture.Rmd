@@ -1,5 +1,5 @@
 ---
-title: "Generalized Linear Models and Maximum Likelihood"
+title: "Generalized Linear Models"
 subtitle: '"The trouble with normal is that it always gets worse"'
 author: "Samuel Robinson, Ph.D."
 date: "November 19, 2020"
@@ -15,7 +15,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE)
 library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
@@ -48,9 +48,8 @@ d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
 What are Generalized Linear Models? (GLMs)
 
 - Meet the exponential family
-  - Normal, t, Binomial, Poisson
+  - Normal, Binomial, Poisson
   - Negative Binomial, Beta, Gamma
-- Probability and Likelihood
 - Tricksy hobbitses! 
   - Zero-inflated models, occupancy models
 
@@ -65,21 +64,23 @@ What are Generalized Linear Models? (GLMs)
 ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
 ```
 
-```{r, echo=FALSE, fig.width=5, fig.height=4} 
-ggplot(d1,aes(y2))+geom_histogram()+labs(y='Count')
-```
+- Some types of data can never be transformed to make the residuals normal
+- Solution: __use the distribution that generates the data!__
 
 :::: 
 
 :::: column
 
-```{r, echo=FALSE, fig.width=5, fig.height=5} 
+```{r, echo=FALSE, fig.width=5, fig.height=4} 
+# ggplot(d1,aes(y2))+geom_histogram(bins=3)+labs(y='Count')
+plot(lm(y2~x,data=d1),which=1)
+```
+
+```{r, echo=FALSE, fig.width=5, fig.height=4} 
 # ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
 plot(lm(y2~x,data=d1),which=2)
 ```
 
-- Some types of data can never be transformed to make the residuals normal
-- Solution: __use the distribution that generates the data!__
 
 ::::
 
@@ -91,8 +92,8 @@ plot(lm(y2~x,data=d1),which=2)
 n <- 1000
 dists <- c('Normal','Binomial','Poisson','Gamma')
 data.frame(dist=factor(rep(dists,each=n),levels=dists),
-           x=c(rnorm(n,0,1),rbinom(n,10,0.25),rpois(n,2),rgamma(n,1,2))) %>% 
-  ggplot(aes(x=x))+geom_histogram()+facet_wrap(~dist,scales='free')
+           x=c(rnorm(n,0,1),rbinom(n,10,0.25),rpois(n,1),rgamma(n,1,2))) %>% 
+  ggplot(aes(x=x))+geom_histogram(bins=30)+facet_wrap(~dist,scales='free')
 ```
 Time to meet the family!
 
@@ -158,7 +159,7 @@ dnorm(x=4,mean=5,sd=1)
 
 :::
 
-## The Normal/Gaussian Distribution
+## The Normal Distribution
 
 ::: columns
 
@@ -169,8 +170,8 @@ data.frame(x=c(0:10)) %>%
   ggplot(aes(x=x))+stat_function(fun=dnorm,n=100,args=list(mean=5,sd=1))+
   geom_vline(xintercept=4,linetype='dashed',color='blue')+
   annotate('text',x=3,y=dnorm(4,5,1),label=round(dnorm(4,5,1),3),color='blue')+
-  annotate('text',x=7.5,y=dnorm(4,5,1)*1.1,label=expression(mu == 5),colour='darkturquoise',size=6)+
-  annotate('text',x=7.5,y=dnorm(4,5,1)*1,label=expression(sigma==1),colour='red',size=6)+
+  annotate('text',x=7.5,y=dnorm(4,5,1)*1.1,label='mu == 5',colour='darkturquoise',size=6,parse=TRUE)+
+  annotate('text',x=7.5,y=dnorm(4,5,1)*1,label='sigma==1',colour='red',size=6,parse=TRUE)+
   labs(y=TeX('$p(x|\\mu,\\sigma)$'))+
   ylim(0,0.4)
 ```
@@ -184,8 +185,8 @@ data.frame(x=c(0:10)) %>%
   ggplot(aes(x=x))+stat_function(fun=dnorm,n=100,args=list(mean=5,sd=3))+
   geom_vline(xintercept=4,linetype='dashed',color='blue')+
   annotate('text',x=3,y=dnorm(4,5,3)+0.01,label=round(dnorm(4,5,3),3),color='blue')+
-  annotate('text',x=7.5,y=dnorm(4,5,3)*1.2,label=expression(mu == 5),colour='darkturquoise',size=6)+
-  annotate('text',x=7.5,y=dnorm(4,5,3)*1,label=expression(sigma==3),colour='red',size=6)+
+  annotate('text',x=7.5,y=dnorm(4,5,3)*1.2,label='mu == 5',colour='darkturquoise',size=6,parse=TRUE)+
+  annotate('text',x=7.5,y=dnorm(4,5,3)*1,label='sigma==3',colour='red',size=6,parse=TRUE)+
   labs(y=TeX('$p(x|\\mu,\\sigma)$'))+
   ylim(0,0.4)
 ```
@@ -205,21 +206,341 @@ data.frame(x=c(0:10)) %>%
 
 - Imagine you have 10 coins, and you flip them all
 - If you do this _many_ times:
-  - Most will be about 5 heads, 5 tails
+  - Most will be about 5 heads/tails
   - Few will be 1 head, 9 tails (or reverse)
 - Common in nature where outcomes are binary
   - e.g. 10 seeds from a plant, how many will germinate?
+- If N = 1, this is called a _Bernoulli trial_
+::::
+
+:::: column
+
+```{r, fig.height=6, fig.width=5}
+data.frame(x=factor(rbinom(1000,10,0.5))) %>% count(x) %>%
+  ggplot(aes(x=factor(x),y=n))+geom_col()+
+  labs(x='Number of heads per 10 flips',y='Frequency')+
+  scale_x_discrete(breaks=as.character(-1:10))
+```
+
+::::
+
+:::
+
+
+## The Binomial Distribution - scary math!
+
+::: columns
+
+:::: column
+
+- 1 parameter: probability of success ($\phi$), plus...
+- Number of "coin flips" ($N$)
+
+\small
+
+\begin{equation*}
+p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\phi},N) = \binom{N}{\textcolor{blue}{x}} \textcolor{darkturquoise}{\phi}^{\textcolor{blue}{x}} (1-\textcolor{darkturquoise}{\phi})^{N-\textcolor{blue}{x}} 
+\end{equation*}
+
+\normalsize
+
+- Probability mass function (PMF); density = continuous
+- Tells you about the probability of getting $\textcolor{blue}{x}$ "successes" _given_ $\phi$ and $N$
+
+::::
+
+:::: column
+
+Example: what is the probability of getting 4 successes, if $\textcolor{darkturquoise}{\phi}$ is 0.25 and N is 15?
+
+\small
+
+\begin{equation*}
+\begin{split}
+p(\textcolor{blue}{4}|\textcolor{darkturquoise}{0.25},15) = & \binom{15}{\textcolor{blue}{4}} \textcolor{darkturquoise}{0.25}^{\textcolor{blue}{4}} (1-\textcolor{darkturquoise}{0.25})^{15-\textcolor{blue}{4}}  \\
+= \sim & 0.23
+\end{split}
+\end{equation*}
+
+\normalsize
+
+In R, this is easy:
+
+```{r, echo=TRUE}
+dbinom(x=4,size=15,prob=0.25)
+```
+
+::::
+
+:::
+
+## The Binomial Distribution
+
+::: columns
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+nSuccess <- 4
+n <- 15
+phi <- 0.25
+data.frame(x=c(0:15)) %>% mutate(d=dbinom(x,n,phi)) %>% 
+  ggplot(aes(x=factor(x),y=d))+
+  geom_point()+
+  geom_vline(xintercept=nSuccess+1,linetype='dashed',color='blue')+
+  annotate('text',x=6,y=dbinom(nSuccess,n,phi),label=round(dbinom(nSuccess,n,phi),3),color='blue')+
+  annotate('text',x=9.5,y=dbinom(nSuccess,n,phi)*1.1,label=paste('phi == ',phi),colour='darkturquoise',size=6,parse=TRUE)+
+  annotate('text',x=9.5,y=dbinom(nSuccess,n,phi)*1,label=paste('N == ',n),colour='black',size=6,parse=TRUE)+
+  labs(y=TeX('$p(x|\\phi,N)$'),x='Number of successes')+
+  ylim(0,0.25)
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+nSuccess <- 4
+n <- 15
+phi <- 0.75
+data.frame(x=c(0:15)) %>% mutate(d=dbinom(x,n,phi)) %>% 
+  ggplot(aes(x=factor(x),y=d))+
+  geom_point()+
+  geom_vline(xintercept=nSuccess+1,linetype='dashed',color='blue')+
+  annotate('text',x=4,y=dbinom(nSuccess,n,phi)+0.01,label=round(dbinom(nSuccess,n,phi),4),color='blue')+
+  annotate('text',x=9.5,y=0.22,label=paste('phi == ',phi),colour='darkturquoise',size=6,parse=TRUE)+
+  annotate('text',x=9.5,y=0.2,label=paste('N == ',n),colour='black',size=6,parse=TRUE)+
+  labs(y=TeX('$p(x|\\phi,N)$'),x='Number of successes')+
+  ylim(0,0.25)
+```
+
+::::
+
+:::
+
+- Probability of x "successes" changes with $\phi$ and $N$
+
+## The Poisson Distribution
+
+::: columns
+
+:::: column
+
+- Imagine a rare event (e.g. getting a non-junk mail letter)
+- If you record the number of events every day:
+  - Most days, you'll get 0 or maybe 1 letter
+  - On some rare days, you'll get 3 or 4 letters
+- Common in nature where rare events are measured over time/space:
+  - e.g. Number of bats caught in a net (per night)
 
 ::::
 
 :::: column
 
 ```{r, fig.height=6, fig.width=5}
-data.frame(x=rbinom(1000,10,0.5)) %>% group_by(x) %>% summarize(n=n()) %>%
+data.frame(x=factor(rpois(365,0.5))) %>% count(x) %>%
   ggplot(aes(x=factor(x),y=n))+geom_col()+
-  labs(x='Number of heads per 10 flips',y='Frequency')
+  labs(x='Letters per day',y='Frequency')
+```
+
+- Equivalent to Binomial distribution, where $N$ is unknown
+
+::::
+
+:::
+
+## The Poisson Distribution - scary math!
+
+::: columns
+
+:::: column
+
+- 1 parameter: rate parameter ($\lambda$)
+
+\begin{equation*}
+p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\lambda}) = \frac{\textcolor{darkturquoise}{\lambda} ^{\textcolor{blue}{x}} e ^{-\textcolor{darkturquoise}{\lambda}}}{\textcolor{blue}{x}!}
+\end{equation*}
+
+- Probability mass function (PMF)
+- Tells you about the probability of getting $\textcolor{blue}{x}$ counts _given_ $\lambda$ 
+
+::::
+
+:::: column
+
+Example: what is the probability of getting 2 counts, if $\textcolor{darkturquoise}{\lambda}$ is 1?
+
+\small
+
+\begin{equation*}
+\begin{split}
+p(\textcolor{blue}{2}|\textcolor{darkturquoise}{1}) = & \frac{\textcolor{darkturquoise}{1} ^{\textcolor{blue}{2}} e ^{-\textcolor{darkturquoise}{1}}}{\textcolor{blue}{2}!} \\
+= &\sim 0.18
+\end{split}
+\end{equation*}
+
+\normalsize
+
+In R, this is easy:
+
+```{r, echo=TRUE}
+dpois(x=2,lambda=1)
 ```
 
 ::::
 
 :::
+
+## The Poisson Distribution
+
+::: columns
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+nCounts <- 2
+lambda <- 1
+data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>% 
+  ggplot(aes(x=factor(x),y=d))+
+  geom_point()+
+  geom_vline(xintercept=nCounts+1,linetype='dashed',color='blue')+
+  annotate('text',x=nCounts+1.5,y=dpois(nCounts,lambda),label=round(dpois(nCounts,lambda),3),color='blue')+
+  annotate('text',x=nCounts+2,y=dpois(nCounts,lambda)*1.8,label=paste('lambda == ',lambda),colour='darkturquoise',size=6,parse=TRUE)+
+  labs(y=TeX('$p(x|\\lambda)$'),x='Counts observed')+
+  ylim(0,0.4)
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+nCounts <- 2
+lambda <- 3
+data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>% 
+  ggplot(aes(x=factor(x),y=d))+
+  geom_point()+
+  geom_vline(xintercept=nCounts+1,linetype='dashed',color='blue')+
+  annotate('text',x=nCounts+1.5,y=dpois(nCounts,lambda),label=round(dpois(nCounts,lambda),3),color='blue')+
+  annotate('text',x=nCounts+2,y=dpois(nCounts,lambda)*1.5,label=paste('lambda == ',lambda),colour='darkturquoise',size=6,parse=TRUE)+
+  labs(y=TeX('$p(x|\\lambda)$'),x='Counts observed')+
+  ylim(0,0.4)
+```
+
+::::
+
+:::
+
+- Probability of x counts changes with $\lambda$
+
+
+## The Negative Binomial Distribution
+
+::: columns
+
+:::: column
+
+Unfortunately, _almost nothing_ in ecology actually follows a Poisson distribution 
+  - In a Poisson distribution, the mean = SD, but...
+  - In reality, many processes have extra __dispersion__
+  - Negative Binomial is similar to a Poisson, but can have longer tails
+  - Also called: _Polya_ distibution (`nbinom2` in most GLM software)
+
+::::
+
+:::: column
+
+```{r, fig.height=6, fig.width=5}
+n <- 1000
+data.frame(x=c(rnbinom(n,mu=2,size=1),rnbinom(n,mu=2,size=0.1)),dist=rep(c('theta==1','theta==0.1'),each=n)) %>% 
+  ggplot(aes(x=x))+geom_histogram(bins=10)+facet_wrap(~dist,ncol=1,labeller=label_parsed)+
+  labs(x='Letters per day',y='Frequency')
+```
+
+::::
+
+:::
+
+## Negative Binomial Distribution - scary math!
+
+::: columns
+
+:::: column
+
+- 2 parameter: rate parameter ($\mu$) and dispersion ($\theta$)
+
+\begin{equation*}
+p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\lambda}) = \frac{\textcolor{darkturquoise}{\lambda} ^{\textcolor{blue}{x}} e ^{-\textcolor{darkturquoise}{\lambda}}}{\textcolor{blue}{x}!}
+\end{equation*}
+
+- Probability mass function (PMF)
+- Tells you about the probability of getting $\textcolor{blue}{x}$ counts _given_ $\lambda$ 
+
+::::
+
+:::: column
+
+Example: what is the probability of getting 2 counts, if $\textcolor{darkturquoise}{\lambda}$ is 1?
+
+\small
+
+\begin{equation*}
+\begin{split}
+p(\textcolor{blue}{2}|\textcolor{darkturquoise}{1}) = & \frac{\textcolor{darkturquoise}{1} ^{\textcolor{blue}{2}} e ^{-\textcolor{darkturquoise}{1}}}{\textcolor{blue}{2}!} \\
+= &\sim 0.18
+\end{split}
+\end{equation*}
+
+\normalsize
+
+In R, this is easy:
+
+```{r, echo=TRUE}
+dpois(x=2,lambda=1)
+```
+
+::::
+
+:::
+
+## The Poisson Distribution
+
+::: columns
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+nCounts <- 2
+lambda <- 1
+data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>% 
+  ggplot(aes(x=factor(x),y=d))+
+  geom_point()+
+  geom_vline(xintercept=nCounts+1,linetype='dashed',color='blue')+
+  annotate('text',x=nCounts+1.5,y=dpois(nCounts,lambda),label=round(dpois(nCounts,lambda),3),color='blue')+
+  annotate('text',x=nCounts+2,y=dpois(nCounts,lambda)*1.8,label=paste('lambda == ',lambda),colour='darkturquoise',size=6,parse=TRUE)+
+  labs(y=TeX('$p(x|\\lambda)$'),x='Number of successes')+
+  ylim(0,0.4)
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+nCounts <- 2
+lambda <- 3
+data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>% 
+  ggplot(aes(x=factor(x),y=d))+
+  geom_point()+
+  geom_vline(xintercept=nCounts+1,linetype='dashed',color='blue')+
+  annotate('text',x=nCounts+1.5,y=dpois(nCounts,lambda),label=round(dpois(nCounts,lambda),3),color='blue')+
+  annotate('text',x=nCounts+2,y=dpois(nCounts,lambda)*1.5,label=paste('lambda == ',lambda),colour='darkturquoise',size=6,parse=TRUE)+
+  labs(y=TeX('$p(x|\\lambda)$'),x='Number of successes')+
+  ylim(0,0.4)
+```
+
+::::
+
+:::
+
+- Probability of x counts changes with $\lambda$
