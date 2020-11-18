@@ -56,17 +56,17 @@ seeds$Collection.Date <- as.Date(seeds$Collection.Date,origin='2012-01-01')
 ```{r, echo=T,eval=F}
 library(tidyverse)
 #Convert factors in plants df
-plants <- plants %>% mutate_at(vars(Species,Plant.Code),factor)
+plants <- plants %>% mutate(across(c(Species,Plant.Code)),factor)
 #Convert factors in seeds df
-seeds <- seeds %>% mutate_at(vars(Seed,Plant.Code),factor)
+seeds <- seeds %>% mutate(across(c(Seed,Plant.Code)),factor)
 #Select Flower, Code, and Total.Germ columns in germ df
 germ <- germ %>% select(Flower,Code,Total.Germ)
 
 #Change columns 3:9 to numeric
-plants <- plants %>% 
-  mutate_at(vars(3:9),funs(as.numeric))
+plants <- plants %>% mutate(across(c(3:9)),as.numeric)
 #Convert Collection.Date to Date format
-seeds <- mutate(Collection.Date=as.Date(Collection.Date,origin='2012-01-01'))
+seeds <- seeds %>% 
+  mutate(Collection.Date=as.Date(Collection.Date,origin='2012-01-01'))
 ```
 
 \normalsize
@@ -166,7 +166,7 @@ head(irisTemp,3) #Chooses rows matching logical criteria
 ```{r,echo=T,eval=T,message=F}
 head(iris,3)
 irisTemp <- mutate(iris,P.Width2=Petal.Width^2)
-head(irisTemp,3) #Squares Petal.Width
+head(irisTemp,3) #Squares Petal.Width, adds new variable
 ```
 
 ## Basic verbs - make new variables
@@ -175,7 +175,7 @@ head(irisTemp,3) #Squares Petal.Width
 
 ```{r,echo=T,eval=T,message=F}
 head(irisTemp,3)
-irisTemp <- mutate(iris,P.Width2=(Petal.Width^2)*2)
+irisTemp <- mutate(iris,Petal.Width=Petal.Width^2)
 head(irisTemp,3) #Alters variable in place
 ```
 
@@ -545,3 +545,10 @@ data.frame(conc=seq(50,1000,20)) %>%
 ::::
 
 :::
+
+
+## Happy wrangling! Yee-haw!
+
+```{r echo=FALSE, out.width='100%'}  
+  include_graphics('./primus.jpg',dpi=NA)
+```

@@ -1,5 +1,5 @@
 Notes for updating lectures:
-- Oct 1, 2020: Intro to R lecture
+* Oct 1, 2020: Intro to R lecture
   - Too long, took ~40 mins
   - First problem was fine, 2nd one probably too advanced (unless more examples shown)
   - Try to focus on _immediately_ practical techniques; programming must be immediately useful
@@ -11,23 +11,28 @@ Notes for updating lectures:
   - Things to add:
     - Example re: working directory for reading csv files
     - Replacement example (i.e. how do I replace value x in column y?)
-- Oct 8, 2020: Linear models lecture 1
+* Oct 8, 2020: Linear models lecture 1
   - OK length, took ~30 mins
   - Qs: how do we do this for 3+ variables? (Answer next week)
   - Talk along with bullet points, don't preempt (takes longer)
   - Exercise was OK, but make sure everyone is keeping up
-- Oct 15, 2020: Linear models lecture 2
+* Oct 15, 2020: Linear models lecture 2
   - OK time, took ~30 mins
   - Consider better example for independent effects example:
     - "a"
   - Consider better example for effects plot: maybe show a 3D plot so limits of plotting are clear?
-- Oct 23, 2020: Model validation
+* Oct 23, 2020: Model validation
   - A bit too long, 35-40 mins
   - Could probably chop out reference to GLMs (not necessary yet?)
-- Oct 29, 2020: ggplot
+* Oct 29, 2020: ggplot
   - OK time, about 30 mins
   - Might help to have staged exercises in the future (ie. learn a bit, code a bit, repeat), or even split into 2 lectures, simply due to the hierarchical nature of ggplot
   - People were VERY interested in maps! Future lecture?
+* Nov 5, 2020: dplyr/tidyr
+  - Took longer, maybe 50 mins in total. Probably should just plan for a longer time period, since the material is fairly heirarchical.
+  - Mini-exercises are good, but probably could be shorter and more compact if done in a lecture (would be OK as lab exercises, though)
+  - Live code demos would be good, esp. for multi-line pipes (hard to see what's going on in the middle of the pipe)
   
 Other ideas:
 - Could also do slightly (10 min) longer lecture, then assign "homework"
+- Need to mention somewhere that packages need to be re-loaded every time you restart R
