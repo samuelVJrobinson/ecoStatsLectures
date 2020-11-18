@@ -1,0 +1,225 @@
+---
+title: "Generalized Linear Models and Maximum Likelihood"
+subtitle: '"The trouble with normal is that it always gets worse"'
+author: "Samuel Robinson, Ph.D."
+date: "November 19, 2020"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggpubr)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+set.seed(123)
+
+#Functions
+logit <- function(x) log(x/(1-x))
+invLogit <- function(x) exp(x)/(1+exp(x))
+
+#Generate data that violate lm assumptions:
+n <- 100
+x <- runif(n,-10,10)
+yhat <- 1 - 0.2*x #Expected value
+y0 <- yhat + rnorm(n,0,2) #OK
+y1 <- rpois(n,exp(yhat))  #Poisson process
+y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+
+d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
+
+
+```
+
+
+## Motivation 
+
+What are Generalized Linear Models? (GLMs)
+
+- Meet the exponential family
+  - Normal, t, Binomial, Poisson
+  - Negative Binomial, Beta, Gamma
+- Probability and Likelihood
+- Tricksy hobbitses! 
+  - Zero-inflated models, occupancy models
+
+  
+## Problem: not everything is normal
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=5, fig.height=4} 
+ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+```{r, echo=FALSE, fig.width=5, fig.height=4} 
+ggplot(d1,aes(y2))+geom_histogram()+labs(y='Count')
+```
+
+:::: 
+
+:::: column
+
+```{r, echo=FALSE, fig.width=5, fig.height=5} 
+# ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
+plot(lm(y2~x,data=d1),which=2)
+```
+
+- Some types of data can never be transformed to make the residuals normal
+- Solution: __use the distribution that generates the data!__
+
+::::
+
+:::
+
+## But how do I know which distribution to use?
+
+```{r} 
+n <- 1000
+dists <- c('Normal','Binomial','Poisson','Gamma')
+data.frame(dist=factor(rep(dists,each=n),levels=dists),
+           x=c(rnorm(n,0,1),rbinom(n,10,0.25),rpois(n,2),rgamma(n,1,2))) %>% 
+  ggplot(aes(x=x))+geom_histogram()+facet_wrap(~dist,scales='free')
+```
+Time to meet the family!
+
+## The Normal Distribution (aka _Gaussian_)
+
+::: columns
+
+:::: column
+
+- Imagine many random + and - numbers added together
+- If you do this _many_ times:
+  - Most cancel out (somewhere around 0)
+  - Few are far away from 0 (tails of distribution)
+- Common in nature, because of many small + and - factors adding together
+  - e.g. Height is driven by many sets of genes
+
+::::
+
+:::: column
+
+[A Galton Board in action](https://thumbs.gfycat.com/QuaintTidyCockatiel-mobile.mp4): ![](galtonBoard.jpg)
+
+::::
+
+:::
+
+## The Normal Distribution - scary math!
+
+::: columns
+
+:::: column
+
+- 2 parameters: mean ($\mu$) and standard deviation ($\sigma$)
+
+\begin{equation*}
+p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\mu},\textcolor{red}{\sigma}) = \frac{1}{\textcolor{red}{\sigma}\sqrt{2\pi}}e^{-\frac{1}{2}(\frac{\textcolor{blue}{x}-\textcolor{darkturquoise}{\mu}}{\textcolor{red}{\sigma}})^2}
+\end{equation*}
+
+- Probability distribution function (PDF) for the Normal distribution
+- Tells you about the probability of getting some number _given_ $\mu$ and $\sigma$
+
+::::
+
+:::: column
+
+Example: what is the probability of getting a 4, if the mean is 5 and SD is 1?
+
+\begin{equation*}
+\begin{split}
+p(\textcolor{blue}{4}|\textcolor{darkturquoise}{5},\textcolor{red}{1}) = & \frac{1}{\textcolor{red}{1}\sqrt{2\pi}}e^{-\frac{1}{2}(\frac{\textcolor{blue}{4}-\textcolor{darkturquoise}{5}}{1})^2}\\
+= \sim & 0.24
+\end{split}
+\end{equation*}
+
+In R, this is easy:
+
+```{r, echo=TRUE}
+#d stands for "density"
+dnorm(x=4,mean=5,sd=1)
+```
+
+::::
+
+:::
+
+## The Normal/Gaussian Distribution
+
+::: columns
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+data.frame(x=c(0:10)) %>% 
+  ggplot(aes(x=x))+stat_function(fun=dnorm,n=100,args=list(mean=5,sd=1))+
+  geom_vline(xintercept=4,linetype='dashed',color='blue')+
+  annotate('text',x=3,y=dnorm(4,5,1),label=round(dnorm(4,5,1),3),color='blue')+
+  annotate('text',x=7.5,y=dnorm(4,5,1)*1.1,label=expression(mu == 5),colour='darkturquoise',size=6)+
+  annotate('text',x=7.5,y=dnorm(4,5,1)*1,label=expression(sigma==1),colour='red',size=6)+
+  labs(y=TeX('$p(x|\\mu,\\sigma)$'))+
+  ylim(0,0.4)
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
+data.frame(x=c(0:10)) %>% 
+  ggplot(aes(x=x))+stat_function(fun=dnorm,n=100,args=list(mean=5,sd=3))+
+  geom_vline(xintercept=4,linetype='dashed',color='blue')+
+  annotate('text',x=3,y=dnorm(4,5,3)+0.01,label=round(dnorm(4,5,3),3),color='blue')+
+  annotate('text',x=7.5,y=dnorm(4,5,3)*1.2,label=expression(mu == 5),colour='darkturquoise',size=6)+
+  annotate('text',x=7.5,y=dnorm(4,5,3)*1,label=expression(sigma==3),colour='red',size=6)+
+  labs(y=TeX('$p(x|\\mu,\\sigma)$'))+
+  ylim(0,0.4)
+```
+
+::::
+
+:::
+
+- Probability of x changes with $\mu$ and $\sigma$
+- Left: $\sigma = 1$, Right: $\sigma = 3$
+
+## The Binomial Distribution
+
+::: columns
+
+:::: column
+
+- Imagine you have 10 coins, and you flip them all
+- If you do this _many_ times:
+  - Most will be about 5 heads, 5 tails
+  - Few will be 1 head, 9 tails (or reverse)
+- Common in nature where outcomes are binary
+  - e.g. 10 seeds from a plant, how many will germinate?
+
+::::
+
+:::: column
+
+```{r, fig.height=6, fig.width=5}
+data.frame(x=rbinom(1000,10,0.5)) %>% group_by(x) %>% summarize(n=n()) %>%
+  ggplot(aes(x=factor(x),y=n))+geom_col()+
+  labs(x='Number of heads per 10 flips',y='Frequency')
+```
+
+::::
+
+:::
