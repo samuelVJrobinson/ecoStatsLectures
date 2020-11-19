@@ -1,5 +1,5 @@
 ---
-title: "Generalized Linear Models"
+title: "Some Common Non-Normal Distributions"
 subtitle: '"The trouble with normal is that it always gets worse"'
 author: "Samuel Robinson, Ph.D."
 date: "November 19, 2020"
@@ -22,6 +22,7 @@ library(ggpubr)
 library(knitr)
 library(kableExtra)
 library(latex2exp)
+library(rmutil) #Beta-binomial
 
 set.seed(123)
 
@@ -43,17 +44,16 @@ d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
 ```
 
 
-## Motivation 
+## Outline 
 
-What are Generalized Linear Models? (GLMs)
+- Meet (some of) the exponential family!
+  - Normal
+  - Binomial
+  - Poisson
+  - Beta-Binomial
+  - Negative Binomial
+- "Play time"
 
-- Meet the exponential family
-  - Normal, Binomial, Poisson
-  - Negative Binomial, Beta, Gamma
-- Tricksy hobbitses! 
-  - Zero-inflated models, occupancy models
-
-  
 ## Problem: not everything is normal
 
 ::: columns
@@ -88,14 +88,18 @@ plot(lm(y2~x,data=d1),which=2)
 
 ## But how do I know which distribution to use?
 
+![](distributions.png)
+[_And if thou gaze long into an abyss, the abyss will also gaze into thee_ - F. Nietzsche](http://www.stat.rice.edu/~dobelman/courses/texts/leemis.distributions.2008amstat.pdf)
+
+## Let's take a look at some _common_ ones!
 ```{r} 
 n <- 1000
-dists <- c('Normal','Binomial','Poisson','Gamma')
+dists <- c('Normal','Binomial','Poisson','Bernoulli')
 data.frame(dist=factor(rep(dists,each=n),levels=dists),
-           x=c(rnorm(n,0,1),rbinom(n,10,0.25),rpois(n,1),rgamma(n,1,2))) %>% 
-  ggplot(aes(x=x))+geom_histogram(bins=30)+facet_wrap(~dist,scales='free')
+           x=c(rnorm(n,0,1),rbinom(n,10,0.25),rpois(n,1),rbinom(n,1,0.6))) %>% 
+  ggplot(aes(x=x))+geom_histogram(bins=30)+facet_wrap(~dist,scales='free')+labs(x=NULL,y=NULL)
 ```
-Time to meet the family!
+Time to meet the Exponential family!
 
 ## The Normal Distribution (aka _Gaussian_)
 
@@ -216,10 +220,10 @@ data.frame(x=c(0:10)) %>%
 :::: column
 
 ```{r, fig.height=6, fig.width=5}
-data.frame(x=factor(rbinom(1000,10,0.5))) %>% count(x) %>%
-  ggplot(aes(x=factor(x),y=n))+geom_col()+
+data.frame(x=0:10) %>% mutate(d=dbinom(x,10,0.5)) %>% 
+  ggplot(aes(x=x,y=d))+geom_col()+
   labs(x='Number of heads per 10 flips',y='Frequency')+
-  scale_x_discrete(breaks=as.character(-1:10))
+  scale_x_continuous(breaks=-1:10)
 ```
 
 ::::
@@ -338,9 +342,9 @@ data.frame(x=c(0:15)) %>% mutate(d=dbinom(x,n,phi)) %>%
 :::: column
 
 ```{r, fig.height=6, fig.width=5}
-data.frame(x=factor(rpois(365,0.5))) %>% count(x) %>%
-  ggplot(aes(x=factor(x),y=n))+geom_col()+
-  labs(x='Letters per day',y='Frequency')
+data.frame(x=0:8) %>% mutate(d=dpois(x,1)) %>% 
+  ggplot(aes(x=x,y=d))+geom_col()+
+  labs(x='Letters per day',y='Density')
 ```
 
 - Equivalent to Binomial distribution, where $N$ is unknown
@@ -434,6 +438,52 @@ data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>%
 - Probability of x counts changes with $\lambda$
 
 
+
+## More complications:
+
+- The Normal distribution has a parameter for the mean and SD, but...
+- What about the Binomial and Poisson distributions?
+  - Binomial: mean $= Np$, SD $= \sqrt{Np(1-p)}$
+  - Poisson: mean $= \lambda$, SD $= \sqrt{\lambda}$
+- What if our data have additional variance?
+  - _Beta Binomial_ and _Negative Binomial_ distributions
+  
+## The Beta Binomial Distibution
+
+::: columns
+
+:::: column
+
+- Many "coin-flip" processes have longer tails than standard Binomial
+  - e.g. numbers of males/females in families
+- Beta-binomial adds additional dispersion to coin flip process
+- 2 parameters: $\phi$ and $s$ (if $s$ is large, similar to Binomial) 
+  - Also requires: $N$
+  
+```{r, eval=FALSE, echo=TRUE}
+#Extra distributions
+library(rmutil) 
+dbetabinom(x,m=phi,size=N,s=5)
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=6, fig.width=5}
+n <- 10
+phi <- 0.5
+data.frame(x=0:10) %>% mutate(bin=dbinom(x,size=n,prob=phi),betabin=dbetabinom(x,size=n,m=phi,s=5)) %>% 
+  pivot_longer(cols=bin:betabin,names_to='dist',values_to='d') %>% 
+  mutate(dist=factor(dist,levels=c('bin','betabin'),labels=c('Binomial','Beta Binomial (s=5)'))) %>% 
+  ggplot(aes(x=x,y=d))+geom_col()+facet_wrap(~dist,ncol=1) +
+  labs(x='Number of heads per 10 flips',y='Density')+scale_x_continuous(breaks=-1:10)
+```
+
+::::
+
+:::
+
 ## The Negative Binomial Distribution
 
 ::: columns
@@ -441,106 +491,74 @@ data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>%
 :::: column
 
 Unfortunately, _almost nothing_ in ecology actually follows a Poisson distribution 
-  - In a Poisson distribution, the mean = SD, but...
-  - In reality, many processes have extra __dispersion__
+
   - Negative Binomial is similar to a Poisson, but can have longer tails
-  - Also called: _Polya_ distibution (`nbinom2` in most GLM software)
+  - Also called: _Polya_ distibution (`nbinom2` in many GLM commands)
+  - Parameters: $\mu$ and $\theta$ (if $\theta$ is large, close to Poisson)
+  
+```{r,eval=FALSE,echo=TRUE}
+#size = theta parameter
+dnbinom(x,mu,size=1) 
+```
 
 ::::
 
 :::: column
 
 ```{r, fig.height=6, fig.width=5}
-n <- 1000
-data.frame(x=c(rnbinom(n,mu=2,size=1),rnbinom(n,mu=2,size=0.1)),dist=rep(c('theta==1','theta==0.1'),each=n)) %>% 
-  ggplot(aes(x=x))+geom_histogram(bins=10)+facet_wrap(~dist,ncol=1,labeller=label_parsed)+
-  labs(x='Letters per day',y='Frequency')
-```
-
-::::
-
-:::
-
-## Negative Binomial Distribution - scary math!
-
-::: columns
-
-:::: column
-
-- 2 parameter: rate parameter ($\mu$) and dispersion ($\theta$)
-
-\begin{equation*}
-p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\lambda}) = \frac{\textcolor{darkturquoise}{\lambda} ^{\textcolor{blue}{x}} e ^{-\textcolor{darkturquoise}{\lambda}}}{\textcolor{blue}{x}!}
-\end{equation*}
-
-- Probability mass function (PMF)
-- Tells you about the probability of getting $\textcolor{blue}{x}$ counts _given_ $\lambda$ 
-
-::::
-
-:::: column
-
-Example: what is the probability of getting 2 counts, if $\textcolor{darkturquoise}{\lambda}$ is 1?
-
-\small
-
-\begin{equation*}
-\begin{split}
-p(\textcolor{blue}{2}|\textcolor{darkturquoise}{1}) = & \frac{\textcolor{darkturquoise}{1} ^{\textcolor{blue}{2}} e ^{-\textcolor{darkturquoise}{1}}}{\textcolor{blue}{2}!} \\
-= &\sim 0.18
-\end{split}
-\end{equation*}
-
-\normalsize
-
-In R, this is easy:
-
-```{r, echo=TRUE}
-dpois(x=2,lambda=1)
-```
-
-::::
-
-:::
-
-## The Poisson Distribution
-
-::: columns
-
-:::: column
-
-```{r, fig.height=5, fig.width=5}
-nCounts <- 2
 lambda <- 1
-data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>% 
-  ggplot(aes(x=factor(x),y=d))+
-  geom_point()+
-  geom_vline(xintercept=nCounts+1,linetype='dashed',color='blue')+
-  annotate('text',x=nCounts+1.5,y=dpois(nCounts,lambda),label=round(dpois(nCounts,lambda),3),color='blue')+
-  annotate('text',x=nCounts+2,y=dpois(nCounts,lambda)*1.8,label=paste('lambda == ',lambda),colour='darkturquoise',size=6,parse=TRUE)+
-  labs(y=TeX('$p(x|\\lambda)$'),x='Number of successes')+
-  ylim(0,0.4)
-```
-
-::::
-
-:::: column
-
-```{r, fig.height=5, fig.width=5}
-nCounts <- 2
-lambda <- 3
-data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>% 
-  ggplot(aes(x=factor(x),y=d))+
-  geom_point()+
-  geom_vline(xintercept=nCounts+1,linetype='dashed',color='blue')+
-  annotate('text',x=nCounts+1.5,y=dpois(nCounts,lambda),label=round(dpois(nCounts,lambda),3),color='blue')+
-  annotate('text',x=nCounts+2,y=dpois(nCounts,lambda)*1.5,label=paste('lambda == ',lambda),colour='darkturquoise',size=6,parse=TRUE)+
-  labs(y=TeX('$p(x|\\lambda)$'),x='Number of successes')+
-  ylim(0,0.4)
+data.frame(x=0:10) %>% mutate(pois=dpois(x,lambda=lambda),nb=dnbinom(x,mu=lambda,size=1)) %>% 
+  pivot_longer(cols=pois:nb,names_to='dist',values_to='d') %>% 
+  mutate(dist=factor(dist,levels=c('pois','nb'),labels=c('Poisson','Negative Binomial (theta = 1)'))) %>% 
+  ggplot(aes(x=x,y=d))+geom_col()+facet_wrap(~dist,ncol=1) +
+  labs(x='Number of counts',y='Density')
 ```
 
 ::::
 
 :::
 
-- Probability of x counts changes with $\lambda$
+## Summary of Common "Starter" Distributions
+
+- Continuous data, spanning - or + numbers:
+  - Normal (transformed or regular)
+- Count data
+  - Poisson, Negative Binomial
+- Count data of successes _and_ failures
+  - Binomial + Beta Binomial
+
+These are by _no means_ the only useful distributions, but are fairly common
+
+## A Challenger Approaches! (Part 1)
+
+Let's say that you've collected data at 2 different sites. Which distributions would you start with for the following data?
+
+- Bat weights 
+- Total bats per box (or small nest)
+- Number of male and female bats
+- Number of pups per female bat
+- Record of occupied/unoccupied nests
+- Size of trees (DBH or height)
+
+## A Challenger Approaches! (Part 2)
+
+Now that you've figured out which distribution, try simulating some data from each site, and plot it!
+
+- Bat weights: _Normal_
+  - `rnorm(n,mean,sd)`
+- Total bats per box: _Poisson or NB_
+  - `rpois(n,lambda)` or `rnbinom(n,mu,size)`
+- Number of male/female bats: _Binomial or Beta Binomial_
+  - `rbinom(n, size, prob)` or `rbetabinom(n,size,m,s)`
+- Number of pups per female bat: _Poisson or NB_
+  - See above
+- Record of occupied/unoccupied nests: _Binomial_
+  - `rbinom(n, 1, prob)` aka. _Bernoulli_ distribution
+- Size of trees (DBH or height): _log-Normal_
+  - `exp(rnorm(n,mean,sd))`
+
+## Distributional pillows
+
+Christmas gifts for the huge nerds in your life
+
+![](pillows.jpg)
