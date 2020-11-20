@@ -32,6 +32,12 @@ Notes for updating lectures:
   - Took longer, maybe 50 mins in total. Probably should just plan for a longer time period, since the material is fairly heirarchical.
   - Mini-exercises are good, but probably could be shorter and more compact if done in a lecture (would be OK as lab exercises, though)
   - Live code demos would be good, esp. for multi-line pipes (hard to see what's going on in the middle of the pipe)
+* Nov 19, 2020: intro to common distributions
+  - A bit too long, ~40 mins, but exercise was fairly short
+  - "What distribution should I use" exercise was OK, but binomial vs poisson was kind of tricky - remind them about number of trials for binomial
+  - Could cut down on math material, and emphasize how the distributions look using different sets of parameters
+  - Might help to do live coding demo at the end, since getting generated data into a dataframe is a bit of a stretch for some
+  - "Homework" idea: think of some of the things you've measured, and figure out what distribution they might follow. 
   
 Other ideas:
 - Could also do slightly (10 min) longer lecture, then assign "homework"
