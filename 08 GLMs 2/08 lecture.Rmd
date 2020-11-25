@@ -1,0 +1,66 @@
+---
+title: "Maximum likelihood and GLMs"
+subtitle: "Well, how did I get here?"
+author: "Samuel Robinson, Ph.D."
+date: "November 26, 2020"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggpubr)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+set.seed(123)
+
+#Functions
+logit <- function(x) log(x/(1-x))
+invLogit <- function(x) exp(x)/(1+exp(x))
+
+#Generate data that violate lm assumptions:
+n <- 100
+x <- runif(n,-10,10)
+yhat <- 1 - 0.2*x #Expected value
+y0 <- yhat + rnorm(n,0,2) #OK
+y1 <- rpois(n,exp(yhat))  #Poisson process
+y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+
+d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
+
+
+```
+
+
+## Outline 
+
+- Maximum likelihood
+  - A way to think about data
+  - Likelihood vs Probability
+- Generalized linear models 
+  - Link functions
+  - Linear model -> Function
+
+## How is our data made?
+
+Making data can be thought of as a _factory_
+
+- Input: __parameters__ (the things that influence our data)
+- Factory: __PDF__ (the process that makes the data)
+- Output: __data__ (the things we actually see)
+
+![](genProcess.png)
+
+## Likelihood
+
