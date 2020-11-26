@@ -299,7 +299,7 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
 - Fit a model to each of their data (found in `batDatGLM.csv`) using a GLM
   - `batCounts` should be modeled using a Poisson GLM, and `batPres` should use a Binomial GLM 
   - Terms to include: `city` and `size` (no interaction)
-- How do the models look? Compare the coefficients and see if they are different.
+- How do the models look? Compare the coefficients and see if they are different
   - Bonus: make a partial regression plot of terms in the Poisson GLM
 
 ## Model results
