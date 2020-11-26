@@ -1,0 +1,90 @@
+---
+title: "Maximum likelihood and GLMs"
+subtitle: "Well, how did I get here?"
+author: "Samuel Robinson, Ph.D."
+date: "November 26, 2020"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  - \usepackage{tikz}
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+#Trick to get smaller R code size with out resorting to LaTeX text sizes
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
+library(tidyverse)
+theme_set(theme_classic())
+library(ggpubr)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+set.seed(123)
+
+#Functions
+logit <- function(x) log(x/(1-x))
+invLogit <- function(x) exp(x)/(1+exp(x))
+
+#Generate data that violate lm assumptions:
+n <- 100
+x <- runif(n,-10,10)
+yhat <- 1 - 0.2*x #Expected value
+y0 <- yhat + rnorm(n,0,2) #OK
+y1 <- rpois(n,exp(yhat))  #Poisson process
+y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+
+d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
+
+
+```
+
+## Outline
+
+- How to fit non-Bernoulli Binomial GLMs
+- Residual checks - Deviance residuals
+- Overdispersion
+  - Negative binomial, Beta binomial
+  - Zero-inflation - maybe a later lecture, along with occupancy models?
+- Model selection
+  - log-likelihood and AIC
+
+## R actually uses _log_ Likelihood
+
+::: columns
+
+:::: column
+
+- Probabilities multiplied together quickly become _very small_
+- Computers can't distinguish between extremely big or small numbers
+- Therefore, it uses _log-likelihoods_ (also easier to calculate)
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2}
+ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
+
+```
+
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2}
+
+ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
+
+```
+
+::::
+
+:::
