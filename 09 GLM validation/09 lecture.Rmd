@@ -58,6 +58,7 @@ d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
   - Negative binomial, Beta binomial
   - Zero-inflation - maybe a later lecture, along with occupancy models?
 - Model selection
+  - ML vs REML
   - log-likelihood and AIC
 
 ## R actually uses _log_ Likelihood

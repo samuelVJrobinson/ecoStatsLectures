@@ -1,6 +1,6 @@
 ---
 title: "Maximum likelihood and GLMs"
-subtitle: "Well, how did I get here?"
+subtitle: '"Never tell me the odds!" - _Han Solo_'
 author: "Samuel Robinson, Ph.D."
 date: "November 26, 2020"
 output: 
@@ -159,7 +159,7 @@ Wait... our estimate should be 0.666 (2/3), not `r round(coef(mod1),3)`!
   - Binomial: $0 < \phi < 1$ 
   - Poisson: $0 < \lambda$
 - GLMs use _link functions_ to map values onto the appropriate parameter range  
-  - Normal: Identity
+  - Normal: Identity (i.e. $\times 1$)
   - Binomial: Logit
   - Poisson/NB: Log
 - $logit(0.693) = 0.666$, so the GLM actually got it right!
@@ -193,7 +193,7 @@ ggplot() + geom_function(fun=log,n=1000) + xlim(0,10) + labs(y='log(x)',x='x')+
 
 :::
 
-These functions map parameter values from $-\infty$ to $+\infty$ onto the appropriate range (0-1 or 0-$\infty$) 
+- These functions map parameter values from the appropriate range (0-1 or 0-$\infty$) onto $-\infty$ to $+\infty$
 
 ## Why do we bother with these link function?
 
@@ -259,7 +259,7 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 
 \begin{equation*} 
 \begin{split}
-\textcolor{orange}{logit(\hat{\phi})} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
+logit(\textcolor{orange}{\hat{\phi}}) & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
 flips & \sim Binomial(\textcolor{orange}{\hat{\phi}})
 \end{split}
 \end{equation*}
@@ -268,7 +268,7 @@ flips & \sim Binomial(\textcolor{orange}{\hat{\phi}})
 
 :::
 
-\center __Instead of directly finding $\phi$, R now looks for ML estimates of the coefficients $\textcolor{blue}{b_0}$, $\textcolor{blue}{b_1}$, ... $\textcolor{blue}{b_i}$__
+\center Instead of finding $\phi$, __R finds the coefficients ($\textcolor{blue}{b_0}$, $\textcolor{blue}{b_1}$ ... $\textcolor{blue}{b_i}$) that create $\phi$__
 
 ## How do I fit GLMs in R?
 
@@ -280,7 +280,7 @@ mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') #Fit a binomi
 summary(mod_binomial) 
 ```
 
-Dispersion and Deviance Residuals will be discussed later...
+Dispersion and deviance will be discussed later...
 
 ## How do I get partial effects plots?
 
