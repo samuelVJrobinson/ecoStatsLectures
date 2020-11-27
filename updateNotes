@@ -38,6 +38,13 @@ Notes for updating lectures:
   - Could cut down on math material, and emphasize how the distributions look using different sets of parameters
   - Might help to do live coding demo at the end, since getting generated data into a dataframe is a bit of a stretch for some
   - "Homework" idea: think of some of the things you've measured, and figure out what distribution they might follow. 
+* Nov 26, 2020: ML and basic GLM fitting
+  - ~30 minutes; felt about right in terms of timing (even with distractions)
+  - I haven't taught the t-distribution, but I'm not sure that it's completely necessary right now
+  - Partial effects plots were taught ~1 month ago, so review/reminder would be good before assigning them to do it again
+    - This would be fine IF dplyr/ggplot were taught at the beginning of the course, rather than in between stats lectures
+  - I think this is useful material, as ML will come up later, but...
+    - Could also just teach link functions + GLM syntax, and just say that R finds the coefficients "somehow"
   
 Other ideas:
 - Could also do slightly (10 min) longer lecture, then assign "homework"

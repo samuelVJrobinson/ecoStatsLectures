@@ -60,6 +60,7 @@ d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
 - Model selection
   - ML vs REML
   - log-likelihood and AIC
+- Ladies and gentlemen... start your models! (Models from last week)
 
 ## R actually uses _log_ Likelihood
 
