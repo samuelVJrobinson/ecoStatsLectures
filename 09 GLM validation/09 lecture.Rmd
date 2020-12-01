@@ -1,6 +1,6 @@
 ---
-title: "Maximum likelihood and GLMs"
-subtitle: "Well, how did I get here?"
+title: "GLMs: Validation"
+subtitle: "Models behaving badly: Part 2!"
 author: "Samuel Robinson, Ph.D."
 date: "November 26, 2020"
 output: 
@@ -24,12 +24,13 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 })
 
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
+library(MASS) #glm.nb
 library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
-library(knitr)
-library(kableExtra)
-library(latex2exp)
+# library(knitr)
+# library(kableExtra)
+# library(latex2exp)
 
 set.seed(123)
 
@@ -43,24 +44,189 @@ x <- runif(n,-10,10)
 yhat <- 1 - 0.2*x #Expected value
 y0 <- yhat + rnorm(n,0,2) #OK
 y1 <- rpois(n,exp(yhat))  #Poisson process
-y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+y2 <- rnbinom(n,mu=exp(yhat),size=1)  #NB process
+# y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
 
 d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
-
+rm(n,x,y0,y1,y2,yhat)
 
 ```
 
-## Outline
+## Motivation
 
-- How to fit non-Bernoulli Binomial GLMs
-- Residual checks - Deviance residuals
-- Overdispersion
-  - Negative binomial, Beta binomial
-  - Zero-inflation - maybe a later lecture, along with occupancy models?
-- Model selection
+- Are my model results reliable?
+  - Residual checks
+  - Overdispersion
+  - Zero-inflation
+- Model selection - which terms should I use?
   - ML vs REML
-  - log-likelihood and AIC
-- Ladies and gentlemen... start your models! (Models from last week)
+  - log-likelihood, $\chi^2$ tests, and AIC
+- Other things
+  - Binomial GLMs with >1 trial
+  - Offsets in count models
+  - $R^2$ for GLMs
+- Show-and-tell!
+
+## Problem 1: Residual checks
+
+::: columns
+
+:::: column
+
+- In LMs, residual checks are used to make sure that:
+1. Terms are linearly related
+2. Generating process is valid
+3. Variance is constant
+- "Regular" residuals don't work this way for GLMs!
+
+```{r}
+m1 <- glm(y1~x,data=d1,family='poisson')
+plot(y1~x,data=d1,pch=19)
+lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
+# x, yhat, y
+resNo <- 81 #Line number to use as example
+lines(rep(d1$x[resNo],2),c(exp(d1$yhat[resNo]),d1$y1[resNo]),col='red')
+r1 <- d1$y1[resNo] - exp(d1$yhat[resNo])
+text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
+     labels=paste('Residual = +',round(r1,3)),adj=-0.1,col='red',cex=3)
+```
+
+::::
+
+:::: column
+
+```{r}
+plot(predict(m1),residuals(m1,type='response'),xlab='Predicted value',ylab='Residuals');abline(h=0,lty='dashed')
+points(x=predict(m1)[resNo],y=residuals(m1,type='response')[resNo],col='black',pch=19)
+lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='response')[resNo]),col='red')
+```
+
+```{r}
+colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
+pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
+qqnorm(residuals(m1,type='response'),col=colVec,pch=pchVec); qqline(residuals(m1,type='response')) 
+
+```
+
+
+:::: 
+
+:::
+
+## There are _many_ kinds of residuals!
+
+In addition to _response_ (regular) residuals there are:
+
+- Working residuals
+- Pearson residuals
+- __Deviance residuals__
+
+Deviance residuals use _likelihood_:
+
+\begin{equation*}
+r_{dev} = sign(y-\hat{y})\sqrt{2(log(L(y|\theta_s))-log(L(y|\theta))))}
+\end{equation*}
+
+- This may look scary, but R does this all for you!
+- These are analogous to regular residuals in LMs
+- For more about the different kinds of residuals, see [here](https://www.datascienceblog.net/post/machine-learning/interpreting_generalized_linear_models/)
+
+## Solution: use deviance residuals for GLMs
+
+::: columns
+
+:::: column
+
+Keep in mind: 
+
+- Residuals from GLMs will never be as "pretty" as those from LMs
+- _Especially_ true for:
+  - Binomial GLMs
+  - Poisson/Negative Binomial GLMs with many zeros
+
+```{r}
+m1 <- glm(y1~x,data=d1,family='poisson')
+plot(y1~x,data=d1,pch=19)
+lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
+# x, yhat, y
+resNo <- 81 #Line number to use as example
+lines(rep(d1$x[resNo],2),c(exp(d1$yhat[resNo]),d1$y1[resNo]),col='red')
+r1 <- d1$y1[resNo] - exp(d1$yhat[resNo])
+text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
+     labels=paste('Residual = +',round(r1,3)),adj=-0.1,col='red',cex=3)
+```
+
+::::
+
+:::: column
+
+```{r}
+plot(predict(m1),residuals(m1,type='deviance'),xlab='Predicted value',ylab='Deviance Residuals');abline(h=0,lty='dashed')
+points(x=predict(m1)[resNo],y=residuals(m1,type='deviance')[resNo],col='black',pch=19)
+lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='deviance')[resNo]),col='red')
+```
+
+```{r}
+colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
+pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
+qqnorm(residuals(m1,type='deviance'),col=colVec,pch=pchVec); qqline(residuals(m1,type='deviance')) 
+
+```
+
+
+:::: 
+
+:::
+
+## Problem 2: Overdispersion
+
+::: columns
+
+:::: column
+
+- Binomial and Poisson families have __no__ variance term (e.g. _SD_).
+- Sometimes this assumption doesn't work!
+- This is very common for Poisson models
+
+::::
+
+:::: column
+
+```{r}
+m2 <- glm(y2~x,data=d1,family='poisson')
+
+do.call('cbind',predict(m2,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>% 
+  mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>% 
+  mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>% 
+  ggplot(aes(x=x))+geom_point(aes(y=y))+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))
+```
+
+Example: data are much more variable than the predictions from the model
+
+:::: 
+
+:::
+
+## Problem: Overdispersion
+
+```{r, size='tiny'}
+summary(m1)
+```
+
+- In a regular Poisson or Binomial model, Residual deviance $\div$ Degrees of Freedom should be $\sim$ 1
+- Residual deviance is the sum of all deviance from the model
+- This particular model is OK (meets assumption of Poisson GLM)
+
+## Problem: Overdispersion
+
+```{r, size='tiny'}
+m2 <- glm(y2~x,data=d1,family='poisson')
+summary(m2)
+```
+
+- This one does __NOT__ meet the assumptions of a Poisson GLM!
 
 ## R actually uses _log_ Likelihood
 
@@ -77,6 +243,13 @@ d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
 :::: column
 
 ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2}
+#Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1)
+llfun2 <- function(lphi){
+  phi <- invLogit(lphi)
+  ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi)
+  return(ll)
+} 
+
 ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
 
 ```
