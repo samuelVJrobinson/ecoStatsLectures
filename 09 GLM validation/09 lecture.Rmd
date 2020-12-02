@@ -2,7 +2,7 @@
 title: "GLMs: Validation"
 subtitle: "Models behaving badly: Part 2!"
 author: "Samuel Robinson, Ph.D."
-date: "November 26, 2020"
+date: "December 3, 2020"
 output: 
   beamer_presentation:
     theme: "default"
@@ -10,7 +10,8 @@ output:
     highlight: "tango"
 df_print: kable
 header-includes: 
-  - \usepackage{tikz}
+  - \usepackage{tikzit}
+  - \input{styles.tikzstyles}
   - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
   - \useinnertheme{circles}
 ---
@@ -28,7 +29,7 @@ library(MASS) #glm.nb
 library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
-# library(knitr)
+library(knitr)
 # library(kableExtra)
 # library(latex2exp)
 
@@ -217,7 +218,7 @@ summary(m1)
 
 - In a regular Poisson or Binomial model, Residual deviance $\div$ Degrees of Freedom should be $\sim$ 1
 - Residual deviance is the sum of all deviance from the model
-- This particular model is OK (meets assumption of Poisson GLM)
+- This model looks OK (`r round(m1$deviance,2)` $\div$ `r round(m1$df.residual,2)` = `r with(m1, round(deviance/df.residual,2))`)
 
 ## Problem: Overdispersion
 
@@ -226,7 +227,94 @@ m2 <- glm(y2~x,data=d1,family='poisson')
 summary(m2)
 ```
 
-- This one does __NOT__ meet the assumptions of a Poisson GLM!
+- This model does __not__ look OK (`r round(m2$deviance,2)` $\div$ `r round(m2$df.residual,2)` = `r with(m2, round(deviance/df.residual,2))`)
+- Generated using Negative Binomial, but fit to Poisson
+
+## Causes
+
+Overdispersion can be caused by different things:
+
+- Using the wrong probability distribution
+  - e.g. Poisson, but should be Negative Binomial
+- Lots of zeros in count data
+  - e.g. Very short observation period
+- Leaving out an important term
+  - e.g. An important _interaction_ term was omitted
+- Random effects\footnotemark not accounted for
+  - e.g. Data collected at different sites, but ignored
+  
+\footnotetext{Random effects discussed later}
+
+## Solutions for overdispersion
+
+Try the following (in this order):
+
+1. Consider terms that may have been left out
+    1. Fixed effects
+    2. Random effects
+2. Try distributions that account for overdispersion
+    1. Negative Binomial, Beta Binomial, Zero-inflated Poisson\footnotemark 
+    2. Quasi-binomial\footnotemark[\value{footnote}] and quasi-poisson\footnotemark[\value{footnote}]
+    3. Transform counts to presence/absence
+3. Lower your expectations, and use a lower critical p-value (e.g. 0.01 instead of 0.05)
+4. Design a better study :(
+
+\footnotetext{These can be annoying to deal with, so avoid if possible}
+
+## Zero-inflation: drunk monks
+
+An analogy: 
+
+1. Monks at a monastary make copies of manuscripts. Most days they make very few (0 or 1), but occasionally they make many (2-5)
+2. Some days they decide to try out the beer that's been brewing in the cellar! No manuscripts get made on those days.
+3. The number of manuscripts made (per day) follows a _zero-inflated Poisson distribution_
+
+This is _mixture_ of a Poisson and a Binomial:
+
+<!-- \begin{equation*} -->
+<!-- ZIPoisson(y | \lambda, \phi) = -->
+<!-- \begin{cases} -->
+<!-- Poisson(0|\lambda)\text{ OR }Binomial(0|\phi) & \text{if } y = 0 \\ -->
+<!-- Poisson(y|\lambda) & \text{if } y > 0 -->
+<!-- \end{cases} -->
+<!-- \end{equation*} -->
+
+\begin{tikzpicture}
+	\begin{pgfonlayer}{nodelayer}
+		\node [style=rectangle] (0) at (-8.25, 0) {Binomial ($\phi$)};
+		\node [style=rectangle] (5) at (-3.75, 1) {No work};
+		\node [style=rectangle] (6) at (-3.75, -1) {Work};
+		\node [style=rectangle] (8) at (0.5, -1) {Poisson ($\lambda$)};
+		\node [style=invisRect] (9) at (-8.5, 1.5) {Get drunk?};
+		\node [style=invisRect] (10) at (1.75, -3.25) {};
+		\node [style=invisRect] (11) at (7, 1) {0 manuscripts};
+		\node [style=invisRect] (12) at (7, -1) {1+ Manuscripts};
+	\end{pgfonlayer}
+	\begin{pgfonlayer}{edgelayer}
+		\draw [style=oneWay] (0) to (6);
+		\draw [style=oneWay] (6) to (8);
+		\draw [style=oneWay] (0) to (5);
+		\draw [style=oneWay] (5) to (11);
+		\draw [style=oneWay] (8) to (12);
+		\draw [style=oneWay] (8) to (11);
+	\end{pgfonlayer}
+\end{tikzpicture}
+
+
+## Zero-inflation: graphical model
+
+```{r, fig.width=5, fig.height=5}
+n <- 200
+data.frame(p=rpois(n,2),zi=rbinom(n,1,0.1)) %>% 
+  mutate(proc=ifelse(zi==1,'Extra Zeros','Poisson'),p=ifelse(zi==1,0,p)) %>% 
+  group_by(proc,p) %>% count() %>% ungroup() %>% 
+  mutate(proc=factor(proc,levels=c('Extra Zeros','Poisson'))) %>% 
+  ggplot(aes(x=factor(p)))+geom_col(aes(y=n,fill=proc))+
+  labs(x='Counts',y='Frequency',fill='Process')+scale_fill_manual(values=c('red','black'))+
+  theme(legend.position = 'bottom')
+
+```
+
 
 ## R actually uses _log_ Likelihood
 

@@ -1,0 +1,20 @@
+\begin{tikzpicture}
+	\begin{pgfonlayer}{nodelayer}
+		\node [style=rectangle] (0) at (-8.25, 0) {Binomial ($\phi$)};
+		\node [style=rectangle] (5) at (-3.75, 1) {No work};
+		\node [style=rectangle] (6) at (-3.75, -1) {Work};
+		\node [style=rectangle] (8) at (0.5, -1) {Poisson ($\lambda$)};
+		\node [style=invisRect] (9) at (-8.5, 1.5) {Get drunk?};
+		\node [style=invisRect] (10) at (1.75, -3.25) {};
+		\node [style=invisRect] (11) at (7, 1) {0 manuscripts};
+		\node [style=invisRect] (12) at (7, -1) {1+ Manuscripts};
+	\end{pgfonlayer}
+	\begin{pgfonlayer}{edgelayer}
+		\draw [style=oneWay] (0) to (6);
+		\draw [style=oneWay] (6) to (8);
+		\draw [style=oneWay] (0) to (5);
+		\draw [style=oneWay] (5) to (11);
+		\draw [style=oneWay] (8) to (12);
+		\draw [style=oneWay] (8) to (11);
+	\end{pgfonlayer}
+\end{tikzpicture}
