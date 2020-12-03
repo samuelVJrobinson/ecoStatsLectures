@@ -60,8 +60,8 @@ rm(n,x,y0,y1,y2,yhat)
   - Overdispersion
   - Zero-inflation
 - Model selection - which terms should I use?
-  - ML vs REML
   - log-likelihood, $\chi^2$ tests, and AIC
+  - ML vs REML
 - Other things
   - Binomial GLMs with >1 trial
   - Offsets in count models
@@ -279,13 +279,13 @@ This is _mixture_ of a Poisson and a Binomial:
 <!-- \end{cases} -->
 <!-- \end{equation*} -->
 
-\begin{tikzpicture}
+\begin{tikzpicture}[scale=0.5]
 	\begin{pgfonlayer}{nodelayer}
 		\node [style=rectangle] (0) at (-8.25, 0) {Binomial ($\phi$)};
 		\node [style=rectangle] (5) at (-3.75, 1) {No work};
 		\node [style=rectangle] (6) at (-3.75, -1) {Work};
 		\node [style=rectangle] (8) at (0.5, -1) {Poisson ($\lambda$)};
-		\node [style=invisRect] (9) at (-8.5, 1.5) {Get drunk?};
+		\node [style=invisRect] (9) at (-8.5, 1.5) {\emph{Get drunk?}};
 		\node [style=invisRect] (10) at (1.75, -3.25) {};
 		\node [style=invisRect] (11) at (7, 1) {0 manuscripts};
 		\node [style=invisRect] (12) at (7, -1) {1+ Manuscripts};
@@ -299,6 +299,8 @@ This is _mixture_ of a Poisson and a Binomial:
 		\draw [style=oneWay] (8) to (11);
 	\end{pgfonlayer}
 \end{tikzpicture}
+
+<!-- \ctikzfig{zeroinfl_h} -->
 
 
 ## Zero-inflation: graphical model
@@ -315,8 +317,55 @@ data.frame(p=rpois(n,2),zi=rbinom(n,1,0.1)) %>%
 
 ```
 
+## Problem: hard to fit
 
-## R actually uses _log_ Likelihood
+- Hard for R to tell the difference between ZIP/ZINB, and a Poisson/NB with a low mean ($\lambda$). 
+- This needs a lot of data in order to work! Consider longer sampling periods in order to reduce zeros
+
+::: columns
+
+:::: column
+
+```{r, fig.width=5, fig.height=5}
+data.frame(p=rpois(n,0.8)) %>% 
+  group_by(p) %>% count() %>% ungroup() %>% 
+  ggplot(aes(x=factor(p)))+geom_col(aes(y=n),fill='black')+
+  labs(x='Counts',y='Frequency')
+
+```
+
+::::
+
+:::: column
+
+```{r, fig.width=5, fig.height=5}
+n <- 200
+data.frame(p=rpois(n,1),zi=rbinom(n,1,0.1)) %>% 
+  mutate(proc=ifelse(zi==1,'Extra Zeros','Poisson'),p=ifelse(zi==1,0,p)) %>% 
+  group_by(proc,p) %>% count() %>% ungroup() %>% 
+  mutate(proc=factor(proc,levels=c('Extra Zeros','Poisson'))) %>% 
+  ggplot(aes(x=factor(p)))+geom_col(aes(y=n,fill=proc))+
+  labs(x='Counts',y='Frequency',fill='Process')+scale_fill_manual(values=c('red','black'))+
+  theme(legend.position = c(0.8,0.8))
+
+```
+
+::::
+
+:::
+
+
+## Model selection
+
+How many terms should be in my model?
+
+- Same principle as in regular linear models: what do you think the process is? (see Lecture 4)
+- Perhaps some terms should _always_ be included on principal?
+- To test whether terms are important in predicting your data, use likelihood-ratio tests
+  - AIC tests usually say the same thing as LR tests
+  - `drop1(model,test='Chisq')`
+
+## _log_ likelihood
 
 ::: columns
 
@@ -351,3 +400,69 @@ ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(p
 ::::
 
 :::
+
+## ML vs REML
+
+- Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased)
+- Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but...
+- This means that models with different numbers of terms don't have the same REML estimates
+- Likelihood between these models technically can't be compared!
+  
+Solution = Use ML if comparing between models with different fixed effects, then re-fit with REML once you've decided on a model
+
+## Other things!
+
+- Binomial GLMs with >1 trial
+- Offsets in count models
+- $R^2$ for GLMs
+
+## Binomial GLMs with >1 trial
+
+- If you're measuring single "success/failures", 1s and 0s are used
+- If multiple trials occur, R requires counts of successes and failures
+- Example: "I counted male and female critters at different sites. How do I tell if temperature affects sex ratios?"
+
+```{r, eval=FALSE, echo=TRUE}
+#Number of females and males are in 2 separate columns in d1
+glm(cbind(females,males) ~ temperature, family='binomial',data = d1)
+```
+
+This will correctly account for different numbers of critters ("trials") at each site
+
+
+## Offsets in count models
+
+- Poisson/NB models assume that counts occur over the same period of time
+- Count models use integers only, so you can't just do: $counts \div hours$
+- Solution: use _offsets_ to deal with different observation times
+  - Predictor with a slope fixed at 1
+- Example: "I counted critters for different lengths of time at each site. How do I tell if temperature affect counts?"
+
+```{r, eval=FALSE, echo=TRUE}
+#hours = observation time at each site, and
+#   must be log-transformed before being used in an offset
+#   
+glm(counts ~ offset(log(hours)) + temp, family='poisson',data = d1)
+```
+
+This will return estimates that have been scaled to a 1-hour observation time
+
+## R-squared for GLMs
+
+- Bad news: there isn't really any good way to get $R^2$ (explained variance) for non-`lm` models
+- OK news: there are many _pseudo_-$R^2$ measures that are _sort of_ like $R^2$, but nobody really agrees on which one is best
+- Good news: ecologists tend to not know or care about this
+
+Solution: pick a single type of $R^2$ and use that, or omit it completely \footnotemark 
+
+- See [here](https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#how-do-i-compute-a-coefficient-of-determination-r2-or-an-analogue-for-glmms), [here](https://stats.stackexchange.com/questions/46345/how-to-calculate-goodness-of-fit-in-glm-r) or [here](http://statistics.ats.ucla.edu/stat/mult_pkg/faq/general/Psuedo_RSquareds.htm) for more info on $R^2$
+- Try `rsquaredglmm()` from `piecewiseSEM` or `r.squaredGLMM()` from `MuMIn`
+
+\footnotetext{But be prepared to argue with supervisors, committee members, or reviewers! They will want some kind of measure of how well your model predicted your data.}
+
+## Show-and-tell!
+
+```{r echo=FALSE, out.width='100%'}  
+  include_graphics('./showMe.png',dpi=NA)
+```
+
