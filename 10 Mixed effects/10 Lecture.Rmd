@@ -1,0 +1,208 @@
+---
+title: "Mixed effects models"
+subtitle: "Wheels within wheels"
+author: "Samuel Robinson, Ph.D."
+date: "December 10, 2020"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+#Trick to get smaller R code size with out resorting to LaTeX text sizes
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
+library(MASS) #glm.nb
+library(tidyverse)
+theme_set(theme_classic())
+# library(ggpubr)
+library(knitr)
+# library(kableExtra)
+# library(latex2exp)
+
+set.seed(123)
+
+#Generate data
+n <- 150
+ngroups <- 10
+x <- runif(n,-10,10) #Single fixed effect predictor
+g <- sample(letters[1:ngroups],n,TRUE) #Groups
+sigmaR <- 3 #Residual and group sigma 
+sigmaG <- 5
+g_int <- rnorm(ngroups,0,sigmaG) #Make group-level intercepts
+yhat <- 1 - 0.2*x + model.matrix(~g) %*% g_int #Expected value
+y <- rnorm(n,yhat,sigmaR) #Data
+dat <- data.frame(y,x,group=g) #Assemble into data frame
+
+rm(n,ngroups,x,g,sigmaR,sigmaG,g_int,yhat,y)
+
+```
+
+## Motivation
+
+- What are mixed effects models?
+  - Scary math (matrix algebra)
+  - Variance partitioning
+  - Fixed effects vs. Random effects
+- Working with random effects
+  - What should be a random effect?
+  - Model validation
+  - Hypothesis testing
+  - Examples
+- Exercise!
+
+## What are mixed effects models?
+
+Many different names:
+
+1. Mixed effects models
+2. Random effects models
+3. Heirarchical models
+4. Empirical/Bayesian heirarchical models
+5. Latent variable models
+6. Split-plot models\footnotemark
+
+I will use the term _heirarchical models_, as this is the closest to what I will teach you
+
+\footnotetext{Earlier form of variance partitioning}
+
+## Scary math
+
+Unfortunately, we need a review of matrix algebra in order to explain this:
+
+- This is a matrix: $$ A = \begin{bmatrix}
+1 & 4 & 7 \\
+2 & 5 & 8 \\
+3 & 6 & 9
+\end{bmatrix}
+$$
+  
+- This is a vector $$ b = \begin{bmatrix}
+1 & 2 & 3 
+\end{bmatrix}
+$$
+  
+- Multiplying them looks like this:
+
+$$ A \times b = Ab = 1 \times \begin{bmatrix}
+1  \\
+2 \\
+3 
+\end{bmatrix} + 2 \times \begin{bmatrix}
+4  \\
+5  \\
+6 
+\end{bmatrix} + 3 \times \begin{bmatrix}
+7  \\
+8 \\
+9 
+\end{bmatrix} = \begin{bmatrix}
+30  \\
+36 \\
+42 
+\end{bmatrix}$$
+
+## Why do we call them "linear models"?
+
+Involves a _linear mapping_ of coefficients onto a model matrix
+
+Coefficients: $$ \beta = \begin{bmatrix}
+0.1 & 1.8 & -0.03 
+\end{bmatrix}
+$$
+
+Model matrix:
+
+$$ X = \begin{bmatrix}
+1 & 1 & 10 \\
+1 & 1 & 12 \\
+1 & 0 & 9 \\
+\vdots & \vdots & \vdots
+\end{bmatrix}
+$$
+
+Multiplying them looks like: 
+
+$$ \hat{y} = X\beta = 
+\begin{bmatrix}
+1.60  \\
+1.54 \\
+-0.17 \\
+\vdots
+\end{bmatrix}$$
+
+## This is exactly what R does to fit models:
+
+```{r, echo=TRUE, size='tiny'}
+head(dat)
+m1 <- lm(y~x,data=dat)
+summary(m1)
+```
+
+## This is exactly what R does to fit models (cont.):
+
+```{r, echo=TRUE, size='tiny'}
+head(model.matrix(m1))
+coef(m1)
+pred2 <- model.matrix(m1) %*% coef(m1) #predicted = matrix * coefs
+head(data.frame(pred1=predict(m1),pred2)) #same thing!
+```
+
+## Structure of LMs... now with matrices!
+
+- All linear models take the form:
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} = \textcolor{blue}{b_0}\textcolor{darkturquoise}{1} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+- $y$ is a vector of data you want to predict
+- $\textcolor{orange}{\hat{y}}$ is a vector of _predicted values_ for $y$
+- $\textcolor{darkturquoise}{X} = \textcolor{darkturquoise}{\{1,x_1...\}}$ is a matrix of _predictors_ for _y_
+- $\textcolor{blue}{\beta} = \textcolor{blue}{\{b_0,b_1,...\}}$ is a vector of _coefficients_
+- $y\sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})$ means:
+  - "$y$ follows a Normal distribution with mean $\textcolor{orange}{\hat{y}}$ and SD $\textcolor{red}{\sigma}$"
+  
+## Fixed effects vs. Random effects
+
+Imagine that 
+
+::: columns
+
+:::: column
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma_r})
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{blue}\textcolor{purple}{\gamma} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma_r}) \\
+\textcolor{purple}{\gamma} & \sim Normal(0,\textcolor{red}{\sigma_g})
+\end{split}
+\end{equation*}
+
+::::
+
+:::

@@ -45,6 +45,13 @@ Notes for updating lectures:
     - This would be fine IF dplyr/ggplot were taught at the beginning of the course, rather than in between stats lectures
   - I think this is useful material, as ML will come up later, but...
     - Could also just teach link functions + GLM syntax, and just say that R finds the coefficients "somehow"
+* Dec 3, 2020: GLM validation
+  - ~40 minutes, but felt OK given that people were showing their homework rather than getting new data to work with
+  - Definitely felt like a grab-bag of topics; probably could have been 2 lectures
+    - ZI section could have been quicker
+  - Also needs:
+    - How to use glm.nb, and possibly beta-binomial models
+    - Partial effects plots for GLMs
   
 Other ideas:
 - Could also do slightly (10 min) longer lecture, then assign "homework"
