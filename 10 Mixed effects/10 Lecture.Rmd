@@ -159,6 +159,15 @@ pred2 <- model.matrix(m1) %*% coef(m1) #predicted = matrix * coefs
 head(data.frame(pred1=predict(m1),pred2)) #same thing!
 ```
 
+## Groups are coded by "dummy variables" (0s and 1s)
+
+```{r, echo=TRUE, size='tiny'}
+head(dat)
+m2 <- lm(y~group,data=dat)
+head(model.matrix(m2)) #0s and 1s used to identify groups
+coef(m2) #This uses the 1st group as the "control" group
+```
+
 ## Structure of LMs... now with matrices!
 
 - All linear models take the form:
@@ -178,31 +187,44 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
   
 ## Fixed effects vs. Random effects
 
-Imagine that 
+Say that $\textcolor{darkturquoise}{X}$ is a model matrix coding for 10 sites\footnotemark, and _y_ is something we're interested in predicting
 
 ::: columns
 
 :::: column
 
-\begin{equation*} 
+\begin{equation*}
 \begin{split}
 \textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
-y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma_r})
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
+
+\hfill\newline
+
+- Site coefficients ($\textcolor{blue}{\beta}$) are unrelated to each other
+- $\textcolor{red}{\sigma}$ is the SD of _residuals_
+- Site is a __fixed effect__
 
 ::::
 
 :::: column
 
-\begin{equation*} 
+\begin{equation*}
 \begin{split}
-\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{blue}\textcolor{purple}{\gamma} \\
-y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma_r}) \\
-\textcolor{purple}{\gamma} & \sim Normal(0,\textcolor{red}{\sigma_g})
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
+\textcolor{blue}{\beta} & \sim Normal(0,\textcolor{red}{\sigma_{site}})
 \end{split}
 \end{equation*}
+
+- Site coefficients ($\textcolor{blue}{\beta}$) are related to each other via a _Normal_ distribution
+- $\textcolor{red}{\sigma}$ is the SD of _residuals_, $\textcolor{red}{\sigma_{site}}$ is the SD of _sites_
+- Site is a __random effect__
 
 ::::
 
 :::
+
+
+\footnotetext{Intercept is a separate variable}
