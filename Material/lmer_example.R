@@ -149,5 +149,45 @@ par(mfrow=c(1,1))
 summary(mod2)
 
 
+#TO DO: make a section on intercept-slope correlation
 
+#Generate data
+n <- 150
+ngroups <- 15
+x <- runif(n,-10,10) #Single fixed effect predictor
+g <- sample(letters[1:ngroups],n,TRUE) #Groups
+intercept <- 1
+slopeX <- 0.5
+sigmaR <- 3 #Residual sigma 
+sigmaG <- 5 #Group intercept sigma
+sigmaG_slope <- abs(slopeX*2) #Slope sigma (half slope value)
 
+#Correlated intercepts and slopes, using Choleski matrices
+raneffs <- matrix(rnorm(ngroups*2,0,1),ncol=2) #Uncorrelated unit normals
+slopeCor <- 0.7 #Intercept-slope correlation
+corMat <- matrix(c(1,slopeCor,slopeCor,1),ncol=2) #Correlation matrix
+cholCorMat <- chol(corMat) #Choleski transform of corMat
+raneffs <- raneffs %*% cholCorMat #Induces correlation in slopes
+raneffs <- raneffs * matrix(rep(c(sigmaG,sigmaG_slope),each=ngroups),ncol=2,
+                            dimnames=list(letters[1:ngroups],c('Int','Slope'))) #Changes SD for each column
+raneff_int <- model.matrix(~g-1) %*% raneffs[,1] #Intercept vector
+raneff_slope <- model.matrix(~g-1) %*% raneffs[,2] #Slope vector
+
+yhat <- intercept + slopeX*x + raneff_int + raneff_slope*x  #Expected value
+# yhat <- intercept + slopeX*x + raneff_int #Slope free version
+y <- rnorm(n,yhat,sigmaR) #Data
+dat <- data.frame(y,x,site=g) #Assemble into data frame
+
+#Fit model
+m1 <- lmer(y~x+(x|site),data=dat)
+summary(m1)
+
+#Check results
+par(mfrow=c(3,2))
+plot(fitted(m1),resid(m1,type='working')); abline(h=0)
+qqnorm(resid(m1,type='working'),main='Residuals');qqline(resid(m1,type='working'))
+qqnorm(ranef(m1)$site[,1],main='Intercepts');qqline(ranef(m1)$site[,1])
+qqnorm(ranef(m1)$site[,2],main='Slopes');qqline(ranef(m1)$site[,2])
+plot(ranef(m1)$site,xlab='Random Intercept',ylab='Random Slope'); 
+
+rm(n,ngroups,x,g,yhat,y,cholCorMat,raneff_int,raneff_slope,slopeCor) #Cleanup

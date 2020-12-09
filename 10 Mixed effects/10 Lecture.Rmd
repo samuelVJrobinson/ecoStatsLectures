@@ -23,11 +23,11 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 })
 
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
-library(MASS) #glm.nb
 library(tidyverse)
 theme_set(theme_classic())
+library(lme4)
 # library(ggpubr)
-library(knitr)
+# library(knitr)
 # library(kableExtra)
 # library(latex2exp)
 
@@ -35,17 +35,29 @@ set.seed(123)
 
 #Generate data
 n <- 150
-ngroups <- 10
+ngroups <- 15
 x <- runif(n,-10,10) #Single fixed effect predictor
 g <- sample(letters[1:ngroups],n,TRUE) #Groups
-sigmaR <- 3 #Residual and group sigma 
-sigmaG <- 5
-g_int <- rnorm(ngroups,0,sigmaG) #Make group-level intercepts
-yhat <- 1 - 0.2*x + model.matrix(~g) %*% g_int #Expected value
-y <- rnorm(n,yhat,sigmaR) #Data
-dat <- data.frame(y,x,group=g) #Assemble into data frame
+intercept <- 1
+slopeX <- 0.5
+sigmaR <- 3 #Residual sigma 
+sigmaG <- 5 #Group intercept sigma
+sigmaG_slope <- abs(slopeX*2) #Slope sigma (half slope value)
 
-rm(n,ngroups,x,g,sigmaR,sigmaG,g_int,yhat,y)
+#Correlated intercepts and slopes, using Choleski matrices
+raneffs <- matrix(rnorm(ngroups*2,0,1),ncol=2) #Uncorrelated unit normals
+slopeCor <- 0.7 #Intercept-slope correlation
+corMat <- matrix(c(1,slopeCor,slopeCor,1),ncol=2) #Correlation matrix
+cholCorMat <- chol(corMat) #Choleski transform of corMat
+raneffs <- raneffs %*% cholCorMat #Induces correlation in slopes
+raneffs <- raneffs * matrix(rep(c(sigmaG,sigmaG_slope),each=ngroups),ncol=2,
+                            dimnames=list(letters[1:ngroups],c('Int','Slope'))) #Changes SD for each column
+raneff_int <- model.matrix(~g-1) %*% raneffs[,1] #Intercept vector
+raneff_slope <- model.matrix(~g-1) %*% raneffs[,2] #Slope vector
+
+yhat <- intercept + slopeX*x + raneff_int + raneff_slope*x  #Expected value
+y <- rnorm(n,yhat,sigmaR) #Data
+dat <- data.frame(y,x,site=g) #Assemble into data frame
 
 ```
 
@@ -146,7 +158,7 @@ $$ \hat{y} = X\beta =
 
 ```{r, echo=TRUE, size='tiny'}
 head(dat)
-m1 <- lm(y~x,data=dat)
+m1 <- lm(y~x,data=dat) #Use variable x to predict y
 summary(m1)
 ```
 
@@ -163,9 +175,9 @@ head(data.frame(pred1=predict(m1),pred2)) #same thing!
 
 ```{r, echo=TRUE, size='tiny'}
 head(dat)
-m2 <- lm(y~group,data=dat)
+m2 <- lm(y~site,data=dat) #Use variable site to predict y
 head(model.matrix(m2)) #0s and 1s used to identify groups
-coef(m2) #This uses the 1st group as the "control" group
+coef(m2) #This uses the 1st site as the "control" group
 ```
 
 ## Structure of LMs... now with matrices!
@@ -212,9 +224,9 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 
 \begin{equation*}
 \begin{split}
-\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{purple}{\zeta} \\
 y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
-\textcolor{blue}{\beta} & \sim Normal(0,\textcolor{red}{\sigma_{site}})
+\textcolor{purple}{\zeta} & \sim Normal(0,\textcolor{red}{\sigma_{site}})
 \end{split}
 \end{equation*}
 
@@ -228,3 +240,70 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 
 
 \footnotetext{Intercept is a separate variable}
+
+## Mixed effects = fixed + random effects
+
+A mixed effects model has both __fixed__ and __random__ effects
+
+\begin{equation*}
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{U}\textcolor{purple}{\zeta} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
+\textcolor{purple}{\zeta} & \sim Normal(0,\textcolor{red}{\sigma_{site}})
+\end{split}
+\end{equation*}
+
+- $\textcolor{darkturquoise}{X}$ = fixed effects matrix (e.g. intercept, temperature)
+- $\textcolor{blue}{\beta}$ = fixed effects coefficients (e.g. )
+- $\textcolor{gray}{U}$ = random effects matrix (e.g. sites)
+- $\textcolor{purple}{\zeta}$ = random effects coefficients
+- $\textcolor{red}{\sigma}$, $\textcolor{red}{\sigma_{site}}$ = variance terms
+
+## Mixed effect model example
+
+Let's go back to our earlier example:
+
+- We're interested in predicting _y_ using _x_ (fixed effects)
+- Data was collected at a number of _sites_, which may affect _y_ "somehow"
+- Effect of each site is normally distributed
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, size='tiny'}
+head(dat)
+library(lme4) #Mixed effects library 
+mm1 <- lmer(y ~ x + (1|site),data=dat) #site is fit as "random intercepts"
+```
+
+## Mixed effect model example
+
+::: columns
+
+:::: column
+
+```{r size='tiny'}
+summary(mm1)
+```
+
+::::
+
+:::: column
+
+Results from `lmer` model:
+
+- Random effects:
+  - _residual_ and _site_ variance ($\textcolor{red}{\sigma}$, $\textcolor{red}{\sigma_{site}}$)
+- Fixed effects: 
+  - Intercept and slope estimates
+
+::::
+
+:::
+
+## Mixed effect model example
+
+Each site is 
+
+```{r}
+dat %>% mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>% 
+  ggplot(aes(x=x,y=y,col=site))+geom_point()+geom_line(aes(y=pred))+
+  geom_line(aes(y=gpred),col='black',size=2)
+```
