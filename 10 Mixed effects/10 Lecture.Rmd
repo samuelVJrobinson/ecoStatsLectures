@@ -450,3 +450,18 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
   - Easier to interpret (p-values, ANOVA, etc.)
   
 \footnotetext{e.g. me}
+
+## A challenger approaches!
+
+- You're interested in how forest cover influences the mass of three bat species. Maybe some of the species do better in forests?
+- You've weighed a bunch of bats across different forest covers (`batMass.csv`). However, these were collected across 15 separate sites. Perhaps some of the variation is just caused by the site?
+- Fit a mixed effects model with the fixed effects you're interested in (__forest cover__, __species__), and include __site__ as a random effect (_intercept_ or _slope_)
+- Your supervisor doesn't like hierarchical models, and tells you to just use site as another fixed term in an `lm` model. Do you get different results if you use their approach?
+
+## Results:
+
+![](coefPlot.png)
+
+## Results:
+
+![](predPlot.png)

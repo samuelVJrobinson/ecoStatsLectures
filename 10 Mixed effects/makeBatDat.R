@@ -1,5 +1,7 @@
 #Make mixed effect model example data
 
+setwd("~/Projects/Stats projects/ecoStats2020/10 Mixed effects")
+
 set.seed(123)
 
 #Generate data
@@ -82,40 +84,54 @@ getCoefs <- function(mod,mult=1.96){ #Extract fixed effects coefficients + SEs
 
 modList <- list(m0=m0,m1=m1,m2=m2,m3=m3,m4=m4)
 
+modLabels <- sapply(modList,function(x){ #Get labels from model formula
+  f <- as.character(formula(x))
+  f <- paste(f[2],f[1],f[3],collapse='')
+  f <- gsub(' - 1','',f)
+  f <- gsub('\\s','',f)
+})
+
 #Plot of coefficients
-lapply(modList,getCoefs) %>% do.call('rbind',.) %>% 
+p1 <- lapply(modList,getCoefs) %>% do.call('rbind',.) %>% 
   rownames_to_column('coef') %>% 
   separate(coef,c('mod','coef'),sep='\\.') %>% 
   filter(!grepl('sites',coef)) %>% 
   bind_rows(.,data.frame(mod='actual',coef=names(coef(m0)),est=fixCoef,se=0,upr=NA,lwr=NA)) %>% 
+  mutate(mod=factor(mod,levels=rev(unique(mod)),labels=c('actual',rev(modLabels))),
+         coef=factor(coef,levels=names(coef(m0)))) %>% 
   ggplot(aes(x=mod,y=est))+
   geom_pointrange(aes(ymax=upr,ymin=lwr,col=ifelse(mod=='actual','a','b')),
                   position=position_dodge(width=0.5),show.legend = FALSE)+
   geom_hline(yintercept=0,linetype='dashed')+
-  facet_wrap(~coef,nrow=1,scales='free_y')+
-  scale_colour_manual(values=c('red','black'))
+  facet_wrap(~coef,scales='free')+
+  labs(y='Estimate',x='Model')+
+  scale_colour_manual(values=c('red','black'))+
+  coord_flip()
 
-meanAt <- function(mat,cols=NA){ #Take mean of only certain matrix columns
-  if(length(cols==1)&&is.na(cols)) return(mat)
-  cMeans <- matrix(rep(apply(mat[,cols],2,mean),each=nrow(mat)),nrow=nrow(mat))
-  mat[,cols] <- cMeans
-  return(mat)
+#Plot of predictions
+library(ggeffects)
+
+#Get dataframe of predictions from models
+getPreds <- function(mod,t=c('forest','species')){ 
+  ggpredict(mod,terms=t) %>% data.frame(.)
 }
 
-meanAt(head(model.matrix(m3)),which(grepl('sites',names(coef(m3)))))
+#Model predictions
+modPreds <- do.call('rbind',lapply(modList,getPreds)) %>% 
+  rownames_to_column('mod') %>% 
+  separate(mod,c('mod','temp'),sep='\\.') %>% select(-temp) %>% 
+  mutate(mod=factor(mod,labels=modLabels))
 
-#Plot of predictions - would be better with standard errors
-data.frame(species,forest,
-  actual=fixefMat %*% fixCoef,
-  m0=predict(m0),
-  m1=predict(m1,re.form=~0),m2=predict(m2,re.form=~0),
-  m3=meanAt(model.matrix(m3),which(grepl('sites',names(coef(m3))))) %*% coef(m3),
-  m4=meanAt(model.matrix(m4),which(grepl('sites',names(coef(m4))))) %*% coef(m4)
-  ) %>% 
-  arrange(species,forest) %>% 
-  pivot_longer(m0:m4) %>% 
-  ggplot(aes(x=forest,y=value,col=species))+geom_line()+
-  geom_line(aes(y=actual,group=species),col='black',linetype='dashed')+
-  facet_wrap(~name)
+#Colours
+colValues <- c('red','purple','blue')
 
+#Plot of model predictions vs actual 
+p2 <- ggplot(modPreds,aes(x=x,y=predicted))+geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=group),alpha=0.3)+
+  geom_line(aes(col=group),size=1)+
+  geom_line(data=data.frame(forest,species,pred=fixefMat %*% fixCoef),aes(x=forest,y=pred,group=species),col='black',size=1)+
+  facet_wrap(~mod)+
+  labs(y='mass',x='forest',col='Species',fill='Species')+
+  scale_fill_manual(values=colValues)+scale_colour_manual(values=colValues)
 
+ggsave('coefPlot.png',p1,height=8,width=12)
+ggsave('predPlot.png',p2,height=8,width=12)
