@@ -28,7 +28,8 @@ knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, siz
 library(MASS) #glm.nb
 library(tidyverse)
 theme_set(theme_classic())
-# library(ggpubr)
+library(ggeffects)
+library(ggpubr)
 library(knitr)
 # library(kableExtra)
 # library(latex2exp)
@@ -42,14 +43,33 @@ invLogit <- function(x) exp(x)/(1+exp(x))
 #Generate data that violate lm assumptions:
 n <- 100
 x <- runif(n,-10,10)
-yhat <- 1 - 0.2*x #Expected value
+
+xMat <- model.matrix(~x)
+coefs <- c(1,-0.2)
+yhat <- xMat %*% coefs
+
+
+#Expected value
 y0 <- yhat + rnorm(n,0,2) #OK
 y1 <- rpois(n,exp(yhat))  #Poisson process
 y2 <- rnbinom(n,mu=exp(yhat),size=1)  #NB process
 # y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
 
 d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
-rm(n,x,y0,y1,y2,yhat)
+
+#Second df for partial residual example
+A <- sample(letters[1:3],n,TRUE)
+xMat <- model.matrix(~A+x)
+coefs <- c(1,-1,0.5,-0.2)
+yhat <- xMat %*% coefs
+
+y0 <- yhat + rnorm(n,0,2) #Normal
+y1 <- rpois(n,exp(yhat))  #Poisson process
+y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+
+d2 <- data.frame(A,x,yhat,y0,y1,y2) #Dataframe
+
+rm(n,x,y0,y1,y2,xMat,A,yhat)
 
 ```
 
@@ -210,7 +230,7 @@ Example: data are much more variable than the predictions from the model
 
 :::
 
-## Problem: Overdispersion
+## Problem 2: Overdispersion
 
 ```{r, size='tiny'}
 summary(m1)
@@ -220,7 +240,7 @@ summary(m1)
 - Residual deviance is the sum of all deviance from the model
 - This model looks OK (`r round(m1$deviance,2)` $\div$ `r round(m1$df.residual,2)` = `r with(m1, round(deviance/df.residual,2))`)
 
-## Problem: Overdispersion
+## Problem 2: Overdispersion
 
 ```{r, size='tiny'}
 m2 <- glm(y2~x,data=d1,family='poisson')
@@ -261,11 +281,53 @@ Try the following (in this order):
 
 \footnotetext{These can be annoying to deal with, so avoid if possible}
 
+## Negative Binomial Regression
+
+```{r, echo=TRUE, size='tiny'}
+library(MASS) #Required for NB models
+m3 <- glm.nb(y2~x,data=d1)
+summary(m3) #No longer overdispersed! 
+```
+
+<!-- - Model is no longer overdispersed (Residual deviance $\div$ d.f. = `r round(m3$deviance,2)` $\div$ `r m3$df.residual` = `r round(m3$deviance/m3$df.residual,2)` ) -->
+
+## Negative Binomial Regression
+
+::: columns
+
+:::: column
+
+```{r fig.height=5,fig.width=4}
+do.call('cbind',predict(m2,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>% 
+  mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>% 
+  mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>% 
+  ggplot(aes(x=x))+geom_point(aes(y=y))+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))+labs(title='Poisson regression')
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=5,fig.width=4}
+do.call('cbind',predict(m3,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>% 
+  mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>% 
+  mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>% 
+  ggplot(aes(x=x))+geom_point(aes(y=y))+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))+labs(title='Negative Binomial Regression')
+```
+
+::::
+
+:::
+
 ## Zero-inflation: drunk monks
 
 An analogy: 
 
-1. Monks at a monastary make copies of manuscripts. Most days they make very few (0 or 1), but occasionally they make many (2-5)
+1. Monks at a monastery make copies of manuscripts. Most days they make very few (0 or 1), but occasionally they make many (2-5)
 2. Some days they decide to try out the beer that's been brewing in the cellar! No manuscripts get made on those days.
 3. The number of manuscripts made (per day) follows a _zero-inflated Poisson distribution_
 
@@ -420,6 +482,7 @@ Solution:
 - Binomial GLMs with >1 trial
 - Offsets in count models
 - $R^2$ for GLMs
+- Partial effects plots
 
 ## Binomial GLMs with >1 trial
 
@@ -464,6 +527,31 @@ Solution: pick a single type of $R^2$ and use that, or omit it completely \footn
 - Try `rsquaredglmm()` from `piecewiseSEM` or `r.squaredGLMM()` from `MuMIn`
 
 \footnotetext{But be prepared to argue with supervisors, committee members, or reviewers! They will want some kind of measure of how well your model predicted your data.}
+
+## Partial effects plots
+
+- `library(ggeffects)` and `library(effects)` work for partial effects plots, but...
+- Residuals are tricky to display, unless you plot them on the link scale
+
+```{r, fig.height=5, fig.width=10}
+m4 <- glm(y1~x+A,data=d2,family='poisson')
+
+p1 <- ggplot(d2,aes(x=x,y=y1,col=A))+geom_point()+geom_smooth(method='glm',formula=y~x,method.args = list(family = "poisson"))+
+  theme(legend.position = 'none')
+p2 <- plot(ggpredict(m4,terms='x'))
+p3 <- plot(ggpredict(m4,terms='A'))
+ggarrange(p1,p2,p3,ncol=3)
+```
+
+## Partial effects plots
+
+- Plots from `effects` use _working residuals_ (not on the link scale)
+
+```{r message=FALSE, warning = FALSE, echo=TRUE, fig.width=8, fig.height=4, size='tiny'}
+library(effects)
+plot(allEffects(m4,residuals=TRUE)) 
+```
+
 
 ## Show-and-tell!
 
