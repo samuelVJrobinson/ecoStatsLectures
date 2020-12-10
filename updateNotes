@@ -21,6 +21,7 @@ Notes for updating lectures:
   - Consider better example for independent effects example:
     - "a"
   - Consider better example for effects plot: maybe show a 3D plot so limits of plotting are clear?
+  - Should show ANOVA or glht here?
 * Oct 23, 2020: Model validation
   - A bit too long, 35-40 mins
   - Could probably chop out reference to GLMs (not necessary yet?)
@@ -56,3 +57,5 @@ Notes for updating lectures:
 Other ideas:
 - Could also do slightly (10 min) longer lecture, then assign "homework"
 - Need to mention somewhere that packages need to be re-loaded every time you restart R
+- No mention of how to do ANOVA or glht tests in early lectures! 
+  - Perhaps this could be a separate lecture: "How to write about stats?"
