@@ -228,7 +228,7 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 \end{split}
 \end{equation*}
 
-- Site coefficients ($\textcolor{blue}{\beta}$) are related to each other via a _Normal_ distribution
+- Site coefficients ($\textcolor{purple}{\zeta}$) are related to each other via a _Normal_ distribution
 - $\textcolor{red}{\sigma}$ is the SD of _residuals_, $\textcolor{red}{\sigma_{site}}$ is the SD of _sites_
 - Site is a __random effect__
 

@@ -53,6 +53,13 @@ Notes for updating lectures:
   - Also needs:
     - How to use glm.nb, and possibly beta-binomial models
     - Partial effects plots for GLMs
+    - Updated, but we'll see how much time these take
+* Dec 10, 2020: Mixed effects models
+    - ~50 mins, but people asked questions, so probably about 40 mins without Qs
+    - Exercise was an OK length, I think
+    - Figures showing random effects were helpful. Could probably reduce the math and rely on figures more
+    - Might be useful to show a "random effects only" model to demonstrate how variance is partitioned
+      - e.g. Mass ~ 1 + (1|Site) -> 2 SD terms
   
 Other ideas:
 - Could also do slightly (10 min) longer lecture, then assign "homework"
