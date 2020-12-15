@@ -1,0 +1,211 @@
+---
+title: "Mixed effects models 2"
+subtitle: "Even more bells and whistles"
+author: "Samuel Robinson, Ph.D."
+date: "December 17, 2020"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+#Trick to get smaller R code size with out resorting to LaTeX text sizes
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
+library(tidyverse)
+theme_set(theme_classic())
+library(lme4)
+library(ggeffects)
+library(ggpubr)
+# library(knitr)
+# library(kableExtra)
+# library(latex2exp)
+
+set.seed(123)
+
+#Generate data
+n <- 150
+ngroups <- 15
+x <- runif(n,-10,10) #Single fixed effect predictor
+g <- sample(letters[1:ngroups],n,TRUE) #Groups
+intercept <- 1
+slopeX <- 0.5
+sigmaR <- 3 #Residual sigma 
+sigmaG <- 5 #Group intercept sigma
+sigmaG_slope <- abs(slopeX*2) #Slope sigma (half slope value)
+
+#Correlated intercepts and slopes, using Choleski matrices
+raneffs <- matrix(rnorm(ngroups*2,0,1),ncol=2) #Uncorrelated unit normals
+slopeCor <- 0.7 #Intercept-slope correlation
+corMat <- matrix(c(1,slopeCor,slopeCor,1),ncol=2) #Correlation matrix
+cholCorMat <- chol(corMat) #Choleski transform of corMat
+raneffs <- raneffs %*% cholCorMat #Induces correlation in slopes
+raneffs <- raneffs * matrix(rep(c(sigmaG,sigmaG_slope),each=ngroups),ncol=2,
+                            dimnames=list(letters[1:ngroups],c('Int','Slope'))) #Changes SD for each column
+raneff_int <- model.matrix(~g-1) %*% raneffs[,1] #Intercept vector
+raneff_slope <- x * model.matrix(~g-1) %*% raneffs[,2]  #Slope vector
+
+yhat <- intercept + slopeX*x + raneff_int + raneff_slope  #Expected value
+y <- rnorm(n,yhat,sigmaR) #Data (normal)
+y2 <- rnbinom(n,exp(yhat),sigmaR) #Data (NB)
+dat <- data.frame(y,y2,x,site=g) #Assemble into data frame
+
+```
+
+## Motivation
+
+- How do I check if model results are valid?
+  - Residual checks
+  - Hypothesis testing
+- What if my response variable is non-normal?
+  - Generalized linear mixed models (GLMMs)
+- Sampling over time or space
+  - "Continuous" random effects
+- Christmas-themed exercise!
+
+## Mixed effect model example
+
+Let's go back to our earlier example:
+
+`lmer(y ~ x + (x|site), data = dat)`
+
+- We're interested in predicting _y_ using _x_ (fixed effects)
+- Data was collected at a number of _sites_, which may affect _y_ 
+- Effect of each site is normally distributed (random intercept)
+- Effect of site on slope of _x_ is normally distributed (random slope)
+
+```{r, fig.height=2.5, fig.width=6}
+mm1 <- lmer(y ~ x + (x|site),data=dat) 
+dat %>% mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>% 
+  ggplot(aes(x=x,y=y,col=site))+
+  geom_point()+
+  geom_line(aes(y=gpred),col='black',size=2) +
+  geom_line(aes(y=pred))+guides(col=guide_legend(ncol=2))
+```
+
+## Validation
+
+- Similar to linear models, but we _also_ check whether the random intercepts are normally distributed
+<!-- - If one site intercept is very different from the others, this is a clue for investigation! -->
+
+```{r}
+par(mfrow=c(2,3))
+plot(fitted(mm1),resid(mm1,type='working'),xlab='Fitted values',ylab='Working residuals'); abline(h=0)
+qqnorm(resid(mm1,type='working'),main='Residuals');qqline(resid(mm1,type='working'))
+qqnorm(ranef(mm1)$site[,1],main='Random Intercepts');qqline(ranef(mm1)$site[,1])
+qqnorm(ranef(mm1)$site[,2],main='Random Slopes');qqline(ranef(mm1)$site[,2])
+plot(ranef(mm1)$site,xlab='Random Intercept',ylab='Random Slope',main='Intercept-Slope Correlation')
+# par(mfrow=c(1,1))
+```
+
+## Hypothesis testing
+
+Is this fixed effect important? (e.g. ANOVA)
+
+- Use likelihood-based test via `drop1` (likelihood ratio test, AIC)
+- Be careful to fit model with `REML = FALSE`!
+
+```{r, echo=TRUE, text='tiny'}
+mm1 <- update(mm1,REML=FALSE) #Refit model using ML rather than REML
+drop1(mm1,test='Chisq') #x has a very strong effect!
+```
+
+## Hypothesis testing (cont.)
+
+How do I know this effect is different from _x_?
+- Use Wald Z-test (2-sided p-value from Z-test)
+
+```{r}
+mm1 <- update(mm1,REML=TRUE) #Reset to REML
+meanEst <- fixef(mm1)[2] #Get mean
+seEst <- sqrt(vcov(mm1)[2,2]) #Get standard error
+(1-pnorm(meanEst/seEst,0,1))*2 #p-value from 2-sided Z-test
+```
+
+- `glht` from `library(multcomp)` works with `lmer` models if you are comparing between coefficients (e.g. "Is treatment A different from B and C?")
+
+## What if my response variable is non-normal?
+
+::: columns
+
+:::: column
+
+- Linear model (LM)
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+:::: 
+
+:::: column
+
+- Generalized linear model (GLM)
+
+\begin{equation*} 
+\begin{split}
+logit(\textcolor{orange}{\hat{\phi}}) & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
+y & \sim Binomial(\textcolor{orange}{\hat{\phi}})
+\end{split}
+\end{equation*}
+
+::::
+
+:::
+
+::: columns
+
+:::: column
+
+\vspace{12pt}
+
+- Linear mixed effects model (LMM)
+
+\begin{equation*}
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{U}\textcolor{purple}{\zeta} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
+\textcolor{purple}{\zeta} & \sim Normal(0,\textcolor{red}{\sigma_{site}})
+\end{split}
+\end{equation*}
+
+:::: 
+
+:::: column
+
+\vspace{12pt}
+
+- Generalized linear mixed effects model (GLMM)
+
+\begin{equation*}
+\begin{split}
+logit(\textcolor{orange}{\hat{\phi}}) & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{U}\textcolor{purple}{\zeta} \\
+y & \sim Binomial(\textcolor{orange}{\hat{\phi}}) \\
+\textcolor{purple}{\zeta} & \sim Normal(0,\textcolor{red}{\sigma_{site}})
+\end{split}
+\end{equation*}
+
+::::
+
+:::
+
+
+## How do I fit a GLMM?
+
+- `glmer` and `glmer.nb` from `library(lme4)` work for Binomial, Poisson, and Negative Binomial data
+- `glmmTMB` from `library(glmmTMB)` works for those above, _plus_ a suite of others
+  - e.g. Zero-inflation, Beta-binomial, Spatial Models
