@@ -1,6 +1,6 @@
 ---
 title: "Mixed effects models 2"
-subtitle: "Even more bells and whistles"
+subtitle: '"Space is the place" - _Sun Ra_'
 author: "Samuel Robinson, Ph.D."
 date: "December 17, 2020"
 output: 
@@ -35,8 +35,8 @@ library(ggpubr)
 set.seed(123)
 
 #Generate data
-n <- 150
-ngroups <- 15
+n <- 160
+ngroups <- 16
 x <- runif(n,-10,10) #Single fixed effect predictor
 g <- sample(letters[1:ngroups],n,TRUE) #Groups
 intercept <- 1
@@ -58,7 +58,7 @@ raneff_slope <- x * model.matrix(~g-1) %*% raneffs[,2]  #Slope vector
 
 yhat <- intercept + slopeX*x + raneff_int + raneff_slope  #Expected value
 y <- rnorm(n,yhat,sigmaR) #Data (normal)
-y2 <- rnbinom(n,exp(yhat),sigmaR) #Data (NB)
+y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
 dat <- data.frame(y,y2,x,site=g) #Assemble into data frame
 
 ```
@@ -86,8 +86,8 @@ Let's go back to our earlier example:
 - Effect of site on slope of _x_ is normally distributed (random slope)
 
 ```{r, fig.height=2.5, fig.width=6}
-mm1 <- lmer(y ~ x + (x|site),data=dat) 
-dat %>% mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>% 
+lmm1 <- lmer(y ~ x + (x|site),data=dat) 
+dat %>% mutate(pred=predict(lmm1),gpred=predict(lmm1,re.form=~0)) %>% 
   ggplot(aes(x=x,y=y,col=site))+
   geom_point()+
   geom_line(aes(y=gpred),col='black',size=2) +
@@ -101,11 +101,11 @@ dat %>% mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>%
 
 ```{r}
 par(mfrow=c(2,3))
-plot(fitted(mm1),resid(mm1,type='working'),xlab='Fitted values',ylab='Working residuals'); abline(h=0)
-qqnorm(resid(mm1,type='working'),main='Residuals');qqline(resid(mm1,type='working'))
-qqnorm(ranef(mm1)$site[,1],main='Random Intercepts');qqline(ranef(mm1)$site[,1])
-qqnorm(ranef(mm1)$site[,2],main='Random Slopes');qqline(ranef(mm1)$site[,2])
-plot(ranef(mm1)$site,xlab='Random Intercept',ylab='Random Slope',main='Intercept-Slope Correlation')
+plot(fitted(lmm1),resid(lmm1,type='working'),xlab='Fitted values',ylab='Working residuals'); abline(h=0)
+qqnorm(resid(lmm1,type='working'),main='Residuals');qqline(resid(lmm1,type='working'))
+qqnorm(ranef(lmm1)$site[,1],main='Random Intercepts');qqline(ranef(lmm1)$site[,1])
+qqnorm(ranef(lmm1)$site[,2],main='Random Slopes');qqline(ranef(lmm1)$site[,2])
+plot(ranef(lmm1)$site,xlab='Random Intercept',ylab='Random Slope',main='Intercept-Slope Correlation')
 # par(mfrow=c(1,1))
 ```
 
@@ -117,8 +117,8 @@ Is this fixed effect important? (e.g. ANOVA)
 - Be careful to fit model with `REML = FALSE`!
 
 ```{r, echo=TRUE, text='tiny'}
-mm1 <- update(mm1,REML=FALSE) #Refit model using ML rather than REML
-drop1(mm1,test='Chisq') #x has a very strong effect!
+lmm1 <- update(lmm1,REML=FALSE) #Refit model using ML rather than REML
+drop1(lmm1,test='Chisq') #x has a strong effect
 ```
 
 ## Hypothesis testing (cont.)
@@ -127,9 +127,9 @@ How do I know this effect is different from _x_?
 - Use Wald Z-test (2-sided p-value from Z-test)
 
 ```{r}
-mm1 <- update(mm1,REML=TRUE) #Reset to REML
-meanEst <- fixef(mm1)[2] #Get mean
-seEst <- sqrt(vcov(mm1)[2,2]) #Get standard error
+lmm1 <- update(lmm1,REML=TRUE) #Reset to REML
+meanEst <- fixef(lmm1)[2] #Get mean
+seEst <- sqrt(vcov(lmm1)[2,2]) #Get standard error
 (1-pnorm(meanEst/seEst,0,1))*2 #p-value from 2-sided Z-test
 ```
 
@@ -204,8 +204,67 @@ y & \sim Binomial(\textcolor{orange}{\hat{\phi}}) \\
 :::
 
 
-## How do I fit a GLMM?
+## How do I fit GLMMs?
 
 - `glmer` and `glmer.nb` from `library(lme4)` work for Binomial, Poisson, and Negative Binomial data
-- `glmmTMB` from `library(glmmTMB)` works for those above, _plus_ a suite of others
+
+```{r, echo=TRUE, eval=FALSE}
+library(lme4) 
+glmm1 <- glmer.nb(y2~x+(x|site),data=dat) #Negative binomial GLMM 
+summary(glmm1) #glmer.nb takes a LONG time to run
+```
+
+- `glmmTMB` from `library(glmmTMB)` works for those above, _plus_ a bunch of others
   - e.g. Zero-inflation, Beta-binomial, Spatial Models
+
+```{r, echo=TRUE, eval=FALSE}
+library(glmmTMB) 
+glmm2 <- glmmTMB(y2~x+(x|site),data=dat,family=nbinom2())
+summary(glmm2) #Similar results, but quicker
+```
+
+## Fitting GLMMs - `glmer.nb`
+
+```{r, echo=FALSE, eval=TRUE, size='tiny'}
+library(lme4) 
+glmm1 <- glmer.nb(y2~x+(x|site),data=dat) #Negative binomial GLMM 
+summary(glmm1) #glmer.nb takes a LONG time to run
+```
+
+## Fitting GLMMs - `glmmTMB`
+
+```{r, echo=FALSE, eval=TRUE, size='tiny'}
+library(glmmTMB) 
+glmm2 <- glmmTMB(y2~x+(x|site),data=dat,family=nbinom2())
+summary(glmm2) #Similar results, but quicker
+```
+
+## Residual checks on `glmmTMB` models
+
+- Extract residuals and make your own plots, or use `simulateResiduals` from `library(DHARMa)` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf))
+- `DHARMa` also has useful functions for checking overdispersion and zero-inflation (found [here](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html))
+  
+```{r, message=FALSE, fig.height=3, fig.width=5, size='tiny'}
+library(DHARMa)
+glmm2_res <- simulateResiduals(glmm2)
+plot(glmm2_res) #No residual problems here
+```
+
+## Partial residual plots for `glmmTMB` models
+
+- `ggpredict()` from `library(ggeffects)` works with `glmmTMB` models
+
+```{r}
+library(ggeffects)
+glmm2_eff <- ggpredict(glmm2)
+plot(glmm2_eff)
+```
+
+## Spatial and Temporal Random Effects
+
+"_My data were sampled over time or over a geographic area (or both). Can I just use day or site as a random effect?_"
+
+- Short answer: Yes
+- Long answer: Yes, but you might be able to do better
+
+## Really fast intro to spatial correlation
