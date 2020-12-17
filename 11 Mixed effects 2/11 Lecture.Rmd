@@ -28,9 +28,8 @@ theme_set(theme_classic())
 library(lme4)
 library(ggeffects)
 library(ggpubr)
-# library(knitr)
-# library(kableExtra)
-# library(latex2exp)
+library(glmmTMB)
+library(DHARMa)
 
 set.seed(123)
 
@@ -60,6 +59,26 @@ yhat <- intercept + slopeX*x + raneff_int + raneff_slope  #Expected value
 y <- rnorm(n,yhat,sigmaR) #Data (normal)
 y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
 dat <- data.frame(y,y2,x,site=g) #Assemble into data frame
+
+#Generate spatially correlated random intercepts
+
+#Squared-exponential distance function
+covFun <- function(sigma,rho,d) (sigma^2)*exp((-rho^2)*(d^2)) 
+
+lat <- runif(ngroups,-10,10) #"Latitude"
+lon <- runif(ngroups,-10,10) #"Longitude"
+distMat <- as.matrix(dist(cbind(lat,lon),diag=TRUE,upper=TRUE)) #Matrix of distances
+covMat <- covFun(sigmaG,0.1,distMat) #Covariance matrix
+corMat <- cov2cor(covMat) #Correlation matrix
+cholCorMat <- chol(corMat) #Choleski matrix
+raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
+raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
+yhat <- intercept + slopeX*x + raneff_int  #Expected value
+y <- rnorm(n,yhat,sigmaR) #Data (normal)
+y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
+lat <- model.matrix(~g-1) %*% lat
+lon <- model.matrix(~g-1) %*% lon
+dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
 
 ```
 
@@ -225,7 +244,7 @@ summary(glmm2) #Similar results, but quicker
 
 ## Fitting GLMMs - `glmer.nb`
 
-```{r, echo=FALSE, eval=TRUE, size='tiny'}
+```{r, echo=FALSE, eval=FALSE, size='tiny'}
 library(lme4) 
 glmm1 <- glmer.nb(y2~x+(x|site),data=dat) #Negative binomial GLMM 
 summary(glmm1) #glmer.nb takes a LONG time to run
@@ -244,7 +263,7 @@ summary(glmm2) #Similar results, but quicker
 - Extract residuals and make your own plots, or use `simulateResiduals` from `library(DHARMa)` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf))
 - `DHARMa` also has useful functions for checking overdispersion and zero-inflation (found [here](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html))
   
-```{r, message=FALSE, fig.height=3, fig.width=5, size='tiny'}
+```{r, message=FALSE, warning=FALSE, fig.height=3, fig.width=5, size='tiny'}
 library(DHARMa)
 glmm2_res <- simulateResiduals(glmm2)
 plot(glmm2_res) #No residual problems here
@@ -256,7 +275,7 @@ plot(glmm2_res) #No residual problems here
 
 ```{r}
 library(ggeffects)
-glmm2_eff <- ggpredict(glmm2)
+glmm2_eff <- ggpredict(glmm2,terms='x')
 plot(glmm2_eff)
 ```
 
@@ -264,7 +283,217 @@ plot(glmm2_eff)
 
 "_My data were sampled over time or over a geographic area (or both). Can I just use day or site as a random effect?_"
 
-- Short answer: Yes
-- Long answer: Yes, but you might be able to do better
+- Short answer: "Yes"
+- Long answer: You might be able to do better, because of the __1st Law of Geography__:
 
-## Really fast intro to spatial correlation
+_"...everything is related to everything else, but near things are more related than distant things."_ Waldo Tobler
+
+- If you have spatial or temporal information, this can help R to estimate random effects more accurately
+  - Can improve prediction accuracy (smaller p-values)
+  - Can give you hints about the underlying causal mechanisms
+  
+## Temporal or Spatial Data
+
+- Correlation is often present in temporal data or spatial data; causes may be unknown or "uninteresting" 
+- Usually we are interested in accounting for these patterns, in order to better estimate the "interesting" patterns on top of them
+
+::: columns
+
+:::: column
+
+```{r, fig.height=4, fig.width=4}
+# data.frame(year=as.numeric(time(lynx)),lynxNum=as.numeric(lynx)) %>% 
+#   ggplot(aes(x=year,y=lynxNum))+geom_line()+
+#   labs(x='Year',y='Lynx Numbers')
+plot(sunspots,ylab='Sunspots per year')
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=4, fig.width=4}
+# ggplot(seals,aes(x=long,y=lat,fill=delta_long))+
+#   geom_raster()+
+#   scale_fill_continuous(type='viridis')+
+#   labs(x='Longitude',y='Latitude')+
+#   theme(legend.position = c(0.2,0.7))
+image(volcano)
+```
+
+::::
+
+:::  
+  
+## Covariance
+
+- Normal distributions\footnotemark don't just have a single $\sigma$, but a matrix of values 
+- If our data _y_ are _independent_, then it looks like this:
+
+\begin{equation*}
+y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma}) 
+\end{equation*}
+
+\begin{equation*}
+\textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3] 
+\end{equation*}
+
+\begin{equation*}
+\textcolor{red}{\Sigma} = \begin{bmatrix}
+\textcolor{red}{\sigma}^2 & 0 & 0 \\
+0 & \textcolor{red}{\sigma}^2 & 0 \\
+0 & 0 & \textcolor{red}{\sigma}^2
+\end{bmatrix}
+\end{equation*}
+
+- Zeros mean "$\mu_1$, $\mu_2$, \& $\mu_3$ aren't related to each other"
+- Diagonal elements = _variance_, off-diagonal = _covariance_
+
+\footnotetext{Multivariate Normal}
+
+## Covariance and Correlation
+
+In real life, things may not be independent from each other. For example:
+
+- $\textcolor{red}{\sigma}$ = 2 (variance = $\textcolor{red}{\sigma}^2$ = 4)
+- $\mu_1$ and $\mu_2$ are strongly correlated (r=0.7), but $\mu_3$ is not related to anything (r=0). Shown here as a _correlation matrix_ ($\textcolor{red}{R}$):
+
+\begin{equation*}
+\textcolor{red}{R} = \begin{bmatrix}
+1 & 0.7 & 0 \\
+0.7 & 1 & 0 \\
+0 & 0 & 1
+\end{bmatrix}
+\end{equation*}
+
+- When multiplied by the variance, this becomes the _covariance matrix_ ($\textcolor{red}{\Sigma}$) 
+
+\begin{equation*}
+\textcolor{red}{\Sigma} = \begin{bmatrix}
+\textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times0 \\
+\textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0 \\
+\textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times1
+\end{bmatrix} = \begin{bmatrix}
+4 & 2.8 & 0 \\
+2.8 & 4 & 0 \\
+0 & 0 & 4
+\end{bmatrix}
+\end{equation*}
+
+
+
+
+## Gaussian Process Modelling
+
+::: columns
+
+:::: column
+
+- We can model covariance between things as a function of _distance_, either in time or space
+- Squared-exponential is fairly common\footnotemark:
+
+\begin{equation*}
+\begin{split}
+\textcolor{red}{\Sigma} = & covariance \\
+\textcolor{red}{\Sigma} = & variance \times correlation \\ 
+\textcolor{red}{\Sigma} = & \textcolor{red}{\sigma}^2 \times e^{-\textcolor{green}{\rho}^2 Dist^2}\\
+\end{split}
+\end{equation*}
+
+- Instead of finding a single $\textcolor{red}{\sigma}$ value, R now looks for $\textcolor{red}{\sigma}$ (maximum covariance) and $\textcolor{green}{\rho}$ (decay with distance)
+
+::::
+
+:::: column
+
+```{r, fig.height=5,fig.width=4}
+expand.grid(dist=seq(0,5,0.1),rho=c(0.5,1,2),sigma=c(1,2)) %>% 
+  mutate(cVal=(sigma^2)*exp((-rho^2)*(dist^2))) %>% 
+  mutate(category=paste0('sigma=',sigma,', rho=',rho)) %>% 
+  mutate(rho=factor(rho)) %>% 
+  ggplot(aes(x=dist,y=cVal,group=category,col=rho))+geom_line(size=1)+
+  labs(x='Distance (km)',y='Covariance')+scale_colour_manual(values=c('red','purple','blue'))+
+  theme(legend.position = c(0.8,0.8))
+```
+
+::::
+
+:::
+
+\footnotetext{Also common: AR-1 (temporal processes), Mat\'{e}rn (spatial processes)}
+
+## Spatial random effects
+
+::: columns
+
+:::: column
+
+- Say that we collected data at 16 sites, and we're interested in the effect of _y_ on _x_
+- Let's first fit a model with a random intercept for site
+
+```{r}
+lmm2 <- glmmTMB(y~x+(1|site),data=dat2)
+```
+
+::::
+
+:::: column
+
+- If we plot the intercepts for each site, we see that they are clustered:
+
+```{r,fig.height=3,fig.width=4}
+dat2 %>% select(site,lat,lon) %>% distinct() %>% arrange(site) %>% mutate(int=lmm2$sdr$par.random) %>%
+  ggplot(aes(lon,lat,col=int))+geom_point(aes(size=abs(int)))+
+  labs(title='Random intercepts (1|Site)',x='Longitude',y='Latitude',col='Intercept')+
+  scale_colour_gradient2(low='blue',mid='purple',high='red')+
+  guides(size=FALSE)
+```
+
+::::
+
+:::
+
+
+## Spatial random effects (cont.)
+
+::: columns
+
+:::: column
+
+- Re-fit model with a spatial (exponential) random effect
+
+```{r}
+dat2$coords <- numFactor(dat2$lon,dat2$lat) #Coordinates
+dat2$group <- factor(rep(1,nrow(dat2))) #Group factor (only 1 here)
+lmm3 <- glmmTMB(y~x+exp(coords+0|group),data=dat2)
+```
+
+::::
+
+:::: column
+
+- Clustering effect modeled as a spatial random effect
+
+```{r,fig.width=4,fig.height=3}
+#Plot spatial random effect
+spRanEff <- expand.grid(lon=-10:10,lat=-10:10) %>% 
+  mutate(coords=numFactor(lon,lat),group=factor(rep(1,nrow(.))),x=0) %>% 
+  mutate(pred=predict(object=lmm3,newdata=.,type='response',allow.new.levels = TRUE))
+
+ggplot(spRanEff,aes(lon,lat,fill=pred))+geom_raster()+
+  geom_point(data=dat2,aes(lon,lat,fill=NULL),col='red')+
+  labs(x='Longitude',y='Latitude',title='Spatial random effect',fill='Intercept')
+
+```
+
+
+::::
+
+:::
+
+
+## A challenger approaches
+
+- Ho ho ho! Merry Christmas! In order to maximize the number of presents that you get from Santa Claus, you've decided to apply an analytic approach, and have collected data across Alberta on _number of Christmas presents received_
+- You've also collected data across a wide geographic area on things that might influence Saint Nick's generosity (_naughtiness_, _presence of milk and cookies_, _chimney width_)
+- Fit a GLMM to the present data, one using spatial random intercepts, and one using "regular" random intercepts
