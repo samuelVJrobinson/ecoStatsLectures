@@ -1,0 +1,309 @@
+---
+title: "Statistics Writing"
+subtitle: "How to write more gooder"
+author: "Samuel Robinson, Ph.D."
+date: "March 4, 2021"
+output: 
+  beamer_presentation:
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+df_print: kable
+header-includes: 
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+---
+
+```{r setup, include=FALSE}
+#Trick to get smaller R code size with out resorting to LaTeX text sizes
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
+library(MASS) #glm.nb
+library(tidyverse)
+theme_set(theme_classic())
+library(ggeffects)
+library(ggpubr)
+library(knitr)
+
+#Generate data 
+n <- 100
+x <- runif(n,0,100)
+yhat <- 5 + 0.3*x #Expected value
+# y1 <- rpois(n,exp(yhat))  #Poisson process
+y1 <- abs(rnorm(n,yhat,3)) #Normal process
+d1 <- data.frame(x,yhat,y1) #Dataframe
+# ggplot(d1,aes(x,y1))+geom_point()
+
+```
+
+## Motivation
+
+- Translating Model Results
+- IMRaD Papers
+- Figures and Tables
+- Practice!
+
+## Where do I start?
+
+- You've finished fitting your models, and the results make sense to you, but...
+- How do I translate all these numbers into ``real" English?
+- Where do I put all these numbers in the paper?
+- Do I need figures and tables?
+
+## Answer: "It depends"
+
+Golden rule of writing: __Who is your audience?__
+
+\vspace{1em}
+
+Questions to ask yourself while writing:
+
+- How do these numbers serve the questions I'm asking?
+- Do these numbers help my audience to understand what I found?
+- Would figures or tables help to prove my point more concisely or easily?
+- How do these numbers relate to the rest of the literature?
+
+## Models as reflections of reality
+
+::: columns
+
+:::: column
+
+- Models are meant to reflect an underlying process
+- Things like effect size (mean/SE) reflect the relative strength of the factors involved
+- Things like $R^2$ reflect how well the model fits the data _overall_
+- Causality is implied, but has to be justified
+
+"Keep your eye on the biology!" \vspace{1em}
+
+::::
+
+:::: column
+
+```{r, fig.width=5, fig.height=5} 
+ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
+  geom_smooth(method='lm',formula=y~x,col='red')
+```
+What might the underlying physical process be here?
+
+::::
+
+:::
+
+## Models as "ammuntion" for arguments
+
+- Scientific discourse can be thought of as a series of logical arguments
+- When making an argument, you bring evidence to support your claims
+- We use scientific literature to support our claims
+- Models act as a _form of evidence_, translating raw data into support for your claim
+
+## Example arguments:
+
+::: columns
+
+:::: column
+
+Example 1:
+
+- Premise 1: Bats eat bugs
+- Premise 2: Forests have lots of bugs
+- Claim: Therefore, bats should prefer forests \footnotemark
+- Evidence: The model of my data __supports this claim__ 
+- Conclusion: This means that our understanding of bugs, bats, and forests is pretty good
+
+::::
+
+:::: column
+
+Example 2:
+
+- Premise 1: Bats eat bugs
+- Premise 2: Forests have lots of bugs
+- Claim: Therefore, bats should prefer forests
+- Evidence: The model of my data __does not support this claim__
+- Conclusion: Either one of these premises is wrong, or we left one out \footnotemark
+
+::::
+
+:::
+
+\footnotetext[1]{Inductive reasoning}
+\footnotetext[2]{Or my model is wrong or the data are weird somehow}
+
+## Evidence type 1: coefficients
+
+::: columns
+
+:::: column
+
+- Slopes and intercepts have physical interpretations
+  - Intercept: How many bats at 0 % forest?
+  - Slope: + 1 % forest = + 1 bat\footnotemark
+- Interpretation can be:
+  - Yes/no: "Is there any relationship?"
+  - Directional: "Is the relationship positive?"
+  - Magnitude: "How big is the slope?"
+  
+:::: 
+
+:::: column
+
+```{r, fig.width=5, fig.height=5} 
+ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
+  geom_smooth(method='lm',se=FALSE,formula=y~x)
+```
+
+::::
+
+:::
+
+\footnotetext{For GLMs, slopes are viewed in log or log-odds (logit) units}
+
+## Evidence type 2: variance
+
+::: columns
+
+:::: column
+
+- Variance has a physical interpretation
+  - What is the variation in bat counts at a given level of forest?
+- $R^2$ relates actual to modelled variance: what % of variance does your model explain?
+- GLMs: different distributions model variance differently
+- Hierarchical models deal with many levels of variance
+
+::::
+
+:::: column
+
+```{r, warning = FALSE, fig.width=5, fig.height=5} 
+ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
+  geom_ribbon(data=data.frame(d1, predict(lm(y1~x,data=d1), interval = "confidence")),
+              aes(x=x,ymax=upr,ymin=lwr),alpha=0.2)+
+  geom_ribbon(data=data.frame(d1, predict(lm(y1~x,data=d1), interval = "prediction")),
+              aes(x=x,ymax=upr,ymin=lwr),alpha=0.1)
+```
+
+::::
+  
+:::
+
+
+## IMRaD Paper Structure
+
+::: columns
+
+:::: column
+
+![](heard2016_adapted.png)
+
+::::
+
+:::: column
+
+- Most scientific papers follow the IMRaD structure
+- Allows the reader to skip to the section they want, and quickly assess whether this paper is something they should keep reading
+- Generally, statistics are discussed in the _Methods_ and _Results_ sections only
+
+::::
+  
+:::
+
+
+## Introduction
+
+_I find this section the trickiest to write, so I usually write it last._
+
+- Set up your research question, using the literature
+  - Moves from general ("Animals need food") to specific premises ("Bats need bugs") 
+- Establish the _knowledge gap_ that your research will address
+  - "Forest have lots of bugs, but nobody has checked whether there are bats there too!"
+- Last paragraph: strong statement that sums up what you're expecting to see
+  - "Bats eat bugs, and forests have lots of bugs. Therefore, bats should prefer forests."
+  
+## Methods
+
+_I usually write this section first, as it gets me "warmed up" for the rest of it._\footnote{You can even write it before you collect your data!}
+
+- Establish how you collected the data, and how you analyzed it
+  - This defends against criticism of your model or your data, and makes your results more believable
+- The detail you use depends how "unusual" your model is, which depends on your audience
+- Clarify what the dependent, independent variables, and random effects in your models are
+- Sometimes you can just use the actual R model formula:
+  -  "I fit the model using `lme4` in R using the following model structure for bat counts (while accounting for frogs and unicorns):"
+
+\small
+
+`lmer(batCounts ~ forest + frogs + unicorns + (1|site))`
+
+## Results
+
+_I write this section after I write the Methods section_
+
+- Brief summary of what you collected \footnote{Can sometimes go at the end of the Methods}
+  - "I caught 420 bats at my 69 sampling sites."
+- Present your results as an answer to the questions that you posed in the Introduction. 
+  - "Forest cover caused an increase of 3 bats for each 10% of forest (p>0.001), while frogs had no effect (p=0.7)"
+  - Try to keep the language as normal and direct as possible 
+  - Having tons of p-values and other numbers can make the text hard to read
+- If something weird happened, just say it and move on. Speculate on _why_ in the Discussion.
+  - "Surprisingly, unicorns had a negative effect on bat counts."
+  
+## Discussion
+
+_I write this after my model Results. Here you can name-drop all the relevant papers you've read._
+
+- Relate your results to your research question. Did your results match your expectations?
+- Move from specific ("bats need bugs") to general ("animals need food"); opposite of the Introduction
+- Put the Results you found into the context of the rest of the literature.  If your results contradict other studies, why do you think that occurred?
+  - "Barclay et al. (2017) showed that bats don't like forests, but our results may differ because..."
+- What new things have we learned? How might this affect theory or practice? Should non-bat people pay attention to this paper?
+  - "If we want to preserve bats, conservation practices should target forest cover"
+  
+## Figures and Tables
+
+- Figures can be excellent tools for telling your story, but...
+  - Figures take up lots of room, cost $ in publications, and can overwhelm the reader if there are too many
+  - Many resources for good figure design
+- Tables are kind of boring, but are great for conveying lots of numbers at once
+  - Useful for showing information on large numbers of coefficients
+  - If you have lots of models, `library(broom)` provides summaries of all of them at once
+
+\large
+Suggestions:
+
+1. Choose 2 or 3 figures and tables to be the __Main Characters__ in your Results section.
+2. Use them to illustrate what your models show. 
+3. Move the rest into a supplemental or appendix.
+
+## Final remarks
+
+- Good writing is re-writing
+  - I find writing in point form useful, as it lets me hash out the general paragraph and section structure
+  - What is obvious to you may not be obvious to your readers. Revision is annoying and painful, but it __will__ help!
+  - "[Good writing is:] Telepathy, of course" (Stephen King)
+- Use the literature
+  - There are tons of poorly-written papers out there, but...
+  - Was there a paper that you found easy to understand? Re-read it, and figure out why!
+  - Check out how other scientists display their statistics, and imitate/avoid their style
+- Use your supervisor and committee members 
+  - They have a much wider picture of the field, and have lots of writing and editing experience
+  - This means that they can be a good stand-in for your audience
+  
+Remember: \textsc{Good writing is good storytelling}
+
+## Practice
+
+\large
+Pull up a blank text document. Using a model that you have fit to some data, write:
+
+- Description of your research question for the Introduction. What do you expect to see, and why?
+- Short description of the model for the Methods
+- Short summary of what the model is telling you for the Results 
+
+Point form is fine, but try to find important points that you could convert into topic sentences in an actual paragraph
+  
