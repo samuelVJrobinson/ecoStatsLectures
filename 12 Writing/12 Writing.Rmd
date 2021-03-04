@@ -57,16 +57,18 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 ## Answer: "It depends"
 
-Golden rule of writing: __Who is your audience?__
-
+\textsc{What is your story?}
 \vspace{1em}
 
-Questions to ask yourself while writing:
+\textsc{Who is your audience?}
+\vspace{1em}
 
 - How do these numbers serve the questions I'm asking?
 - Do these numbers help my audience to understand what I found?
 - Would figures or tables help to prove my point more concisely or easily?
 - How do these numbers relate to the rest of the literature?
+
+Show the _bare minimum_ number of statistics needed to convince people. If it's not relevant to your story, move it somewhere else.
 
 ## Models as reflections of reality
 
@@ -79,7 +81,8 @@ Questions to ask yourself while writing:
 - Things like $R^2$ reflect how well the model fits the data _overall_
 - Causality is implied, but has to be justified
 
-"Keep your eye on the biology!" \vspace{1em}
+\vspace{1em}
+"Keep your eye on the biology!" 
 
 ::::
 
@@ -87,7 +90,7 @@ Questions to ask yourself while writing:
 
 ```{r, fig.width=5, fig.height=5} 
 ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
-  geom_smooth(method='lm',formula=y~x,col='red')
+  geom_smooth(method='lm',formula=y~x)
 ```
 What might the underlying physical process be here?
 
@@ -95,12 +98,12 @@ What might the underlying physical process be here?
 
 :::
 
-## Models as "ammuntion" for arguments
+## Models as evidence for arguments
 
 - Scientific discourse can be thought of as a series of logical arguments
 - When making an argument, you bring evidence to support your claims
-- We use scientific literature to support our claims
-- Models act as a _form of evidence_, translating raw data into support for your claim
+- We use experiments/observations, mathematics, and previous literature to support our claims
+- Models act as a _form of evidence_, translating raw data into "ammunition" for your claim
 
 ## Example arguments:
 
@@ -143,7 +146,7 @@ Example 2:
 
 - Slopes and intercepts have physical interpretations
   - Intercept: How many bats at 0 % forest?
-  - Slope: + 1 % forest = + 1 bat\footnotemark
+  - Slope\footnotemark: + 1 % forest = + 1 bat
 - Interpretation can be:
   - Yes/no: "Is there any relationship?"
   - Directional: "Is the relationship positive?"
@@ -162,7 +165,7 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
 
 :::
 
-\footnotetext{For GLMs, slopes are viewed in log or log-odds (logit) units}
+\footnotetext{For GLMs, slopes are in log or log-odds (logit) units}
 
 ## Evidence type 2: variance
 
@@ -205,8 +208,8 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
 
 :::: column
 
-- Most scientific papers follow the IMRaD structure
-- Allows the reader to skip to the section they want, and quickly assess whether this paper is something they should keep reading
+- Most scientific papers follow the IMRaD canon
+- Allows the reader to quickly assess whether this paper is useful and skip to important sections only
 - Generally, statistics are discussed in the _Methods_ and _Results_ sections only
 
 ::::
@@ -244,7 +247,7 @@ _I usually write this section first, as it gets me "warmed up" for the rest of i
 
 _I write this section after I write the Methods section_
 
-- Brief summary of what you collected \footnote{Can sometimes go at the end of the Methods}
+- Brief summary of what you collected\footnote{Can sometimes go at the end of the Methods}
   - "I caught 420 bats at my 69 sampling sites."
 - Present your results as an answer to the questions that you posed in the Introduction. 
   - "Forest cover caused an increase of 3 bats for each 10% of forest (p>0.001), while frogs had no effect (p=0.7)"
@@ -258,11 +261,10 @@ _I write this section after I write the Methods section_
 _I write this after my model Results. Here you can name-drop all the relevant papers you've read._
 
 - Relate your results to your research question. Did your results match your expectations?
-- Move from specific ("bats need bugs") to general ("animals need food"); opposite of the Introduction
+- Move from specific ("Bats need bugs") to general ("Animals need food"); opposite of the Introduction
 - Put the Results you found into the context of the rest of the literature.  If your results contradict other studies, why do you think that occurred?
   - "Barclay et al. (2017) showed that bats don't like forests, but our results may differ because..."
-- What new things have we learned? How might this affect theory or practice? Should non-bat people pay attention to this paper?
-  - "If we want to preserve bats, conservation practices should target forest cover"
+- \textbf{So what?} What new things have we learned? How might this affect theory or practice? Should non-bat people pay attention to this paper?
   
 ## Figures and Tables
 
