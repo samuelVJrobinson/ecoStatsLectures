@@ -60,6 +60,18 @@ Notes for updating lectures:
     - Figures showing random effects were helpful. Could probably reduce the math and rely on figures more
     - Might be useful to show a "random effects only" model to demonstrate how variance is partitioned
       - e.g. Mass ~ 1 + (1|Site) -> 2 SD terms
+* Dec 17, 2020: Mixed effects models 2
+    - ~ 40 mins, OK length
+    - 1st section of the lecture was a bit of a grab-bag from last week
+      - Code should be made more clear (e.g. Wald Z-test p-values)
+    - Spatial random effects was OK, but the concept of variance and covariance is really tricky
+      - Work on organization to make the flow better
+      - Metaphor: gravity from planets affecting each other; other "field" metaphors? 
+    - Might help to show physical example rather than just (mu1, mu2, mu3)
+      - e.g. "values collected at 5 sites, here's what the covariance matrix looks like, given rho & sigma"
+* Mar 4, 2021: Writing
+    - ~ 30 mins, OK length
+    - Could streamline mention of the IMRaD paper structure, don't say too much of it beforehand
   
 Other ideas:
 - Could also do slightly (10 min) longer lecture, then assign "homework"

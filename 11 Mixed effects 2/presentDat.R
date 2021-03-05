@@ -62,6 +62,7 @@ plot(naughtiness,yhat)
 plot(chimneyWidth,yhat)
 
 write.csv(dat,file='presentDat.csv')
+# dat <- read.csv(file='presentDat.csv') #Read from csv
 
 #Check data
 

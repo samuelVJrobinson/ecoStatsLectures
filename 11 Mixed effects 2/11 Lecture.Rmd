@@ -143,9 +143,10 @@ drop1(lmm1,test='Chisq') #x has a strong effect
 ## Hypothesis testing (cont.)
 
 How do I know this effect is different from _x_?
+
 - Use Wald Z-test (2-sided p-value from Z-test)
 
-```{r}
+```{r, echo=TRUE}
 lmm1 <- update(lmm1,REML=TRUE) #Reset to REML
 meanEst <- fixef(lmm1)[2] #Get mean
 seEst <- sqrt(vcov(lmm1)[2,2]) #Get standard error
@@ -244,7 +245,7 @@ summary(glmm2) #Similar results, but quicker
 
 ## Fitting GLMMs - `glmer.nb`
 
-```{r, echo=FALSE, eval=FALSE, size='tiny'}
+```{r, echo=FALSE, eval=TRUE, size='tiny'}
 library(lme4) 
 glmm1 <- glmer.nb(y2~x+(x|site),data=dat) #Negative binomial GLMM 
 summary(glmm1) #glmer.nb takes a LONG time to run
@@ -431,7 +432,8 @@ expand.grid(dist=seq(0,5,0.1),rho=c(0.5,1,2),sigma=c(1,2)) %>%
 - Say that we collected data at 16 sites, and we're interested in the effect of _y_ on _x_
 - Let's first fit a model with a random intercept for site
 
-```{r}
+```{r, echo=TRUE,size='tiny'}
+#Same syntax as lmer models:
 lmm2 <- glmmTMB(y~x+(1|site),data=dat2)
 ```
 
@@ -441,7 +443,7 @@ lmm2 <- glmmTMB(y~x+(1|site),data=dat2)
 
 - If we plot the intercepts for each site, we see that they are clustered:
 
-```{r,fig.height=3,fig.width=4}
+```{r,echo=FALSE,fig.height=3,fig.width=4,size='tiny'}
 dat2 %>% select(site,lat,lon) %>% distinct() %>% arrange(site) %>% mutate(int=lmm2$sdr$par.random) %>%
   ggplot(aes(lon,lat,col=int))+geom_point(aes(size=abs(int)))+
   labs(title='Random intercepts (1|Site)',x='Longitude',y='Latitude',col='Intercept')+
@@ -462,9 +464,14 @@ dat2 %>% select(site,lat,lon) %>% distinct() %>% arrange(site) %>% mutate(int=lm
 
 - Re-fit model with a spatial (exponential) random effect
 
-```{r}
-dat2$coords <- numFactor(dat2$lon,dat2$lat) #Coordinates
-dat2$group <- factor(rep(1,nrow(dat2))) #Group factor (only 1 here)
+```{r, echo=TRUE,size='tiny'}
+#Coordinates
+dat2$coords <- numFactor(dat2$lon,dat2$lat) 
+
+#Group factor (only 1 here)
+dat2$group <- factor(rep(1,nrow(dat2))) 
+
+#Fit model with spatial random effect
 lmm3 <- glmmTMB(y~x+exp(coords+0|group),data=dat2)
 ```
 
@@ -474,7 +481,7 @@ lmm3 <- glmmTMB(y~x+exp(coords+0|group),data=dat2)
 
 - Clustering effect modeled as a spatial random effect
 
-```{r,fig.width=4,fig.height=3}
+```{r, echo=FALSE, fig.width=4,fig.height=3,size='tiny'}
 #Plot spatial random effect
 spRanEff <- expand.grid(lon=-10:10,lat=-10:10) %>% 
   mutate(coords=numFactor(lon,lat),group=factor(rep(1,nrow(.))),x=0) %>% 
@@ -495,5 +502,6 @@ ggplot(spRanEff,aes(lon,lat,fill=pred))+geom_raster()+
 ## A challenger approaches
 
 - Ho ho ho! Merry Christmas! In order to maximize the number of presents that you get from Santa Claus, you've decided to apply an analytic approach, and have collected data across Alberta on _number of Christmas presents received_
-- You've also collected data across a wide geographic area on things that might influence Saint Nick's generosity (_naughtiness_, _presence of milk and cookies_, _chimney width_)
+- You've also collected data on things that might influence Saint Nick's generosity (_naughtiness_, _presence of milk and cookies_, _chimney width_)
 - Fit a GLMM to the present data, one using spatial random intercepts, and one using "regular" random intercepts
+- Which type of snack should you leave out for Santa? Which area might you consider moving to??

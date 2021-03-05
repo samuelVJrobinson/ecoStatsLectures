@@ -250,7 +250,7 @@ _I write this section after I write the Methods section_
 - Brief summary of what you collected\footnote{Can sometimes go at the end of the Methods}
   - "I caught 420 bats at my 69 sampling sites."
 - Present your results as an answer to the questions that you posed in the Introduction. 
-  - "Forest cover caused an increase of 3 bats for each 10% of forest (p>0.001), while frogs had no effect (p=0.7)"
+  - "Forest cover caused an increase of 3 bats for each 10% of forest (p<0.001), while frogs had no effect (p=0.7)"
   - Try to keep the language as normal and direct as possible 
   - Having tons of p-values and other numbers can make the text hard to read
 - If something weird happened, just say it and move on. Speculate on _why_ in the Discussion.
@@ -274,6 +274,7 @@ _I write this after my model Results. Here you can name-drop all the relevant pa
 - Tables are kind of boring, but are great for conveying lots of numbers at once
   - Useful for showing information on large numbers of coefficients
   - If you have lots of models, `library(broom)` provides summaries of all of them at once
+- Tables and figures (+ captions) should be readable without knowing the rest of the text
 
 \large
 Suggestions:
@@ -285,9 +286,9 @@ Suggestions:
 ## Final remarks
 
 - Good writing is re-writing
-  - I find writing in point form useful, as it lets me hash out the general paragraph and section structure
   - What is obvious to you may not be obvious to your readers. Revision is annoying and painful, but it __will__ help!
   - "[Good writing is:] Telepathy, of course" (Stephen King)
+  - I find writing in point form useful, as it lets me hash out the general paragraph and section structure
 - Use the literature
   - There are tons of poorly-written papers out there, but...
   - Was there a paper that you found easy to understand? Re-read it, and figure out why!
