@@ -26,9 +26,11 @@ theme_set(theme_classic())
 
 \tiny
 
+<!-- Note: "plants" dataframe is just used for (non-evaluated) examples, and isn't included in repository -->
+
 ```{r, echo=T, eval=F}
 #Changes species to factor
-plants$Species <- as.factor(plants$Species) 
+plants$Species <- as.factor(plants$Species)
 #Changes plant code to factor
 plants$Plant.Code <- as.factor(plants$Plant.Code) 
 #Changes Seed to factor
@@ -47,7 +49,7 @@ seeds$Collection.Date <- as.Date(seeds$Collection.Date,origin='2012-01-01')
 \normalsize
 - One line of code per column - lots of typing
 - Lots of `$$$`s
-- Lots of room for error
+- Lots of room for errors
 
 ## Data manipulation using dplyr/tidyr
 
@@ -75,6 +77,23 @@ seeds <- seeds %>%
 - Easier to read
 - Faster (matters for large datasets)
 
+## Can't I just use Excel?? R is for nerrrrrrds...
+
+- Short answer: yes...
+- Long answer: yes, but this is better
+
+\large
+_Why should I do data manipulation in R?_
+
+\normalsize
+- Quicker (once you learn how!)
+- Can do complex re-arranging and make summary tables very easily
+- For large datasets (>10000 rows), Excel basically just gives up
+- __You have a record of exactly what you've done__
+
+\large
+_Start with small, simple tasks, and work your way up to larger, complicated ones_
+
 ## Things to learn today:
 
 - Basic syntax and table verbs
@@ -89,10 +108,10 @@ seeds <- seeds %>%
 
 ## Basic Syntax
 
-Both dplyr and tidyr work with data frames or tibbles
+Both `dplyr` and `tidyr` work with `data frames` or `tibbles`
 
-- data frame: similar to matrix, but with different data types for each column
-- tibble: "compact" data frame, with some annoying features removed
+- `data frame`: similar to matrix, but with different data types for each column
+- `tibble`: "compact" data frame, with some annoying features removed
 
 \tiny
 ```{r,echo=T,eval=T}
@@ -112,11 +131,15 @@ as_tibble(iris) #This is usually done automatically
 
 \tiny
 
+```{r, echo=FALSE,eval=TRUE}
+head(iris)
+```
+
+
 ```{r,echo=T,eval=T,message=F}
-head(iris,3) 
 #Select Petal.Length,Petal.Width,Species
 irisTemp <- select(iris,Petal.Length,Petal.Width,Species)
-head(irisTemp,3)
+head(irisTemp)
 ```
 
 ## Basic verbs - subsetting
@@ -124,6 +147,11 @@ head(irisTemp,3)
 Helper functions for **select**: *colon* operator
 
 \tiny
+
+```{r, echo=FALSE,eval=TRUE}
+head(iris,3)
+```
+
 
 ```{r,echo=T,eval=T,message=F}
 irisTemp <- select(iris,Petal.Length:Species) 
@@ -138,6 +166,11 @@ Helper functions for **select**: -, and *contains*
 
 \tiny
 
+```{r, echo=FALSE,eval=TRUE}
+head(iris,3)
+```
+
+
 ```{r,echo=T,eval=T,message=F}
 irisTemp <- select(iris,-Species) 
 head(irisTemp,3) #Selects all columns EXCEPT Species
@@ -151,10 +184,23 @@ head(irisTemp2,3) #Selects columns with names containing 'Petal'
 
 \tiny
 
+```{r, echo=FALSE,eval=TRUE}
+head(iris)
+```
+
+
 ```{r,echo=T,eval=T,message=F}
-head(iris,3) 
 irisTemp <- filter(iris,Sepal.Length<5,Species=='versicolor')
-head(irisTemp,3) #Chooses rows matching logical criteria
+head(irisTemp) #Chooses rows matching logical criteria
+
+# Some common logical operators:
+# == != equal to, not equal to
+# < > greater than, less than
+# & | AND, OR
+# 
+# Some common selection helpers:
+# contains() contains a string
+# all_of() matches a character vector
 ```
 
 ## Basic verbs - make new variables
@@ -163,8 +209,11 @@ head(irisTemp,3) #Chooses rows matching logical criteria
 
 \tiny
 
-```{r,echo=T,eval=T,message=F}
+```{r, echo=FALSE,eval=TRUE}
 head(iris,3)
+```
+
+```{r,echo=T,eval=T,message=F}
 irisTemp <- mutate(iris,P.Width2=Petal.Width^2)
 head(irisTemp,3) #Squares Petal.Width, adds new variable
 ```
@@ -173,8 +222,11 @@ head(irisTemp,3) #Squares Petal.Width, adds new variable
 
 \tiny
 
+```{r, echo=FALSE,eval=TRUE}
+head(iris,3)
+```
+
 ```{r,echo=T,eval=T,message=F}
-head(irisTemp,3)
 irisTemp <- mutate(iris,Petal.Width=Petal.Width^2)
 head(irisTemp,3) #Alters variable in place
 ```
@@ -186,8 +238,11 @@ head(irisTemp,3) #Alters variable in place
 
 \tiny
 
-```{r,echo=T,eval=T,message=F,warning=F}
+```{r, echo=FALSE,eval=TRUE}
 head(iris,3)
+```
+
+```{r,echo=T,eval=T,message=F,warning=F}
 # "~" is called a lambda (similar to a function)
 # "." means "data from column", so...
 # "~.^2" means "square anything in this column"
@@ -201,6 +256,10 @@ head(irisTemp,3)
 
 \tiny
 
+```{r, echo=FALSE,eval=TRUE}
+head(iris,3)
+```
+
 ```{r,echo=T,eval=T,message=F,warning=F}
 irisTemp <- rename(iris, PWidth=Petal.Width, PLength=Petal.Length)
 head(irisTemp,3) #Renames columns
@@ -210,7 +269,7 @@ head(irisTemp2,3) #Same as mutate, but drops other columns
 
 ## Exercises!
 
-Using the `iris` dataset:
+Using the `iris` dataset (type `data(iris)`):
 
 - Filter only rows with "virginica"
 - Make 2 new "area" columns, which are length $\times$ width of Petals and Sepals
@@ -226,6 +285,8 @@ Using the `iris` dataset:
 
 
 ## Piping - %>% 
+
+This is where the tidyverse becomes _very_ useful
 
 - Takes data from one verb and passes it to the next one
 - Allows you to string together complex operations
