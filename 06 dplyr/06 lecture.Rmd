@@ -304,12 +304,10 @@ head(irisTemp)
 
 - This is very tedious to do in base R and Excel
 - Reshaping operations in `tidyr` make this much easier
-- Four main commands:
+- Main commands:
 
 1. `pivot_longer` - gather columns into rows ('long format')
 2. `pivot_wider` - spread rows into columns ('wide format')
-3. `unite` - unite many columns into one (similar to `paste`)
-4. `separate` - separates one column into many (similar to `strsplit`)
 
 ## Reshaping - _pivot_longer_: columns to rows
 
@@ -347,50 +345,6 @@ longBats %>% pivot_wider(names_from=trait, #Names of new columns
 #Note: this must have unique row identifiers
 ```
 
-## Reshaping - _unite_: many columns into one
-
-- Useful when combined with other reshaping functions
-
-\tiny
-
-```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
-irisTemp <- iris %>% unite(newCol,Sepal.Length:Petal.Width,sep='_') 
-head(irisTemp,10)
-```
-
-## Reshaping - _separate_: one column into many
-
-\tiny
-
-```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
-irisTemp %>% separate(newCol,c('SLength','SWidth','PLength','PWidth'),sep='_') %>% 
-  head(10)
-```
-
-## Reshaping - combinations of reshaping functions
-
-Say we wanted lengths and widths in separate columns, split by Petal & Sepal
-
-\tiny
-
-```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
-irisTemp <- iris %>% unite(col=sepals,contains('Sepal'),sep='_') %>%
-  unite(col=petals,contains('Petal'),sep='_') 
-  head(irisTemp,10)
-```
-
-## Reshaping - combinations of reshaping functions
-
-- Now that measurements are _united_, we _pivot_longer_ and then _separate_ them
-
-\tiny
-
-```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
-irisTemp %>% pivot_longer(cols=sepals:petals,names_to='Type',values_to='Measurement') %>% 
-  separate(Measurement,c('Length','Width'),sep='_',convert=T) %>% 
-  head(10)
-```
-
 ## Exercises!
 
 Using the *CO2* dataset:
@@ -406,14 +360,14 @@ Using the *CO2* dataset:
 CO2 %>% 
   filter(Type=='Quebec',Treatment=='nonchilled') %>% 
   select(-Type,-Treatment) %>% 
-  # spread(Plant,uptake)
   pivot_wider(names_from=Plant,values_from=uptake)
 ```
 
 ## Grouping 
 
-- Often, we want to perform operations only on groups within data frames 
+- Often, we want to perform operations only on _groups_ within data frames 
 - For example, what is the average of each species' _Petal.width_?
+- This can be done in base `R`:
 
 \tiny
 
@@ -424,7 +378,7 @@ aggregate(Petal.Width~Species,data=iris,mean) #Using aggregate
 
 ## Grouping 
 
-- How can this be done in dplyr/tidyr?
+- How can this be done in `dplyr` and `tidyr`?
 
 \tiny
 
@@ -453,7 +407,7 @@ iris %>% group_by(Species) %>% #Group by species
 
 \normalsize
 
-- *n* is empty, because it uses the length of the subsetted data frame
+- *n* is empty, because it shows the number of rows of the grouped "mini-dataframe"
 
 ## Grouping - Examples
 
@@ -487,8 +441,8 @@ iris %>% group_by(Species) %>%
 
 Using the *InsectSprays* dataset:
 
-- Find the mean and SD of each type of spray type
-- Reshape dataframe so that each spray has its own column, with mean and SD in separate rows
+- Find the mean and SD of `counts` for each type of `spray` 
+- Reshape dataframe so that each `spray` has its own column, with mean and SD in separate rows
 - Hint: get summary stats first, then `pivot_longer` and `pivot_wider`
 
 \tiny
@@ -506,7 +460,8 @@ InsectSprays %>% group_by(spray) %>%
 
 :::: column
 
-- dplyr & tidyr interface well with other parts of the tidyverse
+- `dplyr` & `tidyr` work with other parts of the tidyverse, such as `ggplot2`
+- Example: filtered summary plot
 
 \tiny
 
@@ -557,7 +512,8 @@ CO2 %>% filter(conc==1000) %>%
 
 :::: column
 
-- dplyr & tidyr can pass data frames to and from other functions: use '.' operator
+- dplyr & tidyr can pass data frames to and from non-`tidyverse` functions: use '.' operator
+- Example: nonlinear growth model
 
 \tiny
 
