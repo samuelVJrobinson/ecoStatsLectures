@@ -1,0 +1,73 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx} % Required for inserting images
+
+\usepackage{geometry}
+\geometry{
+  top=0.5in,
+  bottom=1in,
+  left=1in,
+  right=1in
+}
+
+\newcommand{\tabit}{\par\textbullet\phantom{ }}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+\pagenumbering{gobble}
+
+\title{Lecture Series: Fundamentals of Ecological Statistics}
+\author{Dr. Samuel V.J. Robinson}
+\date{Fall 2023}
+
+\begin{document}
+\maketitle
+
+\large
+In this course, we will cover the basics of using the \texttt{R} programming language, along with simple plotting, data organization, and programming techniques. We will also cover the fundamentals of linear modeling before moving onto generalized linear modeling (non-normal distributions), mixed models (i.e. \textit{random effects}), spatio-temporal effects. Finally, we will discuss how to write about statistical analysis, and will end with short presentations on an analysis of your own datasets (or a simulated dataset, if you haven't collected data yet).
+
+\vspace{1cm}
+
+Proposed marking scheme:
+\begin{itemize}
+  \item Class participation: 25\%
+  \item Final project ``peer review": 25\%
+  \begin{itemize}
+    \item Create a draft write-up, and provide feedback on your colleagues' work
+    \item Write a review document to send to the editor (SR)
+  \end{itemize}
+  \item Final project write-up: 25\%
+  \begin{itemize}
+    \item Respond to the feedback from your colleagues, and write a response letter
+  \end{itemize}
+  \item Final project presentation: 25\%
+  \begin{itemize}
+    \item Mock committee/proposal meeting: ``what are your main results so far?"
+  \end{itemize}
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{5cm}|p{10cm}}
+\textbf{Lecture}                  & \textbf{Learning Outcomes}  \\ \hline
+Intro to R            & \tabit Learn R syntax, objects, and basic plotting \tabit Write simple R programs  \\ \hline
+Linear Models Part 1  & \tabit Basic structure and terminology of linear models \tabit Fitting simple linear models  \\ \hline
+Linear Models Part 2  & \tabit Structure and fitting of multiple-linear models \tabit Effect sizes, model selection, partial effects plots\\ \hline
+Model Validation      & \tabit Checking model results and output \\ \hline
+\texttt{ggplot2}               & \tabit How to use the \texttt{ggplot2} package \tabit Principles of graphic design             \\ \hline
+\texttt{dplyr} \& \texttt{tidyr} & \tabit Introduction to the \texttt{tidyverse} \tabit Data wrangling, filtering,  organization \\ \hline
+GLMs Part 1           & \tabit Learn common non-normal distributions \tabit Simulate the distributions of your own a \\ \hline
+GLMs Part 2           & \tabit Basics of likelihood and probability \tabit GLM fitting and plotting \\ \hline
+GLM Validation        & \tabit Model validation, model selection for GLMs \tabit Preliminary models of your own data \\ \hline
+Mixed effects Part 2 & \tabit Random versus fixed effects \tabit Random intercept and slope models \\ \hline
+Mixed effects Part 2 & \tabit Slope/intercept covariance, hypothesis testing \tabit Plotting of mixed models \\ \hline
+Nonlinear \& Additive Models & \tabit Fitting strategies \tabit Generalized additive models (GAMs/``wiggly" models)  \tabit Distributional (non-stationary) models \\ \hline
+Spatiotemporal models* & \tabit Spatial and temporal random effects \tabit Dynamic models (e.g. logistic growth)  \\ \hline
+
+Other topics? & \tabit Multivariate models (e.g. community ordination) \tabit State-space models (e.g. mark-recapture, camera traps) \tabit R as a GIS (e.g. mapping) \tabit Structural equation models \tabit Custom model coding (TMB or Stan) \\ \hline
+Writing              & \tabit Structure of scientific papers (IMRaD) \tabit Writing clearly about models  \tabit Reading about models critically \\ \hline
+Open work time & \tabit Time for open work on your own models and data \tabit Can work together/ask for help or ification \\ \hline
+Final Presentations  & \tabit Show us your preliminary results! \tabit Think about how this can go into a paper/thesis chapter                 
+\end{tabular}
+\end{table}
+
+\end{document}
