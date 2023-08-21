@@ -5,28 +5,35 @@ author: "Samuel Robinson, Ph.D."
 date: "Sep. 4 2023"
 output:
   beamer_presentation:
-    slide_level: 2
     incremental: true
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
+    fig_caption: false
 classoption: aspectratio=169
 df_print: kable
+header-includes: 
+  - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  - \let\endoldShaded\endShaded
+  - \renewenvironment{Shaded}{\footnotesize\oldShaded}{\endoldShaded}
+  - \let\oldverbatim\verbatim %Change fontsize of code chunk output
+  - \let\endoldverbatim\endverbatim
+  - \renewenvironment{verbatim}{\footnotesize\oldverbatim}{\endoldverbatim}
 ---
 
 ```{r setup, include=FALSE}
-#Trick to get smaller R code size with out resorting to LaTeX text sizes
-def.chunk.hook  <- knitr::knit_hooks$get("chunk")
-knitr::knit_hooks$set(chunk = function(x, options) {
-  x <- def.chunk.hook(x, options)
-  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
-})
-knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
+# #Trick to get smaller R code size with out resorting to LaTeX text sizes - this doesn't work if you use code chunks in incremental lists
+# def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+# knitr::knit_hooks$set(chunk = function(x, options) {
+#   x <- def.chunk.hook(x, options)
+#   ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+# })
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message=TRUE, warning=TRUE, tidy=TRUE)
 # knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-## Motivation {.build}
+## Motivation
 
 - "Why do I need to learn R?"
   - Free, powerful, and very common
@@ -40,43 +47,28 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message=TRUE, warning=TRUE, size
   - Can be slow if datasets are large*
 - I am not here to teach you programming, but some basic techniques are useful
 
-## Console and Scripts {.build}
+## RStudio GUI
+
+::: columns
+
+:::: {.column width="40%"}
 
 - The __Console__ is the main input into R (where you tell it to do things)
 - __Scripts__ are lists of commands that get passed into the console
 - If you're using RStudio, 2 of the 4 panes will be dedicated to the console and scripts
 
-## RStudio GUI {.build}
+::::
 
-\begin{columns}
+:::: {.column width="60%"}
 
-\column{0.5\textwidth}
+![My (custom) RStudio setup](screenshot.png){width=100%}
 
-![](screenshot.png){width=50%}
+::::
 
-\column{0.5\textwidth}
-
-My (custom) RStudio setup
-
-\end{columns}
+:::
 
 
-<!-- :::: {style="display: flex;"}  -->
-
-<!-- ::: {} -->
-
-<!-- ![](screenshot.png){width=50%} -->
-<!-- :::  -->
-
-<!-- ::: {} -->
-
-<!-- My (custom) RStudio setup -->
-
-<!-- ::: -->
-
-<!-- :::: -->
-
-## Objects and Functions {.build}
+## Objects and Functions
 
 - Everything in R is either an __Object__ or a __Function__. All must have a unique name, or else the _Steve Problem_* occurs.
 - Some common __objects__ (things stored in memory):
@@ -91,79 +83,100 @@ My (custom) RStudio setup
     
 ## Objects
 
->- Let's make some objects. These are all single objects:
->
->   ```{r}
->   myString <- "Hello world" #A string object
->   myNumeric <- 12345 #A numeric object
->   myLogical <- TRUE #A logical object
->   ```
+- Let's make some objects. These are all single objects:
 
->- These are objects joined into a _vector_, joined by the function c (concatenate):
->
->   ```{r}
->   myStringVec <- c("I like pie","I like cake","I like anything you bake")
->   myNumericVec <- c(1,2,3,4,5)
->   myLogicalVec <- c(TRUE,TRUE,FALSE,TRUE,FALSE,FALSE)
->   ```
+   ```{r}
+   myString <- "Hello world" #A string object
+   myNumeric <- 12345 #A numeric object
+   myLogical <- TRUE #A logical object
+   ```
+   
+- These are objects joined into a _vector_, joined by the function c (concatenate):
+   
+   ```{r}
+   myStringVec <- c("I like pie","I like cake","I like anything you bake")
+   myNumericVec <- c(1,2,3,4,5)
+   myLogicalVec <- c(TRUE,TRUE,FALSE,TRUE,FALSE,FALSE)
+   ```
+   
+- How long are each of these vectors?
 
->- How long are each of these vectors?
->
->   ```{r}
->   howLong <- c(length(myStringVec), length(myNumericVec), length(myLogicalVec))
->   howLong #This executes the `print` command on `howLong`
->   ```
+   ```{r}
+   howLong <- c(length(myStringVec), length(myNumericVec), length(myLogicalVec))
+   howLong #This executes the `print` command on `howLong`
+   ```
 
-## Vectors {.build}
+## Vectors
 
 - How do I get stuff out of the vectors I just made?
 
->   ```{r}
->   myStringVec #Here's what's inside the whole thing
->   myStringVec[1] #Uses a single numeric
->   myStringVec[c(2,3)] #Uses a vector of numerics
->   myStringVec[c(TRUE,FALSE,TRUE)] #Uses a logical vector of same length
->   ```
+```{r}
+myStringVec #Here's what's inside the whole thing
+myStringVec[1] #Uses a single numeric
+myStringVec[c(2,3)] #Uses a vector of numerics
+myStringVec[c(TRUE,FALSE,TRUE)] #Uses a logical vector of same length
+```
 
-## Matrices {.build}
+## Matrices
 
->- Matrices are rectangular structures that hold values inside them:
->
->   ```{r}
->   (myMatrix <- matrix(1:9,ncol=3))
->   ```
+- Matrices are rectangular structures that hold values inside them:
 
->- Matrices are indexed by _rows_ and _columns_ (in that order):
->   ```{r}
->   myMatrix[1,3] #1st row, 3rd col
->   myMatrix[,3] #All rows, 3rd column
->   ```
+   ```{r}
+   (myMatrix <- matrix(1:9,ncol=3))
+   ```
 
-## Dataframes {.build}
+- Matrices are indexed by _rows_ and _columns_ (in that order):
+   
+   ```{r}
+   myMatrix[1,3] #1st row, 3rd col
+   myMatrix[,3] #All rows, 3rd column
+   ```
+
+## Dataframes
 
 - Dataframes look similar to matrices, but can hold different data types in each column:
 
-```{r}
-#Each column has a unique name, and must be the same length
-myDF <- data.frame(stringCol=myStringVec, numCol=myNumericVec[c(1:3)], 
-                   logCol=myLogicalVec[c(1:3)])
-myDF
-summary(myDF) #This function summarizes each column
+   ```{r}
+   #Each column has a unique name, and must be the same length
+   myDF <- data.frame(stringCol=myStringVec, numCol=myNumericVec[c(1:3)], 
+                      logCol=myLogicalVec[c(1:3)])
+   myDF
+   ```
+- 
+
+  ```{r}
+  summary(myDF) #This function summarizes each column
+  ```
+
+## Lists
+
+::: columns
+
+:::: column
+
+>- Lists look similar to vectors, but can hold anything in each slot, including other lists. 
+
+>- LOTS of things in R (e.g. model output) are specially-structured lists at their core
+
+```{r tidy.opts=list(width.cutoff=25)}
+myList <- list(stringSlot=myStringVec, numSlot=myNumericVec, 
+                  logSlot=myLogicalVec, dfSlot = myDF)
 ```
 
-## Lists {.build}
+::::
 
-- Lists look similar to vectors, but can hold anything in each slot, including other lists. 
+:::: column
 
-- LOTS of things in R (e.g. model output) are specially-structured lists at their core
-
-```{r}
-myList <- list(stringSlot=myStringVec, numSlot=myNumericVec, 
-                   logSlot=myLogicalVec, dfSlot = myDF)
+```{r eval = TRUE, echo=FALSE}
 myList
 ```
 
-## Accessing Dataframes {.build}
+::::
+
+:::
+   
+
+## Accessing Dataframes
 
 - Dataframes can be accessed numerically, by their name slots, or with a mixture of the two:
 
@@ -173,7 +186,7 @@ myDF$numCol #This gets all of the column "numCol"
 myDF[1,"numCol"]
 ```
 
-## Accessing Lists {.build} 
+## Accessing Lists 
 
 - Similarly, lists can be accessed numerically (see below), or by their name slots:
 
@@ -184,7 +197,7 @@ myList$numSlot
 myList[[4]][,3] #Same as myList$dfSlot$logCol
 ```
 
-## Functions {.build}
+## Functions
 
 - Functions take objects as __arguments__ (input) and return other __objects__ (output)
 
@@ -197,51 +210,100 @@ meanSdVec
 ?median #If you can't remember how a command works, use "?" to access the help files
 ```
 
-## Homemade Functions {.build}
+## Homemade Functions
 
 - You can make your own functions! This is useful if you have to do the same thing to many different input objects.
 
-```{r}
-myFun <- function(input){ #Takes a vector of numbers
-  A <- mean(input) #Take the mean of INPUT
-  B <- sd(input) #Take the SD of INPUT
-  C <- c(A,B) #Join A and B into a vector C
-  return(C) #Return (output) C, then end the function
-}
-myFun(myNumericVec) #Same as previous slide
-myFun(myLogicalVec) #Logical vector is converted to 1 (TRUE) and 0 (FALSE)
-```
+   ```{r}
+   myFun <- function(input){ #Takes a vector of numbers
+     A <- mean(input) #Take the mean of INPUT
+     B <- sd(input) #Take the SD of INPUT
+     C <- c(A,B) #Join A and B into a vector C
+     return(C) #Return (output) C, then end the function
+   }
+   myFun(myNumericVec) #Same as previous slide
+   ```
+
+- 
+
+   ```{r}
+   myFun(myLogicalVec) #Logical vector is converted to 1 (TRUE) and 0 (FALSE)
+   ```
 
 - The objects inside of functions (A,B,C in the one above) disappear after the function runs. However, functions can see objects in the outer environment, so beware of the Steve Problem*
 
-## Plotting {.build}
+## Plotting
 
-- The _plot_ command is useful for quickly looking at sets of data. The following CO2 dataset is built-in to R. To see others, type data()
+::: columns
 
-```{r fig.height = 4, fig.width = 5}
-#Makes a plot of the uptake (y) and conc columns of CO2, and customize axis labels
-plot(x = CO2$conc, y = CO2$uptake, xlab = 'Concentration (ppm)', ylab = 'Uptake (g)')
+:::: column
+
+- The _plot_ command is useful for quickly looking at sets of data. The following CO2 dataset is built-in to R. To see others, type \texttt{data()}
+
+```{r, co2plot, eval=FALSE, fig.height=5, fig.width=5, tidy=FALSE}
+#Makes a plot of the uptake (y) and 
+# concentration (x) columns of CO2 
+# dataframe, and customizes axis labels
+plot(x = CO2$conc, y = CO2$uptake, 
+     xlab = 'Concentration (ppm)', 
+     ylab = 'Uptake (g)', 
+     main = 'Plot of CO2 Concentrations', 
+     cex = 2)
 ```
 
-## Plotting (cont.) {.build}
+:::: 
+
+:::: column
+
+```{r, co2plot, echo=FALSE, eval=TRUE}
+```
+
+::::
+
+:::
+
+## Plotting (cont.)
+
+::: columns
+
+:::: column
 
 - The boxplot command can summarize _continuous_ and _categorical_ data
 
-```{r fig.height = 4, fig.width = 5}
+```{r, co2plot2, fig.height = 4, fig.width = 5, eval=FALSE, tidy.opts=list(width.cutoff=30)}
 #Boxplot uses a formula rather than x,y vectors 
 #Note: plot can also use formulas in lieu of x,y
-boxplot(CO2$uptake ~ CO2$Type, #Formula where uptake depends on (~) groups
-        xlab='Type', ylab='Uptake (g)')
+boxplot(CO2$uptake ~ CO2$Type, xlab='Type', ylab='Uptake (g)') 
+#Formula: uptake depends on (~) Type
 ```
 
-## Summary statistics {.build}
+:::: 
+
+:::: column
+
+```{r, co2plot2, echo = FALSE, eval = TRUE}
+```
+
+::::
+
+:::
+
+## Summary statistics
 
 - Often we want to get the mean of one columns, but split it up by other things in the dataframe. Using the CO2 plant example, how does _uptake_ differ between _Type_?
+
+::: columns
+
+:::: column
 
 ```{r}
 #Split up uptake by Type and Treatment, then take the mean
 tapply(CO2$uptake,list(CO2$Type,CO2$Treatment),mean)
 ```
+
+::::
+
+:::: column
 
 - It's annoying and repetitive to type "CO2" over and over again. You can use _with_ to avoid this (avoid using _attach_):
 
@@ -250,8 +312,11 @@ tapply(CO2$uptake,list(CO2$Type,CO2$Treatment),mean)
 with(CO2, tapply(uptake,list(Type,Treatment),sd))
 ```
 
+::::
 
-## if statements {.build}
+:::
+
+## _if_ statements
 
 - R can be told to do things only _if_ certain conditions apply. This is useful inside of functions for error handling:
 
@@ -270,7 +335,7 @@ myFun2(myNumericVec)
 
 ```
 
-## for loops {.build}
+## for loops
 
 - R can be told to do things _repeatedly_, using an index:
 
@@ -286,7 +351,7 @@ for(i in 1:length(myList)){
 classVec
 ```
 
-## Reading csv files {.build}
+## Reading csv files
 
 - One very common practice is to read in your own data from a csv file. Excel files can be read in directly, but present other problems. 
 
@@ -297,7 +362,7 @@ head(testDat) #head shows only first 6 rows of dataframe
 
 - R can't handle spaces or other special characters in the column headers (replaces them with periods). It also tries to guess the proper data type for each column, but sometimes gets this wrong.
 
-## A challenger approaches! {.build}
+## A challenger approaches!
 
 - Your supervisor has just given you a dataset (_test_results.csv_) recorded by two undergrads. However, these undergrads were in a big hurry, and have made some mistakes.
   
