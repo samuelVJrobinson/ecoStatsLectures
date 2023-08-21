@@ -4,3 +4,4 @@
 .Ruserdata
 *lecture_cache*
 *lecture_files*
+*.log
