@@ -372,8 +372,10 @@ head(testDat) #head shows only first 6 rows of dataframe
   
   - Some useful commands: __boxplot__, __grepl__, __gsub__, __as.numeric__
 
-- Make R sing "99 bottles of beer on the wall". Bonus points if you can use a function that you built! 
+- Population growth models are common in ecology, and usually often take the form $n_t = n_{t-1} + rn_{t-1}$, where $n$ is the number of critters at some time point $t$, and $r$ is the change in $n$ from one point to the next (r = 0: no change). Using a \texttt{for} loop, write a simple population simulation using the following models:
+
+  - Exponential growth: $n_t = n_{t-1}(1+r)$
+  - Logistic growth: $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$
+  - Predator-prey system: $\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{predators}_{t-1})\\\text{predators}_t = predators_{t-1}(1 + a_2\text{prey}_{t-1}-d)$
   
-  - Some useful commands: __for__, __if__, __paste__, __print__
   
-  - [Don't know the song?](https://en.wikipedia.org/wiki/99_Bottles_of_Beer)

@@ -1,0 +1,902 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  ignorenonframetext,
+  aspectratio=169]{beamer}
+\usepackage{pgfpages}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{caption label separator}{: }
+\setbeamercolor{caption name}{fg=normal text.fg}
+\beamertemplatenavigationsymbolsempty
+% Prevent slide breaks in the middle of a paragraph
+\widowpenalties 1 10000
+\raggedbottom
+\setbeamertemplate{part page}{
+  \centering
+  \begin{beamercolorbox}[sep=16pt,center]{part title}
+    \usebeamerfont{part title}\insertpart\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{section page}{
+  \centering
+  \begin{beamercolorbox}[sep=12pt,center]{part title}
+    \usebeamerfont{section title}\insertsection\par
+  \end{beamercolorbox}
+}
+\setbeamertemplate{subsection page}{
+  \centering
+  \begin{beamercolorbox}[sep=8pt,center]{part title}
+    \usebeamerfont{subsection title}\insertsubsection\par
+  \end{beamercolorbox}
+}
+\AtBeginPart{
+  \frame{\partpage}
+}
+\AtBeginSection{
+  \ifbibliography
+  \else
+    \frame{\sectionpage}
+  \fi
+}
+\AtBeginSubsection{
+  \frame{\subsectionpage}
+}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\usecolortheme{lily}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\newif\ifbibliography
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\let\oldShaded\Shaded %Change fontsize of R code chunks
+\let\endoldShaded\endShaded
+\renewenvironment{Shaded}{\footnotesize\oldShaded}{\endoldShaded}
+\let\oldverbatim\verbatim %Change fontsize of code chunk output
+\let\endoldverbatim\endverbatim
+\renewenvironment{verbatim}{\footnotesize\oldverbatim}{\endoldverbatim}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Introduction to R},
+  pdfauthor={Samuel Robinson, Ph.D.},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Introduction to R}
+\subtitle{``How do you turn this thing on?''}
+\author{Samuel Robinson, Ph.D.}
+\date{Sep.~4 2023}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Motivation}
+\protect\hypertarget{motivation}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  ``Why do I need to learn R?''
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    Free, powerful, and very common
+  \item
+    Interfaces with other languages (e.g.~C++), and can help you learn
+    other languages
+  \end{itemize}
+\item
+  ``What is R good at?''
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    Displaying data, running models, and processing data*
+  \item
+    Writing presentations and papers
+  \item
+    \emph{Keeping a record of what you've done}
+  \end{itemize}
+\item
+  ``What is R bad at?''
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    No point-and-click interface; simple things can take more time
+  \item
+    Can be slow if datasets are large*
+  \end{itemize}
+\item
+  I am not here to teach you programming, but some basic techniques are
+  useful
+\end{itemize}
+\end{frame}
+
+\begin{frame}{RStudio GUI}
+\protect\hypertarget{rstudio-gui}{}
+\begin{columns}[T]
+\begin{column}{0.4\textwidth}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  The \textbf{Console} is the main input into R (where you tell it to do
+  things)
+\item
+  \textbf{Scripts} are lists of commands that get passed into the
+  console
+\item
+  If you're using RStudio, 2 of the 4 panes will be dedicated to the
+  console and scripts
+\end{itemize}
+\end{column}
+
+\begin{column}{0.6\textwidth}
+\includegraphics[width=1\textwidth,height=\textheight]{screenshot.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Objects and Functions}
+\protect\hypertarget{objects-and-functions}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Everything in R is either an \textbf{Object} or a \textbf{Function}.
+  All must have a unique name, or else the \emph{Steve Problem}* occurs.
+\item
+  Some common \textbf{objects} (things stored in memory):
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    Strings, Logicals, \& Numerics
+  \item
+    Vectors \& Matrices
+  \item
+    Dataframes \& Lists*
+  \end{itemize}
+\item
+  Some common \textbf{functions} (things done to objects):
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    \emph{mean}, \emph{sd}, \emph{median}, \emph{quantile}, \emph{c},
+    \emph{paste}
+  \item
+    \emph{plot}, \emph{summary}
+
+    \begin{itemize}[<+->]
+    \tightlist
+    \item
+      these are polymorphic functions: they do different things to
+      different types of objects
+    \end{itemize}
+  \item
+    Control flow - \emph{if} and \emph{for}
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Objects}
+\protect\hypertarget{objects}{}
+\begin{itemize}[<+->]
+\item
+  Let's make some objects. These are all single objects:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myString }\OtherTok{\textless{}{-}} \StringTok{"Hello world"}  \CommentTok{\#A string object}
+\NormalTok{myNumeric }\OtherTok{\textless{}{-}} \DecValTok{12345}  \CommentTok{\#A numeric object}
+\NormalTok{myLogical }\OtherTok{\textless{}{-}} \ConstantTok{TRUE}  \CommentTok{\#A logical object}
+\end{Highlighting}
+\end{Shaded}
+\item
+  These are objects joined into a \emph{vector}, joined by the function
+  c (concatenate):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myStringVec }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"I like pie"}\NormalTok{, }\StringTok{"I like cake"}\NormalTok{, }\StringTok{"I like anything you bake"}\NormalTok{)}
+\NormalTok{myNumericVec }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{, }\DecValTok{3}\NormalTok{, }\DecValTok{4}\NormalTok{, }\DecValTok{5}\NormalTok{)}
+\NormalTok{myLogicalVec }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\ConstantTok{TRUE}\NormalTok{, }\ConstantTok{TRUE}\NormalTok{, }\ConstantTok{FALSE}\NormalTok{, }\ConstantTok{TRUE}\NormalTok{, }\ConstantTok{FALSE}\NormalTok{, }\ConstantTok{FALSE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+\item
+  How long are each of these vectors?
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{howLong }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\FunctionTok{length}\NormalTok{(myStringVec), }\FunctionTok{length}\NormalTok{(myNumericVec), }\FunctionTok{length}\NormalTok{(myLogicalVec))}
+\NormalTok{howLong  }\CommentTok{\#This executes the \textasciigrave{}print\textasciigrave{} command on \textasciigrave{}howLong\textasciigrave{}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 3 5 6
+\end{verbatim}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Vectors}
+\protect\hypertarget{vectors}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  How do I get stuff out of the vectors I just made?
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myStringVec  }\CommentTok{\#Here\textquotesingle{}s what\textquotesingle{}s inside the whole thing}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "I like pie"               "I like cake"             
+## [3] "I like anything you bake"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myStringVec[}\DecValTok{1}\NormalTok{]  }\CommentTok{\#Uses a single numeric}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "I like pie"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myStringVec[}\FunctionTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{3}\NormalTok{)]  }\CommentTok{\#Uses a vector of numerics}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "I like cake"              "I like anything you bake"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myStringVec[}\FunctionTok{c}\NormalTok{(}\ConstantTok{TRUE}\NormalTok{, }\ConstantTok{FALSE}\NormalTok{, }\ConstantTok{TRUE}\NormalTok{)]  }\CommentTok{\#Uses a logical vector of same length}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "I like pie"               "I like anything you bake"
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Matrices}
+\protect\hypertarget{matrices}{}
+\begin{itemize}[<+->]
+\item
+  Matrices are rectangular structures that hold values inside them:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{(myMatrix }\OtherTok{\textless{}{-}} \FunctionTok{matrix}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{9}\NormalTok{, }\AttributeTok{ncol =} \DecValTok{3}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##      [,1] [,2] [,3]
+## [1,]    1    4    7
+## [2,]    2    5    8
+## [3,]    3    6    9
+\end{verbatim}
+\item
+  Matrices are indexed by \emph{rows} and \emph{columns} (in that
+  order):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myMatrix[}\DecValTok{1}\NormalTok{, }\DecValTok{3}\NormalTok{]  }\CommentTok{\#1st row, 3rd col}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 7
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myMatrix[, }\DecValTok{3}\NormalTok{]  }\CommentTok{\#All rows, 3rd column}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 7 8 9
+\end{verbatim}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Dataframes}
+\protect\hypertarget{dataframes}{}
+\begin{itemize}[<+->]
+\item
+  Dataframes look similar to matrices, but can hold different data types
+  in each column:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Each column has a unique name, and must be the same length}
+\NormalTok{myDF }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{stringCol =}\NormalTok{ myStringVec, }\AttributeTok{numCol =}\NormalTok{ myNumericVec[}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{)], }\AttributeTok{logCol =}\NormalTok{ myLogicalVec[}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{)])}
+\NormalTok{myDF}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                  stringCol numCol logCol
+## 1               I like pie      1   TRUE
+## 2              I like cake      2   TRUE
+## 3 I like anything you bake      3  FALSE
+\end{verbatim}
+\item
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(myDF)  }\CommentTok{\#This function summarizes each column}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   stringCol             numCol      logCol       
+##  Length:3           Min.   :1.0   Mode :logical  
+##  Class :character   1st Qu.:1.5   FALSE:1        
+##  Mode  :character   Median :2.0   TRUE :2        
+##                     Mean   :2.0                  
+##                     3rd Qu.:2.5                  
+##                     Max.   :3.0
+\end{verbatim}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Lists}
+\protect\hypertarget{lists}{}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{itemize}
+\tightlist
+\item
+  Lists look similar to vectors, but can hold anything in each slot,
+  including other lists.
+\end{itemize}
+
+\begin{itemize}
+\tightlist
+\item
+  LOTS of things in R (e.g.~model output) are specially-structured lists
+  at their core
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myList }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\AttributeTok{stringSlot =}\NormalTok{ myStringVec,}
+    \AttributeTok{numSlot =}\NormalTok{ myNumericVec,}
+    \AttributeTok{logSlot =}\NormalTok{ myLogicalVec,}
+    \AttributeTok{dfSlot =}\NormalTok{ myDF)}
+\end{Highlighting}
+\end{Shaded}
+\end{column}
+
+\begin{column}{0.48\textwidth}
+\begin{verbatim}
+## $stringSlot
+## [1] "I like pie"               "I like cake"             
+## [3] "I like anything you bake"
+## 
+## $numSlot
+## [1] 1 2 3 4 5
+## 
+## $logSlot
+## [1]  TRUE  TRUE FALSE  TRUE FALSE FALSE
+## 
+## $dfSlot
+##                  stringCol numCol logCol
+## 1               I like pie      1   TRUE
+## 2              I like cake      2   TRUE
+## 3 I like anything you bake      3  FALSE
+\end{verbatim}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Accessing Dataframes}
+\protect\hypertarget{accessing-dataframes}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Dataframes can be accessed numerically, by their name slots, or with a
+  mixture of the two:
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myDF[}\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myDF}\SpecialCharTok{$}\NormalTok{numCol  }\CommentTok{\#This gets all of the column \textquotesingle{}numCol\textquotesingle{}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1 2 3
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myDF[}\DecValTok{1}\NormalTok{, }\StringTok{"numCol"}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Accessing Lists}
+\protect\hypertarget{accessing-lists}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Similarly, lists can be accessed numerically (see below), or by their
+  name slots:
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myList[[}\DecValTok{2}\NormalTok{]]  }\CommentTok{\#Needs 2 square brackets to isolate object}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1 2 3 4 5
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myList[[}\StringTok{"numSlot"}\NormalTok{]]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1 2 3 4 5
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myList}\SpecialCharTok{$}\NormalTok{numSlot}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1 2 3 4 5
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myList[[}\DecValTok{4}\NormalTok{]][, }\DecValTok{3}\NormalTok{]  }\CommentTok{\#Same as myList$dfSlot$logCol}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1]  TRUE  TRUE FALSE
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Functions}
+\protect\hypertarget{functions}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Functions take objects as \textbf{arguments} (input) and return other
+  \textbf{objects} (output)
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myNumericVec}
+\NormalTok{meanVec }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(myNumericVec)  }\CommentTok{\#Arithmetic mean (average)}
+\NormalTok{sdVec }\OtherTok{\textless{}{-}} \FunctionTok{sd}\NormalTok{(myNumericVec)  }\CommentTok{\#Standard deviation (sqrt(variance))}
+\NormalTok{meanSdVec }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(meanVec, sdVec)  }\CommentTok{\#Joins mean and SD into a vector}
+\NormalTok{meanSdVec}
+\StringTok{\textasciigrave{}}\AttributeTok{?}\StringTok{\textasciigrave{}}\NormalTok{(median  }\CommentTok{\#If you can\textquotesingle{}t remember how a command works, use \textquotesingle{}?\textquotesingle{} to access the help files}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+\end{frame}
+
+\begin{frame}[fragile]{Homemade Functions}
+\protect\hypertarget{homemade-functions}{}
+\begin{itemize}[<+->]
+\item
+  You can make your own functions! This is useful if you have to do the
+  same thing to many different input objects.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myFun }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(input) \{}
+    \CommentTok{\# Takes a vector of numbers}
+\NormalTok{    A }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(input)  }\CommentTok{\#Take the mean of INPUT}
+\NormalTok{    B }\OtherTok{\textless{}{-}} \FunctionTok{sd}\NormalTok{(input)  }\CommentTok{\#Take the SD of INPUT}
+\NormalTok{    C }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(A, B)  }\CommentTok{\#Join A and B into a vector C}
+    \FunctionTok{return}\NormalTok{(C)  }\CommentTok{\#Return (output) C, then end the function}
+\NormalTok{\}}
+\FunctionTok{myFun}\NormalTok{(myNumericVec)  }\CommentTok{\#Same as previous slide}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 3.000000 1.581139
+\end{verbatim}
+\item
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{myFun}\NormalTok{(myLogicalVec)  }\CommentTok{\#Logical vector is converted to 1 (TRUE) and 0 (FALSE)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.5000000 0.5477226
+\end{verbatim}
+\item
+  The objects inside of functions (A,B,C in the one above) disappear
+  after the function runs. However, functions can see objects in the
+  outer environment, so beware of the Steve Problem*
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Plotting}
+\protect\hypertarget{plotting}{}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  The \emph{plot} command is useful for quickly looking at sets of data.
+  The following CO2 dataset is built-in to R. To see others, type
+  \texttt{data()}
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\#Makes a plot of the uptake (y) and }
+\CommentTok{\# concentration (x) columns of CO2 }
+\CommentTok{\# dataframe, and customizes axis labels}
+\FunctionTok{plot}\NormalTok{(}\AttributeTok{x =}\NormalTok{ CO2}\SpecialCharTok{$}\NormalTok{conc, }\AttributeTok{y =}\NormalTok{ CO2}\SpecialCharTok{$}\NormalTok{uptake, }
+     \AttributeTok{xlab =} \StringTok{\textquotesingle{}Concentration (ppm)\textquotesingle{}}\NormalTok{, }
+     \AttributeTok{ylab =} \StringTok{\textquotesingle{}Uptake (g)\textquotesingle{}}\NormalTok{, }
+     \AttributeTok{main =} \StringTok{\textquotesingle{}Plot of CO2 Concentrations\textquotesingle{}}\NormalTok{, }
+     \AttributeTok{cex =} \DecValTok{2}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+\end{column}
+
+\begin{column}{0.48\textwidth}
+\includegraphics{01-Lecture_files/figure-beamer/co2plot-1.pdf}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Plotting (cont.)}
+\protect\hypertarget{plotting-cont.}{}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  The boxplot command can summarize \emph{continuous} and
+  \emph{categorical} data
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Boxplot uses a formula}
+\CommentTok{\# rather than x,y vectors}
+\CommentTok{\# Note: plot can also use}
+\CommentTok{\# formulas in lieu of x,y}
+\FunctionTok{boxplot}\NormalTok{(CO2}\SpecialCharTok{$}\NormalTok{uptake }\SpecialCharTok{\textasciitilde{}}\NormalTok{ CO2}\SpecialCharTok{$}\NormalTok{Type,}
+    \AttributeTok{xlab =} \StringTok{"Type"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"Uptake (g)"}\NormalTok{)}
+\CommentTok{\# Formula: uptake depends on}
+\CommentTok{\# (\textasciitilde{}) Type}
+\end{Highlighting}
+\end{Shaded}
+\end{column}
+
+\begin{column}{0.48\textwidth}
+\includegraphics{01-Lecture_files/figure-beamer/co2plot2-1.pdf}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Summary statistics}
+\protect\hypertarget{summary-statistics}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Often we want to get the mean of one columns, but split it up by other
+  things in the dataframe. Using the CO2 plant example, how does
+  \emph{uptake} differ between \emph{Type}?
+\end{itemize}
+
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Split up uptake by Type and Treatment, then take the mean}
+\FunctionTok{tapply}\NormalTok{(CO2}\SpecialCharTok{$}\NormalTok{uptake, }\FunctionTok{list}\NormalTok{(CO2}\SpecialCharTok{$}\NormalTok{Type, CO2}\SpecialCharTok{$}\NormalTok{Treatment), mean)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##             nonchilled  chilled
+## Quebec        35.33333 31.75238
+## Mississippi   25.95238 15.81429
+\end{verbatim}
+\end{column}
+
+\begin{column}{0.48\textwidth}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  It's annoying and repetitive to type ``CO2'' over and over again. You
+  can use \emph{with} to avoid this (avoid using \emph{attach}):
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Runs command inside the name space of the CO2 object}
+\FunctionTok{with}\NormalTok{(CO2, }\FunctionTok{tapply}\NormalTok{(uptake, }\FunctionTok{list}\NormalTok{(Type, Treatment), sd))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##             nonchilled  chilled
+## Quebec        9.596371 9.644823
+## Mississippi   7.402136 4.058976
+\end{verbatim}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{\emph{if} statements}
+\protect\hypertarget{if-statements}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  R can be told to do things only \emph{if} certain conditions apply.
+  This is useful inside of functions for error handling:
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{myFun2 }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x) \{}
+\NormalTok{    xClass }\OtherTok{\textless{}{-}} \FunctionTok{class}\NormalTok{(x)  }\CommentTok{\#What class is x? (Numeric, character, boolean)}
+
+    \ControlFlowTok{if}\NormalTok{ (xClass }\SpecialCharTok{==} \StringTok{"character"}\NormalTok{) \{}
+        \CommentTok{\# == means \textquotesingle{}are these things equal\textquotesingle{}?}
+        \FunctionTok{return}\NormalTok{(}\StringTok{"This is a string"}\NormalTok{)  }\CommentTok{\#If x is a character, returns a message}
+\NormalTok{    \} }\ControlFlowTok{else}\NormalTok{ \{}
+        \FunctionTok{return}\NormalTok{(}\FunctionTok{mean}\NormalTok{(x))  }\CommentTok{\#If x isn\textquotesingle{}t a character, returns the mean of x}
+\NormalTok{    \}}
+\NormalTok{\}}
+\FunctionTok{myFun2}\NormalTok{(myStringVec)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "This is a string"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{myFun2}\NormalTok{(myNumericVec)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 3
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{for loops}
+\protect\hypertarget{for-loops}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  R can be told to do things \emph{repeatedly}, using an index:
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{classVec }\OtherTok{\textless{}{-}} \FunctionTok{rep}\NormalTok{(}\StringTok{""}\NormalTok{, }\FunctionTok{length}\NormalTok{(myList))  }\CommentTok{\#Storage vector}
+
+\CommentTok{\# i will take on values 1 to 4, each time the loop repeats}
+\ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\FunctionTok{length}\NormalTok{(myList)) \{}
+
+    \CommentTok{\# ith slot of classVec becomes class from ith slot of myList}
+\NormalTok{    classVec[i] }\OtherTok{\textless{}{-}} \FunctionTok{class}\NormalTok{(myList[[i]])}
+\NormalTok{\}}
+\NormalTok{classVec}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "character"  "numeric"    "logical"    "data.frame"
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Reading csv files}
+\protect\hypertarget{reading-csv-files}{}
+\begin{itemize}[<+->]
+\tightlist
+\item
+  One very common practice is to read in your own data from a csv file.
+  Excel files can be read in directly, but present other problems.
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{testDat }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"test\_results.csv"}\NormalTok{)}
+\FunctionTok{head}\NormalTok{(testDat)  }\CommentTok{\#head shows only first 6 rows of dataframe}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   Concentration Treatment Lab.Member Time.of.Day
+## 1           2.9   Control       Will     Morning
+## 2           3.2   Control       Will     Morning
+## 3           3.6   Control       Will     Morning
+## 4           5.6         A       Will     Morning
+## 5           6.8         A       Will     Morning
+## 6           7.0         A       Will     Morning
+\end{verbatim}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  R can't handle spaces or other special characters in the column
+  headers (replaces them with periods). It also tries to guess the
+  proper data type for each column, but sometimes gets this wrong.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A challenger approaches!}
+\protect\hypertarget{a-challenger-approaches}{}
+\begin{itemize}[<+->]
+\item
+  Your supervisor has just given you a dataset
+  (\emph{test\_results.csv}) recorded by two undergrads. However, these
+  undergrads were in a big hurry, and have made some mistakes.
+
+  \begin{itemize}[<+->]
+  \item
+    Read the \emph{csv} file and fix any mistakes. Bonus if you do this
+    without using Excel!
+  \item
+    Plot the concentration data by treatment group, then plot it for
+    each undergrad. Does there look like much of a difference?
+  \item
+    Some useful commands: \textbf{boxplot}, \textbf{grepl},
+    \textbf{gsub}, \textbf{as.numeric}
+  \end{itemize}
+\item
+  Population growth models are common in ecology, and usually often take
+  the form \(n_t = n_{t-1} + rn_{t-1}\), where \(n\) is the number of
+  critters at some time point \(t\), and \(r\) is the change in \(n\)
+  from one point to the next (r = 0: no change). Using a \texttt{for}
+  loop, write a simple population simulation using the following models:
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    Exponential growth: \(n_t = n_{t-1}(1+r)\)
+  \item
+    Logistic growth: \(n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))\)
+  \item
+    Predator-prey system:
+    \(\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{predators}_{t-1})\\\text{predators}_t = predators_{t-1}(1 + a_2\text{prey}_{t-1}-d)\)
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\end{document}
