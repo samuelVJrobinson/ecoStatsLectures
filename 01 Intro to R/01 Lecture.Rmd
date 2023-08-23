@@ -372,26 +372,12 @@ head(testDat) #head shows only first 6 rows of dataframe
   
   - Some useful commands: __read.csv__, __boxplot__, __is.na__, __as.factor__
 
-- Population growth models are common in ecology, and usually often take the form $n_t = n_{t-1} + rn_{t-1}$, where $n$ is the number of critters at some time point $t$, and $r$ is the change in $n$ from one point to the next (r = 0: no change). Using a \texttt{for} loop, write a simple population simulation using the following models:
+Population growth models are common in ecology, and usually often take the form $n_t = n_{t-1} + rn_{t-1}$, where $n$ is the number of critters at some time point $t$, and $r$ is the change in $n$ from one point to the next (r = 0: no change). Using a \texttt{for} loop, write a simple population simulation using the following models:
 
-  - Exponential growth: $n_t = n_{t-1}(1+r)$
-  - Logistic growth: $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$
-  - Predator-prey system: $\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{predators}_{t-1});\text{ pred}_t = \text{pred}_{t-1}(1 + a_2\text{prey}_{t-1}-d)$
-  
-## Solutions (1)
-
-```{r}
-dat <- read.csv('test_results.csv',)
-# print(dat)
-dat <- dat[!is.na(dat$Concentration),] #Remove NA
-dat$Treatment[dat$Treatment=='Bee'] <- 'B' #Change Bee to B
-dat$Lab.Member[dat$Lab.Member=='Same'] <- 'Sam' #Change Same to Sam
-dat$Treatment <- as.factor(dat$Treatment) #Change characters to factor
-dat$Lab.Member <- as.factor(dat$Lab.Member) 
-dat$Concentration[dat$Concentration==30] <- 3.0
-
-boxplot(Concentration ~ Treatment,data=dat)
-
-```
+- Exponential growth: $n_t = n_{t-1}(1+r)$
+- Logistic growth: $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$
+- Predator-prey cycles (Lotka-Volterra): 
+  - $\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{pred}_{t-1})$
+  - $\text{pred}_t = \text{pred}_{t-1}(1 + a_2\text{prey}_{t-1}-d)$
   
   
