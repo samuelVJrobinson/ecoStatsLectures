@@ -1,7 +1,8 @@
-# CONCENTRATION DATA PROBLEM
+#Solutions to Lecture 1 Problems
 
-# READ IN THE DATA --------------------------------------------------------
-setwd("~/Documents/ecoStats2020/01 Intro to R") #Set the working directory
+# Concentration data processing ----------------------------
+
+setwd("~/ecoStatsLectures/01 Intro to R") #Set the working directory
 
 testData <- read.csv('test_results.csv') #Reads in csv file from that working directory
 
@@ -62,7 +63,7 @@ testData #No more NAs.
 # - This is a very small dataset. Large datasets (>1000 rows) are harder to look through by eye, and Excel has trouble opening very large datasets (>10000 rows)
 # - You now have a record of exactly how you cleaned up your data! You can now refer to this when writing papers (e.g. "All values <0 were excluded from further analysis"), or can give this script to other colleagues so that they can clean up their data in the same way. 
 
-# BASIC PLOTTING -------------------
+# Basic plots from concentration data
 
 #Take a look at the data we read in
 hist(testData$Concentration) #Histogram of Concentration
@@ -80,4 +81,70 @@ plot(testData$LabMember,testData$Concentration,xlab='Lab Member',ylab='Concentra
 
 #Reset plotting parameters
 par(mfrow=c(1,1))
+
+# Growth models -------------------------------
+
+#Exponential growth
+
+t <- 100 #100 time points
+n0 <- 5 #Starting number of critters
+r <- 0.1 #10% growth rate
+
+n <- rep(NA,t) #Empty vector
+n[1] <- n0 #Fill in the first number
+
+for(i in 2:t){
+  n[i] <- n[i-1] + n[i-1]*r
+}
+
+plot(1:t,n,xlab='Time',ylab='Number of Critters',main='Exponential growth',pch=19)
+
+# Logistic growth
+
+t <- 100 #100 time points
+m0 <- 5 #Starting number of critters
+r <- 0.1 #10% growth rate
+k <- 100 #Carrying capacity
+
+m <- rep(NA,t) #Empty vector
+m[1] <- m0 #Fill in the first number
+
+for(i in 2:t){
+  m[i] <- m[i-1] + m[i-1]*r*(1-(m[i-1]/k))
+}
+
+plot(1:t,m,xlab='Time',ylab='Number of Critters',main='Logistic growth',pch=19)
+abline(h=k,col='red')
+
+#Predator-prey (Lotka-Volterra model)
+
+t <- 100 #100 time points
+pred0 <- 3 #Starting number of predators
+prey0 <- 10 #Starting number of prey
+r <- 0.1 # 10% growth rate for prey
+a1 <- 0.02 #Effect of predators on prey growth
+a2 <- 0.02 #Effect of prey on predator growth
+d <- 0.2 #Death rate of predators
+
+pred <- prey <- rep(NA,t) #Empty vectors
+pred[1] <- pred0; prey[1] <- prey0 #Set first value
+
+for(i in 2:t){
+  prey[i] <- prey[i-1] + prey[i-1]*r - a1*prey[i-1]*pred[i-1]
+  pred[i] <- pred[i-1] + a2*prey[i-1]*pred[i-1] - pred[i-1]*d
+  
+  #If either prey or predator count is negative, set to 0 (extinction)
+  prey[i] <- pmax(0,prey[i]); pred[i] <- pmax(0,pred[i]) 
+}
+
+par(mfrow=c(2,1)) #Split plot into 2 windows
+
+#Time series plot
+plot(1:t,prey,pch=19,ylim=range(c(prey,pred)),xlab='Time',ylab='Number of Critters')
+points(1:t,pred,col='red',pch=19)
+legend('topright',c('Prey','Pred'),fill=c('black','red'))
+
+#Phase plane diagram, showing dynamic spirals
+plot(pred,prey,pch=19,xlab='Predators',ylab='Prey',main='Phase-plane')
+text(pred[1]*1.1,prey[1],'Start',col='red')
 
