@@ -106,16 +106,49 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message=TRUE, warning=TRUE, tidy
    howLong #This executes the `print` command on `howLong`
    ```
 
-## Vectors
-
-- How do I get stuff out of the vectors I just made?
-
+## Vectors - ``getting"
 ```{r}
 myStringVec #Here's what's inside the whole thing
-myStringVec[1] #Uses a single numeric
-myStringVec[c(2,3)] #Uses a vector of numerics
-myStringVec[c(TRUE,FALSE,TRUE)] #Uses a logical vector of same length
 ```
+
+\pause 
+
+- Single number:
+  
+  ```{r}
+  myStringVec[1]
+  ```
+
+- Vector of numbers
+  
+  ```{r}
+  myStringVec[c(2,3)] 
+  ```
+- Logical vector
+ 
+  ```{r}
+  myStringVec[c(TRUE,FALSE,TRUE)] 
+  ```
+  
+## Vectors - ``setting"
+
+Vectors are set in the same way, using the assignment operator: <- OR =
+  
+\pause  
+  
+- String vector
+  ```{r}
+  myStringVec[c(2,3)] <- c('Cats','Dogs')
+  ```
+- Logical vector
+  ```{r}
+  myStringVec[c(TRUE,FALSE,FALSE)] = 'Parakeets'
+  ```
+- Results:
+  ```{r}
+  myStringVec #Here's what's inside the whole thing
+  ```
+  
 
 ## Matrices
 
@@ -129,7 +162,7 @@ myStringVec[c(TRUE,FALSE,TRUE)] #Uses a logical vector of same length
    
    ```{r}
    myMatrix[1,3] #1st row, 3rd col
-   myMatrix[,3] #All rows, 3rd column
+   myMatrix[,c(FALSE,FALSE,TRUE)] #All rows, 3rd column
    ```
 
 ## Dataframes
@@ -143,10 +176,20 @@ myStringVec[c(TRUE,FALSE,TRUE)] #Uses a logical vector of same length
    myDF
    ```
 - 
-
   ```{r}
   summary(myDF) #This function summarizes each column
   ```
+
+## Accessing Dataframes
+
+Dataframes can be accessed numerically, by their name slots (using the $ operator), or with a mixture of the two:
+
+```{r}
+myDF[1,2]
+myDF$numCol #This gets all of the column "numCol"
+myDF[1,"numCol"]
+myDF$numCol[1]
+```
 
 ## Lists
 
@@ -159,8 +202,10 @@ myStringVec[c(TRUE,FALSE,TRUE)] #Uses a logical vector of same length
 >- LOTS of things in R (e.g. model output) are specially-structured lists at their core
 
 ```{r tidy.opts=list(width.cutoff=25)}
-myList <- list(stringSlot=myStringVec, numSlot=myNumericVec, 
-                  logSlot=myLogicalVec, dfSlot = myDF)
+myList <- list(stringSlot=myStringVec, 
+               numSlot=myNumericVec, 
+               logSlot=myLogicalVec, 
+               dfSlot = myDF)
 ```
 
 ::::
@@ -175,20 +220,9 @@ myList
 
 :::
    
-
-## Accessing Dataframes
-
-- Dataframes can be accessed numerically, by their name slots, or with a mixture of the two:
-
-```{r}
-myDF[1,2]
-myDF$numCol #This gets all of the column "numCol"
-myDF[1,"numCol"]
-```
-
 ## Accessing Lists 
 
-- Similarly, lists can be accessed numerically (see below), or by their name slots:
+Lists can be accessed numerically or logically, or by their name slots:
 
 ```{r}
 myList[[2]] #Needs 2 square brackets to isolate object
@@ -200,15 +234,18 @@ myList[[4]][,3] #Same as myList$dfSlot$logCol
 ## Functions
 
 - Functions take objects as __arguments__ (input) and return other __objects__ (output)
-
-```{r eval=FALSE, include=TRUE}
-myNumericVec
-meanVec <- mean(myNumericVec) #Arithmetic mean (average)
-sdVec <- sd(myNumericVec) #Standard deviation (sqrt(variance))
-meanSdVec <- c(meanVec,sdVec) #Joins mean and SD into a vector
-meanSdVec
-?median #If you can't remember how a command works, use "?" to access the help files
-```
+  ```{r}
+  myNumericVec <- c(1,2,3,4,5)
+  meanVec <- mean(myNumericVec) #Arithmetic mean (average)
+  sdVec <- sd(myNumericVec) #Standard deviation (sqrt(variance))
+  meanSdVec <- c(meanVec,sdVec) #Joins mean and SD into a vector
+  meanSdVec
+  ```
+  
+- If you can't remember how a command works, use ? to access the help files
+  ```{r, eval=FALSE, echo=TRUE}
+  ?median 
+  ```
 
 ## Homemade Functions
 
@@ -223,14 +260,14 @@ meanSdVec
    }
    myFun(myNumericVec) #Same as previous slide
    ```
+   
+<!-- - If you pass in a logical vector, it will convert it to numeric (0 and 1) -->
+<!--   ```{r} -->
+<!--   myLogicalVec <- c(TRUE,TRUE,FALSE,TRUE) -->
+<!--   myFun(myLogicalVec)  -->
+<!--   ``` -->
 
-- 
-
-   ```{r}
-   myFun(myLogicalVec) #Logical vector is converted to 1 (TRUE) and 0 (FALSE)
-   ```
-
-- The objects inside of functions (A,B,C in the one above) disappear after the function runs. However, functions can see objects in the outer environment, so beware of the Steve Problem*
+- The objects inside of functions (A, B, C in the one above) disappear after the function runs. However, _functions can see objects in the outer environment_, so beware of the Steve Problem*
 
 ## Plotting
 
@@ -272,9 +309,12 @@ plot(x = CO2$conc, y = CO2$uptake,
 
 ```{r, co2plot2, fig.height = 4, fig.width = 5, eval=FALSE, tidy.opts=list(width.cutoff=30)}
 #Boxplot uses a formula rather than x,y vectors 
-#Note: plot can also use formulas in lieu of x,y
-boxplot(CO2$uptake ~ CO2$Type, xlab='Type', ylab='Uptake (g)') 
+
 #Formula: uptake depends on (~) Type
+boxplot(CO2$uptake ~ CO2$Type, 
+        xlab='Type',
+        ylab='Uptake (g)') 
+
 ```
 
 :::: 
@@ -290,13 +330,18 @@ boxplot(CO2$uptake ~ CO2$Type, xlab='Type', ylab='Uptake (g)')
 
 ## Summary statistics
 
-- Often we want to get the mean of one columns, but split it up by other things in the dataframe. Using the CO2 plant example, how does _uptake_ differ between _Type_?
-
 ::: columns
 
 :::: column
 
+Often we want to get the mean of one columns, but split it up by other things in the dataframe. Using the CO2 plant example, how does _uptake_ differ between _Type_?
+
+\pause
+
 ```{r}
+
+options(width = 10)
+
 #Split up uptake by Type and Treatment, then take the mean
 tapply(CO2$uptake,list(CO2$Type,CO2$Treatment),mean)
 ```
@@ -305,11 +350,17 @@ tapply(CO2$uptake,list(CO2$Type,CO2$Treatment),mean)
 
 :::: column
 
-- It's annoying and repetitive to type "CO2" over and over again. You can use _with_ to avoid this (avoid using _attach_):
+\pause
+
+Typing "CO2" over and over again is annoying. You can use _with_ to avoid this (avoid using _attach_):
+
+\pause
 
 ```{r}
 #Runs command inside the name space of the CO2 object
-with(CO2, tapply(uptake,list(Type,Treatment),sd))
+with(CO2, 
+     tapply(uptake,list(Type,Treatment),sd)
+     )
 ```
 
 ::::
@@ -364,20 +415,20 @@ head(testDat) #head shows only first 6 rows of dataframe
 
 ## A challenger approaches!
 
-- Your supervisor has just given you a dataset (_test_results.csv_) recorded by two undergrads. However, these undergrads were in a hurry and have made some mistakes:
+Your supervisor has just given you a dataset (_test_results.csv_) recorded by two undergrads. However, these undergrads were in a hurry and have made some mistakes:
   
-  - Read the _csv_ file and fix any mistakes. Bonus if you do this without using Excel!
+  >- Read the _csv_ file and fix any mistakes. Bonus if you do this without using Excel!
   
-  - Plot the concentration data by treatment group, then plot it for each undergrad. Does there look like much of a difference?
+  >- Plot the concentration data by treatment group, then plot it for each undergrad. Does there look like much of a difference?
   
-  - Some useful commands: __read.csv__, __boxplot__, __is.na__, __as.factor__
+  >- Some useful commands: __read.csv__, __boxplot__, __is.na__, __as.factor__
 
 Population growth models are common in ecology, and usually often take the form $n_t = n_{t-1} + rn_{t-1}$, where $n$ is the number of critters at some time point $t$, and $r$ is the change in $n$ from one point to the next (r = 0: no change). Using a \texttt{for} loop, write a simple population simulation using the following models:
 
-- Exponential growth: $n_t = n_{t-1}(1+r)$
-- Logistic growth: $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$
-- Predator-prey cycles (Lotka-Volterra): 
-  - $\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{pred}_{t-1})$
-  - $\text{pred}_t = \text{pred}_{t-1}(1 + a_2\text{prey}_{t-1}-d)$
+  >- Exponential growth: $n_t = n_{t-1}(1+r)$
+  >- Logistic growth: $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$
+  >- Predator-prey cycles (Lotka-Volterra): 
+    >- $\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{pred}_{t-1})$
+    >- $\text{pred}_t = \text{pred}_{t-1}(1 + a_2\text{prey}_{t-1}-d)$
   
   
