@@ -189,8 +189,9 @@ Vectors (or other data) can be converted between __classes__, usually using _as.
 
 - Dataframes look similar to matrices, but can hold different data types in each column:
 
-  ```{r tidy.opts=list(width.cutoff=50)}
-  myDF <- data.frame(stringCol=myCharVec, numCol=myNumVec[c(1:3)], logCol=myLogVec[c(1:3)])
+  ```{r tidy.opts=list(width.cutoff=30)}
+  myDF <- data.frame(stringCol=myCharVec, numCol=myNumVec[c(1:3)], 
+    logCol=myLogVec[c(1:3)])
   myDF
   ```
 - 
@@ -224,13 +225,33 @@ Dataframes can be accessed numerically, by their name slots (using the $ operato
   myDF$numCol[1]
   ```
   
+## Manipulating dataframe
+
+Like other objects, you can alter parts of dataframes
+
+- You can add columns
+  ```{r, eval=FALSE}
+  myDF$numCol2 <- myDF$numCol*3 #Multiplies 
+  ```
+
+- You can also alter columns in place, or elements within columns
+  ```{r eval=FALSE}
+  myDF$numCol <- (myDF$numCol)^2
+  myDF$numCol[3] <- myDF$numCol[3] - myDF$numCol[2]
+  ```  
+- You can delete columns by subsetting the dataframe, or assigning the column to \texttt{NULL}
+  ```{r eval=FALSE}
+  myDF <- myDF[,c(1,2)] #Selects only column 1 and 2
+  myDF$numCol <- NULL #Removes numCol
+  ```
+  
 ## Reading csv files
 
-- One very common practice is to read in your own data from a csv file. Excel files can be read in directly, but present other problems. 
+- One very common practice is to read in your own data from a csv file as a dataframe. Excel files can be read in directly, but present other problems. 
 
   ```{r}
-  testDat <- read.csv('test_results.csv')
-  head(testDat) #head shows only first 6 rows of dataframe
+  testDat <- read.csv('test_results.csv') #Path to csv file
+  head(testDat) #head shows only the first 6 rows of dataframe
   ```
 - R can't handle spaces or other special characters in the column headers (replaces them with periods). It also tries to guess the proper data type for each column, but sometimes gets this wrong.
 
@@ -240,7 +261,7 @@ Dataframes can be accessed numerically, by their name slots (using the $ operato
 
 :::: column
 
-- The _plot_ command is useful for quickly looking at sets of data. The following CO2 dataset is built-in to R. To see others, type \texttt{data()}
+- The _plot_ command is useful for quickly looking at sets of data. The following CO2 dataset is built-in to R.\footnotemark 
 
 ```{r, co2plot, eval=FALSE, fig.height=5, fig.width=5, tidy=FALSE}
 #Makes a plot of the uptake (y) and 
@@ -250,21 +271,29 @@ plot(x = CO2$conc, y = CO2$uptake,
      xlab = 'Concentration (ppm)', 
      ylab = 'Uptake (g)', 
      main = 'Plot of CO2 Concentrations', 
-     cex = 2)
+     cex.lab = 2, cex.main=2)
 ```
 
 :::: 
 
 :::: column
 
-```{r, co2plot, echo=FALSE, eval=TRUE}
+```{r, echo=FALSE, eval=TRUE, fig.height=5, fig.width=5}
+par(mar=c(5,5,4,2)+0.1)
+plot(x = CO2$conc, y = CO2$uptake, 
+     xlab = 'Concentration (ppm)', 
+     ylab = 'Uptake (g)', 
+     main = 'Plot of CO2 Concentrations', 
+     cex.lab = 2, cex.main=2)
 ```
 
 ::::
 
 :::
 
-## Plotting (cont.)
+\footnotetext{To see others, type \texttt{data()} in the console}
+
+## More Plotting 
 
 ::: columns
 
@@ -272,13 +301,15 @@ plot(x = CO2$conc, y = CO2$uptake,
 
 - The boxplot command can summarize _continuous_ and _categorical_ data
 
-```{r, co2plot2, fig.height = 4, fig.width = 5, eval=FALSE, tidy.opts=list(width.cutoff=30)}
-#Boxplot uses a formula rather than x,y vectors 
+```{r, co2plot2, eval=FALSE, tidy.opts=list(width.cutoff=30)}
+#Boxplot uses a formula rather than x,y 
+#   vectors 
 
 #Formula: uptake depends on (~) Type
 boxplot(CO2$uptake ~ CO2$Type, 
         xlab='Type',
-        ylab='Uptake (g)') 
+        ylab='Uptake (g)',
+        cex.lab = 2, cex.main=2)
 
 ```
 
@@ -286,7 +317,12 @@ boxplot(CO2$uptake ~ CO2$Type,
 
 :::: column
 
-```{r, co2plot2, echo = FALSE, eval = TRUE}
+```{r, echo = FALSE, eval = TRUE, fig.height = 5, fig.width = 5}
+par(mar=c(5,5,4,2)+0.1)
+boxplot(CO2$uptake ~ CO2$Type, 
+        xlab='Type',
+        ylab='Uptake (g)',
+        cex.lab = 2)
 ```
 
 ::::
@@ -305,47 +341,6 @@ Your supervisor has just given you a dataset (_test_results.csv_) recorded by tw
   >- Plot the concentration data by treatment group, then plot it for each undergrad. Does there look like much of a difference?
   
   >- Some useful commands: __read.csv__, __boxplot__, __is.na__, __as.factor__, __summary__
-
-
-## Lists
-
-::: columns
-
-:::: column
-
->- Lists look similar to vectors, but can hold anything in each slot, including other lists. 
-
->- LOTS of things in R (e.g. model output) are specially-structured lists at their core
-
-```{r tidy.opts=list(width.cutoff=25)}
-myList <- list(charSlot=myCharVec, 
-               numSlot=myNumVec, 
-               logSlot=myLogVec, 
-               dfSlot = myDF)
-```
-
-::::
-
-:::: column
-
-```{r eval = TRUE, echo=FALSE}
-myList
-```
-
-::::
-
-:::
-   
-## Accessing Lists 
-
-Lists can be accessed numerically or logically, or by their name slots:
-
-```{r}
-myList[[2]] #Needs 2 square brackets to isolate object
-myList[['numSlot']]
-myList$numSlot
-myList[[4]][,3] #Same as myList$dfSlot$logCol
-```
 
 ## Functions
 
@@ -396,12 +391,11 @@ Often we want to get the mean of one columns, but split it up by other things in
 
 \pause
 
-```{r}
-
-options(width = 10)
-
-#Split up uptake by Type and Treatment, then take the mean
-tapply(CO2$uptake,list(CO2$Type,CO2$Treatment),mean)
+```{r tidy.opts=list(width.cutoff=20)}
+#Split up uptake by Type and Treatment, 
+#   then take the mean
+tapply(CO2$uptake, list(CO2$Type,
+                CO2$Treatment), mean)
 ```
 
 ::::
@@ -414,11 +408,12 @@ Typing "CO2" over and over again is annoying. You can use _with_ to avoid this (
 
 \pause
 
-```{r}
-#Runs command inside the name space of the CO2 object
-with(CO2, 
-     tapply(uptake,list(Type,Treatment),sd)
-     )
+```{r tidy.opts=list(width.cutoff=20)}
+#Runs command inside the name space of the 
+#   CO2 object
+with(CO2,
+ tapply(uptake, list(Type, Treatment), sd)
+)
 ```
 
 ::::
@@ -444,32 +439,74 @@ myFun2(myNumVec)
 
 ```
 
-## for loops
+## __for__ loops
 
-- R can be told to do things _repeatedly_, using an index:
+- R can be told to do things repeatedly, using an _index_ inside a loop:
 
 ```{r}
-classVec <- rep('',length(myList)) #Storage vector
+classVec <- rep(0,10) #Storage vector of zeros, 10 long
+classVec[c(1,2)] <- 1 #Set first two slots to 1
 
-#i will take on values 1 to 4, each time the loop repeats
-for(i in 1:length(myList)){
+#Each time the loop repeats, i will take on values 3 to 10
+for(i in 3:length(classVec)){
   
-  #ith slot of classVec becomes class from ith slot of myList
-  classVec[i] <- class(myList[[i]]) 
+  #ith slot of classVec becomes the sum of the previous two slots
+  classVec[i] <- classVec[i-1] + classVec[i-2]
 }
-classVec
+classVec #First 10 numbers in the Fibbonaci sequence
 ```
 
 ## Second challenge
 
-
-
-Population growth models are common in ecology, and usually often take the form $n_t = n_{t-1} + rn_{t-1}$, where $n$ is the number of critters at some time point $t$, and $r$ is the change in $n$ from one point to the next (r = 0: no change). Using a \texttt{for} loop, write a simple population simulation using the following models:
+Population growth models are common in ecology, and usually often take the form $n_t = n_{t-1} + rn_{t-1}$, where $n$ is the number of critters at some time point $t$, and $r$ is the change in $n$ from one point to the next (r = 0: no change). Write a \texttt{function} (with a \texttt{for} loop inside) that performs a simple population simulation using the following models:
 
   >- Exponential growth: $n_t = n_{t-1}(1+r)$
   >- Logistic growth: $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$
-  >- Predator-prey cycles (Lotka-Volterra): 
-    >- $\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{pred}_{t-1})$
-    >- $\text{pred}_t = \text{pred}_{t-1}(1 + a_2\text{prey}_{t-1}-d)$
+  <!-- >- Predator-prey cycles (Lotka-Volterra):  -->
+  <!--   >- $\text{prey}_t = \text{prey}_{t-1}(1+ r_1 - a_1\text{pred}_{t-1})$ -->
+  <!--   >- $\text{pred}_t = \text{pred}_{t-1}(1 + a_2\text{prey}_{t-1}-d)$ -->
   
+Hint: functions need input variables that tell them what to do. The input variables here could be things like _starting population_ ($n_0$), _growth rate_ ($r$), and _number of time steps_ ($T$) to simulate
+    
   
+<!-- # Extra Material -->
+
+<!-- ## Lists -->
+
+<!-- ::: columns -->
+
+<!-- :::: column -->
+
+<!-- >- Lists look similar to vectors, but can hold anything in each slot, including other lists.  -->
+
+<!-- >- LOTS of things in R (e.g. model output) are specially-structured lists at their core -->
+
+<!-- ```{r tidy.opts=list(width.cutoff=25)} -->
+<!-- myList <- list(charSlot=myCharVec,  -->
+<!--                numSlot=myNumVec,  -->
+<!--                logSlot=myLogVec,  -->
+<!--                dfSlot = myDF) -->
+<!-- ``` -->
+
+<!-- :::: -->
+
+<!-- :::: column -->
+
+<!-- ```{r eval = TRUE, echo=FALSE} -->
+<!-- myList -->
+<!-- ``` -->
+
+<!-- :::: -->
+
+<!-- ::: -->
+
+<!-- ## Accessing Lists  -->
+
+<!-- Lists can be accessed numerically or logically, or by their name slots: -->
+
+<!-- ```{r} -->
+<!-- myList[[2]] #Needs 2 square brackets to isolate object -->
+<!-- myList[['numSlot']] -->
+<!-- myList$numSlot -->
+<!-- myList[[4]][,3] #Same as myList$dfSlot$logCol -->
+<!-- ``` -->
