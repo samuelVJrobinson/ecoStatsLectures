@@ -116,35 +116,83 @@ for(i in 2:t){
 plot(1:t,m,xlab='Time',ylab='Number of Critters',main='Logistic growth',pch=19)
 abline(h=k,col='red')
 
-#Predator-prey (Lotka-Volterra model)
+# #Predator-prey (Lotka-Volterra model)
+# 
+# t <- 100 #100 time points
+# pred0 <- 3 #Starting number of predators
+# prey0 <- 10 #Starting number of prey
+# r <- 0.1 # 10% growth rate for prey
+# a1 <- 0.02 #Effect of predators on prey growth
+# a2 <- 0.02 #Effect of prey on predator growth
+# d <- 0.2 #Death rate of predators
+# 
+# pred <- prey <- rep(NA,t) #Empty vectors
+# pred[1] <- pred0; prey[1] <- prey0 #Set first value
+# 
+# for(i in 2:t){
+#   prey[i] <- prey[i-1] + prey[i-1]*r - a1*prey[i-1]*pred[i-1]
+#   pred[i] <- pred[i-1] + a2*prey[i-1]*pred[i-1] - pred[i-1]*d
+#   
+#   #If either prey or predator count is negative, set to 0 (extinction)
+#   prey[i] <- pmax(0,prey[i]); pred[i] <- pmax(0,pred[i]) 
+# }
+# 
+# par(mfrow=c(2,1)) #Split plot into 2 windows
+# 
+# #Time series plot
+# plot(1:t,prey,pch=19,ylim=range(c(prey,pred)),xlab='Time',ylab='Number of Critters')
+# points(1:t,pred,col='red',pch=19)
+# legend('topright',c('Prey','Pred'),fill=c('black','red'))
+# 
+# #Phase plane diagram, showing dynamic spirals
+# plot(pred,prey,pch=19,xlab='Predators',ylab='Prey',main='Phase-plane')
+# text(pred[1]*1.1,prey[1],'Start',col='red')
 
-t <- 100 #100 time points
-pred0 <- 3 #Starting number of predators
-prey0 <- 10 #Starting number of prey
-r <- 0.1 # 10% growth rate for prey
-a1 <- 0.02 #Effect of predators on prey growth
-a2 <- 0.02 #Effect of prey on predator growth
-d <- 0.2 #Death rate of predators
+# Logistic growth states -------------------------
 
-pred <- prey <- rep(NA,t) #Empty vectors
-pred[1] <- pred0; prey[1] <- prey0 #Set first value
-
-for(i in 2:t){
-  prey[i] <- prey[i-1] + prey[i-1]*r - a1*prey[i-1]*pred[i-1]
-  pred[i] <- pred[i-1] + a2*prey[i-1]*pred[i-1] - pred[i-1]*d
-  
-  #If either prey or predator count is negative, set to 0 (extinction)
-  prey[i] <- pmax(0,prey[i]); pred[i] <- pmax(0,pred[i]) 
+logFun <- function(r,k,t,n0){ #Create logistic growth function
+  m <- rep(NA,t) #Empty vector
+  m[1] <- n0 #Fill in the first number
+  for(i in 2:t){
+    m[i] <- m[i-1] + m[i-1]*r*(1-(m[i-1]/k))
+  }
+  return(m)
 }
 
-par(mfrow=c(2,1)) #Split plot into 2 windows
+{ #Try out some values
+  par(mfrow=c(2,2))
+    for(r in c(0.5,2,2.5,2.9)){
+      l <- logFun(r,100,1000,1)
+      l <- round(l)
+      plot(l[1:200],type='n',xlab='Time',ylab='Population',
+           main=paste0('r = ',r,', ', length(unique(l[900:1000])),' states'))
+      abline(h=100,col='red')
+      lines(l[1:200])
+    }
+  par(mfrow=c(1,1))  
+}
 
-#Time series plot
-plot(1:t,prey,pch=19,ylim=range(c(prey,pred)),xlab='Time',ylab='Number of Critters')
-points(1:t,pred,col='red',pch=19)
-legend('topright',c('Prey','Pred'),fill=c('black','red'))
+rSeq <- seq(1,3,0.01) #Sequence of r values to use
 
-#Phase plane diagram, showing dynamic spirals
-plot(pred,prey,pch=19,xlab='Predators',ylab='Prey',main='Phase-plane')
-text(pred[1]*1.1,prey[1],'Start',col='red')
+logSim <- lapply(rSeq,function(r){
+  l <- logFun(r,100,3000,1)[2001:3000] #Takes only samples after t = 2000 ("burn-in" period)
+  l <- round(l,1) #Rounds to 1 digit - keeps things simple for now
+  unique(l)
+})
+
+#Plots of simulation
+{
+  par(mfrow=c(2,1))
+  
+  X <- rSeq
+  Y <- sapply(logSim,length)
+  plot(X,log(Y),type='b',ylab='log(Number of states)',xlab='',pch=19)
+  
+  X <- rep(rSeq,sapply(logSim,length))
+  Y <- unlist(logSim) 
+  plot(X,Y,pch=19,ylab='Stable states',xlab='r value')
+  par(mfrow=c(1,1))
+}
+
+
 

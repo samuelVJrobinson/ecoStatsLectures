@@ -1,18 +1,27 @@
 ---
-title: 'Intro to *data wrangling*' 
-subtitle: '`dplyr` & `tidyr` workshop'
+title: '`dplyr`, `tidyr`, and `ggplot2`'
+subtitle: 'Intro to the _tidyverse_' 
 author: "Samuel Robinson, Ph.D."
-date: "November 24, 2021"
+date: "Sep. 15, 2023"
 output: 
   beamer_presentation:
+    incremental: true
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
+    fig_caption: false
 urlcolor: blue
+classoption: aspectratio=169
 df_print: kable
 header-includes: 
-  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
-  \useinnertheme{circles}
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+  - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  - \let\endoldShaded\endShaded
+  - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
+  - \let\oldverbatim\verbatim %Change fontsize of code chunk output
+  - \let\endoldverbatim\endverbatim
+  - \renewenvironment{verbatim}{\scriptsize\oldverbatim}{\endoldverbatim}
 ---
 
 ```{r setup, include=FALSE}
@@ -23,8 +32,6 @@ theme_set(theme_classic())
 ```
 
 ## Normal data manipulation in R
-
-\tiny
 
 <!-- Note: "plants" dataframe is just used for (non-evaluated) examples, and isn't included in repository -->
 
@@ -46,14 +53,13 @@ plants[,c(3:9)] <- as.numeric(unlist(plants[,c(3:9)]))
 seeds$Collection.Date <- as.Date(seeds$Collection.Date,origin='2012-01-01')
 ```
 
-\normalsize
+\pause
+
 - One line of code per column - lots of typing
 - Lots of `$$$`s
 - Lots of room for errors
 
 ## Data manipulation using dplyr/tidyr
-
-\tiny
 
 ```{r, echo=T,eval=F}
 library(tidyverse)
@@ -71,30 +77,28 @@ seeds <- seeds %>%
   mutate(Collection.Date=as.Date(Collection.Date,origin='2012-01-01'))
 ```
 
-\normalsize
+\pause
 
 - More compact, less typing
 - Easier to read
 - Faster (matters for large datasets)
 
-## Can't I just use Excel?? R is for nerrrrrrds...
+## Why should I do data manipulation in R?
 
-- Short answer: yes...
-- Long answer: yes, but this is better
-
-\large
-_Why should I do data manipulation in R?_
-
-\normalsize
-- Quicker (once you learn how!)
+- Much quicker (once you learn how!)
 - Can do complex re-arranging and make summary tables very easily
-- For large datasets (>10000 rows), Excel basically just gives up
+- For very large datasets, Excel starts falling apart fairly quickly
 - __You have a record of exactly what you've done__
 
-\large
-_Start with small, simple tasks, and work your way up to larger, complicated ones_
+\pause
+
+__Start with small, simple tasks, and work your way up to larger, complicated ones__
 
 ## Things to learn today:
+
+::: columns
+
+:::: column
 
 - Basic syntax and table verbs
 - Piping
@@ -102,9 +106,19 @@ _Start with small, simple tasks, and work your way up to larger, complicated one
 - Grouping
 - Exercise!
 
-```{r echo=FALSE, out.width='80%'}  
-  include_graphics('./teachMe.jpg',dpi=NA)
+::::
+
+:::: column
+
+```{r echo=FALSE}  
+  include_graphics('./teachMe.jpg')
 ```
+
+::::
+
+:::
+
+
 
 ## Basic Syntax
 
@@ -113,82 +127,86 @@ Both `dplyr` and `tidyr` work with `data frames` or `tibbles`
 - `data frame`: similar to matrix, but with different data types for each column
 - `tibble`: "compact" data frame, with some annoying features removed
 
-\tiny
 ```{r,echo=T,eval=T}
 head(iris) #Regular data frame
 ```
 
 ## Basic Syntax
 
-\tiny
+
 ```{r,echo=T,eval=T,message=F}
 as_tibble(iris) #This is usually done automatically
 ```
 
 ## Basic verbs - subsetting
 
-- **select**: returns only columns that you want
+**select**: returns only columns that you want
 
-\tiny
+-
+  ```{r, echo=FALSE,eval=TRUE}
+  head(iris)
+  ```
 
-```{r, echo=FALSE,eval=TRUE}
-head(iris)
-```
-
-
-```{r,echo=T,eval=T,message=F}
-#Select Petal.Length,Petal.Width,Species
-irisTemp <- select(iris,Petal.Length,Petal.Width,Species)
-head(irisTemp)
-```
+-
+  ```{r,echo=T,eval=T,message=F}
+  #Select Petal.Length,Petal.Width,Species
+  irisTemp <- select(iris,Petal.Length,Petal.Width,Species)
+  head(irisTemp)
+  ```
 
 ## Basic verbs - subsetting
 
 Helper functions for **select**: *colon* operator
 
-\tiny
+-
+  ```{r, echo=FALSE,eval=TRUE}
+  head(iris,3)    
+  ```
 
-```{r, echo=FALSE,eval=TRUE}
-head(iris,3)
-```
-
-
-```{r,echo=T,eval=T,message=F}
-irisTemp <- select(iris,Petal.Length:Species) 
-head(irisTemp,3) #All columns between Petal.Length and Species
-irisTemp2 <- select(iris,Petal.Length,Petal.Width,Species) 
-head(irisTemp2,3) #This is the same thing
-```
+-
+  ```{r,echo=T,eval=T,message=F}
+  irisTemp <- select(iris,Petal.Length:Species) 
+  head(irisTemp,3) #All columns between Petal.Length and Species
+  ```
+  
+- 
+  ```{r,echo=T,eval=T,message=F}  
+  irisTemp2 <- select(iris,Petal.Length,Petal.Width,Species) 
+  head(irisTemp2,3) #This is the same thing
+  ```
 
 ## Basic verbs - subsetting
 
 Helper functions for **select**: -, and *contains*
 
-\tiny
-
 ```{r, echo=FALSE,eval=TRUE}
-head(iris,3)
+head(iris,3)  
 ```
 
+\pause
 
 ```{r,echo=T,eval=T,message=F}
 irisTemp <- select(iris,-Species) 
 head(irisTemp,3) #Selects all columns EXCEPT Species
+```
+
+\pause
+
+```{r,echo=T,eval=T,message=F}
 irisTemp2 <- select(iris,contains('Petal'))
 head(irisTemp2,3) #Selects columns with names containing 'Petal'
 ```
 
 ## Basic verbs - subsetting
 
-- **filter**: returns only rows that you want
-
-\tiny
+**filter**: returns only rows that you want
 
 ```{r, echo=FALSE,eval=TRUE}
-head(iris)
+head(iris,5)  
 ```
 
-
+\pause 
+  
 ```{r,echo=T,eval=T,message=F}
 irisTemp <- filter(iris,Sepal.Length<5,Species=='versicolor')
 head(irisTemp) #Chooses rows matching logical criteria
@@ -205,43 +223,34 @@ head(irisTemp) #Chooses rows matching logical criteria
 
 ## Basic verbs - make new variables
 
-- **mutate**: add variables or alter existing ones
+**mutate**: add variables or alter existing ones
 
-\tiny
+\pause
 
-```{r, echo=FALSE,eval=TRUE}
-head(iris,3)
+```{r,echo=FALSE,eval=T,message=F}
+irisTemp <- mutate(iris,P.Width2=Petal.Width^2) #Squares Petal.Width
+head(irisTemp,3) 
 ```
 
+\pause
+
 ```{r,echo=T,eval=T,message=F}
-irisTemp <- mutate(iris,P.Width2=Petal.Width^2)
-head(irisTemp,3) #Squares Petal.Width, adds new variable
+irisTemp <- mutate(iris,Petal.Width=Petal.Width^2) #Changes Petal.Width
+head(irisTemp,3) 
 ```
 
 ## Basic verbs - make new variables
 
-\tiny
+**across**: uses the function on a number of columns. Must be used _inside_ verbs
+
+\pause
 
 ```{r, echo=FALSE,eval=TRUE}
 head(iris,3)
 ```
 
-```{r,echo=T,eval=T,message=F}
-irisTemp <- mutate(iris,Petal.Width=Petal.Width^2)
-head(irisTemp,3) #Alters variable in place
-```
-
-## Basic verbs - make new variables
-
-- **across**: uses the function on a number of columns
-  - Must be used _inside_ verbs
-
-\tiny
-
-```{r, echo=FALSE,eval=TRUE}
-head(iris,3)
-```
-
+\pause
+ 
 ```{r,echo=T,eval=T,message=F,warning=F}
 # "~" is called a lambda (similar to a function)
 # "." means "data from column", so...
@@ -252,22 +261,30 @@ head(irisTemp,3)
 
 ## Basic verbs - make new variables
 
-- **rename** & **transmute**
+**rename** & **transmute**
 
-\tiny
+-
+  ```{r, echo=FALSE,eval=TRUE}
+  head(iris,3)
+  ```
+ 
+-  
+  ```{r,echo=T,eval=T,message=F,warning=F}
+  irisTemp <- rename(iris, PWidth=Petal.Width, PLength=Petal.Length)
+  head(irisTemp,3) #Renames columns
+  ```
+  
+-
+  ```{r,echo=T,eval=T,message=F,warning=F}
+  irisTemp2 <- transmute(iris, P.Width2=(Petal.Width^2))
+  head(irisTemp2,3) #Same as mutate, but drops other columns
+  ```
 
-```{r, echo=FALSE,eval=TRUE}
-head(iris,3)
-```
+## First challenge
 
-```{r,echo=T,eval=T,message=F,warning=F}
-irisTemp <- rename(iris, PWidth=Petal.Width, PLength=Petal.Length)
-head(irisTemp,3) #Renames columns
-irisTemp2 <- transmute(iris, P.Width2=(Petal.Width^2))
-head(irisTemp2,3) #Same as mutate, but drops other columns
-```
+::: columns
 
-## Exercises!
+:::: column
 
 Using the `iris` dataset (type `data(iris)`):
 
@@ -275,7 +292,9 @@ Using the `iris` dataset (type `data(iris)`):
 - Make 2 new "area" columns, which are length $\times$ width of Petals and Sepals
 - Get rid of all columns except "Species" + 2 new columns
 
-\tiny
+::::
+
+:::: column
 
 ```{r,echo=F}
  iris %>% filter(Species=='virginica') %>%
@@ -283,22 +302,27 @@ Using the `iris` dataset (type `data(iris)`):
   head(10)
 ```
 
+::::
 
-## Piping - %>% 
+:::
+
+## Piping - %>%
 
 This is where the tidyverse becomes _very_ useful
 
 - Takes data from one verb and passes it to the next one
+
 - Allows you to string together complex operations
+  ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
+  irisTemp <- select(iris,Sepal.Length,Species) %>% #Selects Sepal.Length & Species
+    filter(Sepal.Length>5,Species=='versicolor') %>% #Filters using dataframe from above
+    mutate(SLength2=Sepal.Length^2) #Mutates using dataframe from above
+  ```
 
-\tiny
-
-```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
-irisTemp <- select(iris,Sepal.Length,Species) %>% #Selects Sepal.Length & Species
-  filter(Sepal.Length>5,Species=='versicolor') %>% #Filters using dataframe from above
-  mutate(SLength2=Sepal.Length^2) #Mutates using dataframe from above
-head(irisTemp)
-```
+-
+  ```{r}
+  head(irisTemp)
+  ```
 
 ## Reshaping - i.e. "data gymnastics"
 
@@ -311,21 +335,39 @@ head(irisTemp)
 
 ## Reshaping - _pivot_longer_: columns to rows
 
-- Some data in a "wide" format
-
-\tiny
-
-```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
+```{r,echo=F}
 #Some data to work with
-(bats <- data.frame(bat=letters[1:3], weight = seq(1,3,1), 
+(bats <- data.frame(bat=letters[1:3], weight = seq(1,3,1),
                     height=seq(2.5,5.5,length=3), wings=rep(2,3)))
 ```
 
+::: columns
+
+:::: column
+
+Some data in __wide__ format: data for each "unit" listed in multiple columns
+
+```{r, echo=FALSE}
+bats
+```
+
+::::
+
+:::: column
+
+The same data in __long__ format: data listed in single column, plus and ID column
+
+```{r, echo=FALSE}
+pivot_longer(bats,-bat)
+```
+
+::::
+
+:::
+
 ## Reshaping - _pivot_longer_: columns to rows
 
-- Change "wide" dataframe to "long" dataframe
-
-\tiny
+- Change wide dataframe to long dataframe
 
 ```{r,echo=T,eval=T,message=F,warning=F}
 (longBats <- bats %>% pivot_longer(cols=weight:wings, #Columns to be made into 2
@@ -337,7 +379,7 @@ head(irisTemp)
 
 - This is the inverse of _pivot_longer_
 
-\tiny
+
 
 ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
 longBats %>% pivot_wider(names_from=trait, #Names of new columns
@@ -354,33 +396,33 @@ Using the *CO2* dataset:
 - Change the uptake dataset from long to wide format (each plant should have its own column), with a column at the beginning showing concentration
 - Hint: _filter_ rows and _select_ columns you need, then _pivot_wide_ to wide format
 
-\tiny
+
 
 ```{r,echo=F}
-CO2 %>% 
-  filter(Type=='Quebec',Treatment=='nonchilled') %>% 
-  select(-Type,-Treatment) %>% 
+CO2 %>%
+  filter(Type=='Quebec',Treatment=='nonchilled') %>%
+  select(-Type,-Treatment) %>%
   pivot_wider(names_from=Plant,values_from=uptake)
 ```
 
-## Grouping 
+## Grouping
 
-- Often, we want to perform operations only on _groups_ within data frames 
+- Often, we want to perform operations only on _groups_ within data frames
 - For example, what is the average of each species' _Petal.width_?
 - This can be done in base `R`:
 
-\tiny
+
 
 ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
 with(iris,tapply(Petal.Width,Species,mean)) #Using tapply
 aggregate(Petal.Width~Species,data=iris,mean) #Using aggregate
 ```
 
-## Grouping 
+## Grouping
 
 - How can this be done in `dplyr` and `tidyr`?
 
-\tiny
+
 
 ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
 iris %>% group_by(Species) %>% #Group by species
@@ -396,7 +438,7 @@ iris %>% group_by(Species) %>% #Group by species
 
 ## Grouping - Examples
 
-\tiny
+
 
 ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
 iris %>% group_by(Species) %>% #Group by species
@@ -413,23 +455,23 @@ iris %>% group_by(Species) %>% #Group by species
 
 - Also useful for applying functions to subsets of data, *without* summarizing
 
-\tiny
+
 
 ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
-iris %>% group_by(Species) %>% 
+iris %>% group_by(Species) %>%
   mutate(ID=1:n()) %>% #Makes ID column, with numbers 1-N
   filter(ID<4) #Selects ID 1-3 from each group
-  
+
 ```
 
-## Grouping 
+## Grouping
 
 - Another way of doing the same thing
 
-\tiny
+
 
 ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
-iris %>% group_by(Species) %>% 
+iris %>% group_by(Species) %>%
   slice(1:3) #Selects rows 1-3 from each group
 ```
 
@@ -441,16 +483,16 @@ iris %>% group_by(Species) %>%
 
 Using the *InsectSprays* dataset:
 
-- Find the mean and SD of `counts` for each type of `spray` 
+- Find the mean and SD of `counts` for each type of `spray`
 - Reshape dataframe so that each `spray` has its own column, with mean and SD in separate rows
 - Hint: get summary stats first, then `pivot_longer` and `pivot_wider`
 
-\tiny
+
 
 ```{r,echo=F}
-InsectSprays %>% group_by(spray) %>% 
-  summarize(mean=mean(count),sd=sd(count),.groups='keep') %>% 
-  pivot_longer(cols=mean:sd,names_to='stat',values_to='value') %>% 
+InsectSprays %>% group_by(spray) %>%
+  summarize(mean=mean(count),sd=sd(count),.groups='keep') %>%
+  pivot_longer(cols=mean:sd,names_to='stat',values_to='value') %>%
   pivot_wider(names_from=spray,values_from=value)
 ```
 
@@ -463,16 +505,16 @@ InsectSprays %>% group_by(spray) %>%
 - `dplyr` & `tidyr` work with other parts of the tidyverse, such as `ggplot2`
 - Example: filtered summary plot
 
-\tiny
+
 
 ```{r,echo=T,eval=F,message=F,warning=F,fig.height = 4, fig.width = 5, fig.align = "center"}
 library(ggplot2)
 #Code for dplyr begins here
-CO2 %>% filter(conc==1000) %>% 
-  group_by(Type,Treatment) %>% 
+CO2 %>% filter(conc==1000) %>%
+  group_by(Type,Treatment) %>%
   summarize(meanUp=mean(uptake),
             maxUp=max(uptake),
-            minUp=min(uptake)) %>% 
+            minUp=min(uptake)) %>%
   #Code for ggplot begins here
   ggplot(aes(x=Type,col=Treatment))+
   geom_pointrange(aes(y=meanUp,
@@ -488,11 +530,11 @@ CO2 %>% filter(conc==1000) %>%
 
 ```{r,echo=F,eval=T,message=F,warning=F,fig.height = 4, fig.width = 5}
 library(ggplot2)
-CO2 %>% filter(conc==1000) %>% 
-  group_by(Type,Treatment) %>% 
+CO2 %>% filter(conc==1000) %>%
+  group_by(Type,Treatment) %>%
   summarize(meanUp=mean(uptake),
             maxUp=max(uptake),
-            minUp=min(uptake)) %>% 
+            minUp=min(uptake)) %>%
   #Code for ggplot begins here
   ggplot(aes(x=Type,col=Treatment))+
   geom_pointrange(aes(y=meanUp,
@@ -515,25 +557,25 @@ CO2 %>% filter(conc==1000) %>%
 - dplyr & tidyr can pass data frames to and from non-`tidyverse` functions: use '.' operator
 - Example: nonlinear growth model
 
-\tiny
+
 
 ```{r,echo=T,eval=F}
-co2mod <- CO2 %>% 
-  filter(Type=='Quebec') %>% 
+co2mod <- CO2 %>%
+  filter(Type=='Quebec') %>%
   #Code for nls begins here
   nls(uptake~SSasymp(conc,A,B,C),
       start=list(A=30,B=-15,C=-5),data=.)
 
-data.frame(conc=seq(50,1000,20)) %>% 
-  predict(co2mod,newdata=.) %>% 
-  data.frame(conc=seq(50,1000,20),predUp=.) %>% 
+data.frame(conc=seq(50,1000,20)) %>%
+  predict(co2mod,newdata=.) %>%
+  data.frame(conc=seq(50,1000,20),predUp=.) %>%
   #Code for ggplot begins here
   ggplot(aes(conc,predUp))+
   geom_line()+
   geom_point(data=filter(CO2,Type=='Quebec'),
              aes(conc,uptake))+
   labs(x='CO2 Concentration',y='Uptake')
-  
+
 ```
 
 ::::
@@ -541,22 +583,22 @@ data.frame(conc=seq(50,1000,20)) %>%
 :::: column
 
 ```{r,echo=F,eval=T,message=F,warning=F,fig.height = 4, fig.width = 5}
-co2mod <- CO2 %>% 
-  filter(Type=='Quebec') %>% 
+co2mod <- CO2 %>%
+  filter(Type=='Quebec') %>%
   #Code for nls begins here
   nls(uptake~SSasymp(conc,A,B,C),
       start=list(A=40,B=-25,C=-5),data=.)
 
-data.frame(conc=seq(50,1000,20)) %>% 
-  predict(co2mod,newdata=.) %>% 
-  data.frame(conc=seq(50,1000,20),predUp=.) %>% 
+data.frame(conc=seq(50,1000,20)) %>%
+  predict(co2mod,newdata=.) %>%
+  data.frame(conc=seq(50,1000,20),predUp=.) %>%
   #Code for ggplot begins here
   ggplot(aes(conc,predUp))+
   geom_line()+
   geom_point(data=filter(CO2,Type=='Quebec'),
              aes(conc,uptake))+
   labs(x='CO2 Concentration',y='Uptake')
-  
+
 ```
 
 ::::
@@ -566,6 +608,6 @@ data.frame(conc=seq(50,1000,20)) %>%
 
 ## Happy wrangling! Yee-haw!
 
-```{r echo=FALSE, out.width='100%'}  
+```{r echo=FALSE, out.width='100%'}
   include_graphics('./primus.jpg',dpi=NA)
 ```
