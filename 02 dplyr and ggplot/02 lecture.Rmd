@@ -142,38 +142,39 @@ as_tibble(iris) #This is usually done automatically
 
 **select**: returns only columns that you want
 
--
-  ```{r, echo=FALSE,eval=TRUE}
-  head(iris)
-  ```
+```{r, echo=FALSE,eval=TRUE}
+head(iris)
+```
 
--
-  ```{r,echo=T,eval=T,message=F}
-  #Select Petal.Length,Petal.Width,Species
-  irisTemp <- select(iris,Petal.Length,Petal.Width,Species)
-  head(irisTemp)
-  ```
+\pause
+
+```{r,echo=T,eval=T,message=F}
+#Select Petal.Length,Petal.Width,Species
+irisTemp <- select(iris,Petal.Length,Petal.Width,Species)
+head(irisTemp)
+```
 
 ## Basic verbs - subsetting
 
 Helper functions for **select**: *colon* operator
 
--
-  ```{r, echo=FALSE,eval=TRUE}
-  head(iris,3)    
-  ```
+```{r, echo=FALSE,eval=TRUE}
+head(iris,3)    
+```
 
--
-  ```{r,echo=T,eval=T,message=F}
-  irisTemp <- select(iris,Petal.Length:Species) 
-  head(irisTemp,3) #All columns between Petal.Length and Species
-  ```
+\pause
+```{r,echo=T,eval=T,message=F}
+irisTemp <- select(iris,Petal.Length:Species) 
+head(irisTemp,3) #All columns between Petal.Length and Species
+```
   
-- 
-  ```{r,echo=T,eval=T,message=F}  
-  irisTemp2 <- select(iris,Petal.Length,Petal.Width,Species) 
-  head(irisTemp2,3) #This is the same thing
-  ```
+
+\pause
+ 
+```{r,echo=T,eval=T,message=F}  
+irisTemp2 <- select(iris,Petal.Length,Petal.Width,Species) 
+head(irisTemp2,3) #This is the same thing
+```
 
 ## Basic verbs - subsetting
 
@@ -263,22 +264,23 @@ head(irisTemp,3)
 
 **rename** & **transmute**
 
--
-  ```{r, echo=FALSE,eval=TRUE}
-  head(iris,3)
-  ```
- 
--  
-  ```{r,echo=T,eval=T,message=F,warning=F}
-  irisTemp <- rename(iris, PWidth=Petal.Width, PLength=Petal.Length)
-  head(irisTemp,3) #Renames columns
-  ```
+```{r, echo=FALSE,eval=TRUE}
+head(iris,3)
+```
+
+\pause 
   
--
-  ```{r,echo=T,eval=T,message=F,warning=F}
-  irisTemp2 <- transmute(iris, P.Width2=(Petal.Width^2))
-  head(irisTemp2,3) #Same as mutate, but drops other columns
-  ```
+```{r,echo=T,eval=T,message=F,warning=F}
+irisTemp <- rename(iris, PWidth=Petal.Width, PLength=Petal.Length)
+head(irisTemp,3) #Renames columns
+```
+
+\pause
+
+```{r,echo=T,eval=T,message=F,warning=F}
+irisTemp2 <- transmute(iris, P.Width2=(Petal.Width^2))
+head(irisTemp2,3) #Same as mutate, but drops other columns
+```
 
 ## First challenge
 
