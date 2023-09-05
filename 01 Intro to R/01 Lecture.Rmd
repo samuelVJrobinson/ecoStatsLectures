@@ -515,7 +515,7 @@ Different output formats: _lapply_ uses a list, _sapply_ uses a vector (or matri
 
 ## Third challenge
 
-The discrete logistic growth equation has some interesting mathematical properties (see [here](https://en.wikipedia.org/wiki/Logistic_map)). At certain values of $r$ the population converges to the carrying capacity $K$, while at other values it cycles between multiple values. 
+The discrete logistic growth equation has some interesting mathematical properties (see [here](https://en.wikipedia.org/wiki/Logistic_map) and [here](https://www.nature.com/articles/261459a0)). At certain values of $r$ the population converges to the carrying capacity $K$, while at other values it cycles between multiple values.
 
 ::: columns
 
@@ -559,6 +559,33 @@ logFun <- function(r,k,t,n0){ #Create logistic growth function
 ::::
 
 :::
+
+## Complex behaviour from a simple system
+
+```{r bifurcation, echo=FALSE, eval=TRUE, fig.width=12, dpi=200}
+rSeq <- seq(1,3,0.01) #Sequence of r values to use
+
+logSim <- lapply(rSeq,function(r){
+  l <- logFun(r,100,3000,1)[2001:3000] #Takes only samples after t = 2000 ("burn-in" period)
+  l <- round(l,1) #Rounds to 1 digit - keeps things simple for now
+  unique(l)
+})
+
+#Plots of simulation
+{
+  par(mfrow=c(2,1))
+  
+  X <- rSeq
+  Y <- sapply(logSim,length)
+  plot(X,log(Y),type='b',ylab='log(Number of states)',xlab='',pch=19)
+  
+  X <- rep(rSeq,sapply(logSim,length))
+  Y <- unlist(logSim) 
+  plot(X,Y,pch=19,ylab='Stable states',xlab='r value',cex=0.25)
+  par(mfrow=c(1,1))
+}
+
+```
 
 ## To do this week: 
 

@@ -190,7 +190,7 @@ logSim <- lapply(rSeq,function(r){
   
   X <- rep(rSeq,sapply(logSim,length))
   Y <- unlist(logSim) 
-  plot(X,Y,pch=19,ylab='Stable states',xlab='r value')
+  plot(X,Y,pch=19,ylab='Stable states',xlab='r value',cex=0.25)
   par(mfrow=c(1,1))
 }
 
