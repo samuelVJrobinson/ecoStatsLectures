@@ -634,7 +634,7 @@ Top line of code says:
 - map `disp` to x-axis
 - `geom_histogram()` 
 
-```{r eval=FALSE, echo=TRUE}
+```{r, histPlot, eval=FALSE, echo=TRUE}
 ggplot(data = mtcars, aes(x = disp))+
   # Group disp into bins, and display
   #   count in each bin
@@ -645,65 +645,26 @@ ggplot(data = mtcars, aes(x = disp))+
 
 :::: column
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(data=mtcars,aes(x=disp))+ geom_histogram()
+```{r, histPlot, eval=TRUE,echo=FALSE}
 ```
 
 ::::
 
 :::
 
-## Simple example - histograms and density plots
-
-\tiny
-
-::: columns
-
-:::: column
-
-```{r echo=TRUE, message=FALSE, warning=FALSE}
-# Histogram
-ggplot(data=mtcars,aes(x=disp))+
-  geom_histogram()
-```
-
-\normalsize
-
-Histogram
-
-::::
-
-:::: column
-
-```{r echo=TRUE, message=FALSE, warning=FALSE}
-# Density plot
-ggplot(data=mtcars,aes(x=disp))+
-  geom_density()
-```
-
-\normalsize
-
-Probability density plot
-
-$a\int_{-\infty}^{\infty} f(x) \,dx=1$
-
-::::
-
-:::
 
 ## Colours in plots
 
 - Colours can be _mapped_ (via `aes`) or _set_ (outside of `aes`)
-
-\tiny
+- _mapping_ associates a variable with a colour scheme, _setting_ fixes the colour to a preset value
 
 ::: columns
 
 :::: column
 
+Maps colour to `gear`
 ```{r, echo = TRUE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
-  # Maps gear to colour
   geom_point(aes(col=factor(gear)))
 ```
 
@@ -711,18 +672,15 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 
 :::: column
 
+Sets colour as red
 ```{r echo=TRUE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
-  geom_point(colour='red') #Sets colour
+  geom_point(colour='red') 
 ```
 
 ::::
 
 :::
-
-\normalsize
-
-- Notice how `aes` was used twice in Figure 1? If used within the `ggplot` command, the rest of the geoms will remember it. Used within a geom, it will _update_ the aesthetic
 
 ## What if I want different colours?
 
@@ -730,46 +688,39 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 
 :::: column
 
-- Default colour themes are pretty bad. Change them with `scale_colour_manual`
-- Use `scale_fill_manual` for area-based colours (e.g. bar plots, polygons)
-- Remember, 10% of males are red-green colourblind!
+- Default colour themes are pretty bad. Change them with `scale_colour_manual` or `scale_fill_manual` 
+- `scale_colour_brewer` is generally pretty good; see examples [here](https://ggplot2.tidyverse.org/reference/scale_brewer.html) 
+- ~10% of (European) males are red-green colourblind; see [here](https://colorbrewer2.org/) for some suggested schemes
+
+```{r, themePlot, echo=TRUE, eval = FALSE}
+ggplot(data=mtcars,aes(x=disp,y=mpg))+
+  geom_point(aes(col=factor(gear)))+
+  scale_colour_manual(values=c('blue','purple','red'))
+```
 
 ::::
 
 :::: column
 
-```{r echo=FALSE, eval = TRUE, fig.width=5, fig.height=5}
-ggplot(data=mtcars,aes(x=disp,y=mpg))+
-  geom_point(aes(col=factor(gear)))+
-  scale_colour_manual(values=c('blue','purple','red'))
+```{r, themePlot, echo=FALSE, eval = TRUE, fig.width=5, fig.height=5}
 ```
 
 ::::
 
 :::
 
-\small
-
-```{r, echo = TRUE, eval = FALSE}
-ggplot(data=mtcars,aes(x=disp,y=mpg))+
-  geom_point(aes(col=factor(gear)))+
-  scale_colour_manual(values=c('blue','purple','red'))
-```
-
 
 ## Sizes in plots
 
-- Sizes can also be _mapped_ (via `aes`) or _set_ (outside of `aes`)
-
-\tiny
+- Sizes of things can also be _mapped_ (via `aes`) or _set_ (outside of `aes`), similar to colours
 
 ::: columns
 
 :::: column
 
+Maps `gear` to `size`:
 ```{r, echo = TRUE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
-  # Maps gear to size
   geom_point(aes(size=gear))
 ```
 
@@ -777,16 +728,15 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 
 :::: column
 
+Sets size at 10:
 ```{r echo=TRUE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
-  geom_point(size=10) #Sets size
+  geom_point(size=10) 
 ```
 
 ::::
 
 :::
-
-\normalsize
 
 - Similar to colour choices, you can alter mapped sizes using `scale_size`
 
