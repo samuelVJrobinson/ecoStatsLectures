@@ -207,7 +207,7 @@ as_tibble(iris) #This is usually done automatically
   ```
 - Some common logical operators:
   - `==` equal to, `!=` not equal to
-  - < greater than, > less than
+  - < less than, > greater than
   - & AND, | OR
 
 ## Basic verbs - make new variables

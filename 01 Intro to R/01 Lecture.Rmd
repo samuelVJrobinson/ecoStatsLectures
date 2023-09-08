@@ -305,7 +305,7 @@ plot(x = CO2$conc, y = CO2$uptake,
 
 - The boxplot command can summarize _continuous_ and _categorical_ data
 
-```{r, co2plot2, eval=FALSE, tidy.opts=list(width.cutoff=40)}
+```{r, co2plot2, eval=FALSE, tidy.opts=list(width.cutoff=40), tidy=FALSE}
 #Boxplot uses a formula rather than x,y vectors 
 
 #Formula: uptake depends on (~) Type
