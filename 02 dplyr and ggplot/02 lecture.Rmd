@@ -515,7 +515,7 @@ InsectSprays %>% group_by(spray) %>%
 
 ## Happy data wrangling! Yee-haw!
 
-![](primus.jpg){width=95%}
+![](primus.jpg){width=90%}
 
 # Part 2: `ggplot2`
 
@@ -558,16 +558,19 @@ head(mtcars,5) # Show first 5 rows
 
 :::: column
 
-Top line of code says:
-
-- data from `mtcars` dataframe
-- `aes` = aesthetics from dataframe
-- map `disp` to x-axis, `mpg` to y-axis
 
 ```{r, scatPlot, eval=FALSE, echo = TRUE}
 ggplot(data = mtcars, aes(x = disp, y = mpg))+
   geom_point() # Display data using points
 ```
+
+\pause
+
+Top line of code says:
+
+- data from `mtcars` dataframe
+- `aes` = aesthetics from dataframe
+- map `disp` to x-axis, `mpg` to y-axis
 
 ::::
 
@@ -593,17 +596,19 @@ head(mtcars,5) # Show first 5 rows
 
 :::: column
 
-Top line of code says:
-
-- map `gear` to x-axis (first converted to a `factor`)
-- Automatically uses `stat='count'` to group data according to factor
-
 ```{r, barPlot, eval=FALSE, echo = TRUE}
 ggplot(data = mtcars, aes(x = factor(gear)))+
   geom_bar()
 # Display number of data points for each 
 #   factor level
 ```
+
+\pause
+
+Top line of code says:
+
+- map `gear` to x-axis (first converted to a `factor`)
+- Automatically uses `stat='count'` to group data according to factor
 
 ::::
 
@@ -629,23 +634,26 @@ head(mtcars,5) # Show first 5 rows
 
 :::: column
 
-Top line of code says:
 
-- map `disp` to x-axis
-- `geom_histogram()` 
-
-```{r, histPlot, eval=FALSE, echo=TRUE}
+```{r, histPlot, eval=FALSE, echo=TRUE, warning=FALSE}
 ggplot(data = mtcars, aes(x = disp))+
   # Group disp into bins, and display
   #   count in each bin
   geom_histogram()
 ```
 
+\pause
+
+Top line of code says:
+
+- map `disp` to x-axis
+- `geom_histogram()` 
+
 ::::
 
 :::: column
 
-```{r, histPlot, eval=TRUE,echo=FALSE}
+```{r, histPlot, eval=TRUE,echo=FALSE, warning=FALSE, message=FALSE}
 ```
 
 ::::
@@ -662,7 +670,10 @@ ggplot(data = mtcars, aes(x = disp))+
 
 :::: column
 
+\pause
+
 Maps colour to `gear`
+
 ```{r, echo = TRUE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
   geom_point(aes(col=factor(gear)))
@@ -671,6 +682,8 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 ::::
 
 :::: column
+
+\pause
 
 Sets colour as red
 ```{r echo=TRUE}
@@ -692,6 +705,8 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 - `scale_colour_brewer` is generally pretty good; see examples [here](https://ggplot2.tidyverse.org/reference/scale_brewer.html) 
 - ~10% of (European) males are red-green colourblind; see [here](https://colorbrewer2.org/) for some suggested schemes
 
+\pause
+
 ```{r, themePlot, echo=TRUE, eval = FALSE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
   geom_point(aes(col=factor(gear)))+
@@ -712,7 +727,7 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 
 ## Sizes in plots
 
-- Sizes of things can also be _mapped_ (via `aes`) or _set_ (outside of `aes`), similar to colours
+- Sizes of things can also be _mapped_ (via `aes`) or _set_ (outside of `aes`), similar to colours. You can alter mapped sizes using `scale_size`
 
 ::: columns
 
@@ -738,7 +753,6 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 
 :::
 
-- Similar to colour choices, you can alter mapped sizes using `scale_size`
 
 ## Change plot `theme`
 
@@ -748,11 +762,10 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 
 - `theme` controls almost all non-data elements of plots
 - Made up of _elements_: `element_line()`, `element_text()`, `element_rect()`
-- Let's make some changes:
 
-\tiny
+\pause
 
-```{r, echo = TRUE, eval=FALSE}
+```{r, uglyPlot, echo = TRUE, eval=FALSE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
   # Maps gear to colour
   geom_point(aes(col=factor(gear))) +
@@ -763,35 +776,22 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
     panel.grid.minor=element_line(colour='purple'),
     panel.grid.major=element_line(colour='orange'))
 ```
+
+- This plot is hideous, but it gives you the idea; use `?theme` to see all options
 
 ::::
 
 :::: column
 
-```{r, echo = FALSE, eval=TRUE, fig.width=4,fig.height=5}
-ggplot(data=mtcars,aes(x=disp,y=mpg))+
-  # Maps gear to colour
-  geom_point(aes(col=factor(gear))) +
-  #Changes plot theme
-  theme(axis.title.x=element_text(size=10),
-    legend.background=element_rect(fill='red'),
-    legend.position=c(0.8,0.8),
-    panel.grid.minor=element_line(colour='purple'),
-    panel.grid.major=element_line(colour='orange'))
+```{r, uglyPlot, echo = FALSE, eval=TRUE, fig.width=4,fig.height=4}
 ```
-
-\small
-
-- This plot is hideous, but it gives you the idea!
-- Use `?theme` to see all options
-
 ::::
 
 :::
 
 ## Preset themes
 
-```{r, echo = FALSE, eval=TRUE, out.width='100%'}
+```{r, echo = FALSE, eval=TRUE, fig.height=4, fig.width=8}
 p <- ggplot(data=mtcars,aes(x=disp,y=mpg)) + geom_point()
 p1 <- p + theme_grey() + annotate('text',y=30,x=400,label='theme_grey()') #Regular grey theme
 p2 <- p + theme_bw() + annotate('text',y=30,x=400,label='theme_bw()') #B/W
@@ -809,9 +809,9 @@ ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
 - You can modify existing themes in order to create your own
 - Try using `theme_set()` at the start of your script to pre-set the theme for the rest of the script
 
-\tiny
+\pause
 
-```{r, echo = TRUE, eval=FALSE}
+```{r, customTheme, echo = TRUE, eval=FALSE}
 myTheme <- theme_classic()+ #Existing theme
   #Makes axis text bigger
   theme(axis.title=element_text(size=30),
@@ -849,21 +849,16 @@ theme_set(theme_grey())
 
 ## Complex plots - facets
 
-\small
+- You can break up the plot into smaller `facets` that are mapped to a given variable
 
-- It is possible to break up the plot into smaller `facets` that are mapped to a given variable
-- This can be combined with colour/size mappings
-
-\tiny
-```{r, echo = TRUE, eval = TRUE, fig.width=6, fig.height=3.5}
+```{r, echo = TRUE, eval = TRUE, fig.width=8,fig.height=4}
 ggplot(mtcars,aes(x=disp,y=mpg))+ geom_point(aes(col=wt))+
   facet_grid(factor(am) ~ factor(gear))
 ```
 
 ## Complex plots - summary statistics (mean)
 
-\tiny
-```{r, echo = TRUE,fig.width=8,fig.height=5}
+```{r, echo = TRUE,fig.width=8,fig.height=4}
 ggplot(mtcars,aes(x=factor(am),y=mpg))+
   geom_point(position=position_jitter(width=0.05))+ #Adds noise to data in x-dimension
   geom_point(stat='summary',fun=mean,col='red',size=3) #Mean only
@@ -872,7 +867,7 @@ ggplot(mtcars,aes(x=factor(am),y=mpg))+
 ## Complex plots - summary statistics (mean + SD)
 
 \tiny
-```{r, echo = TRUE,fig.width=8,fig.height=5}
+```{r, echo = TRUE,fig.width=8,fig.height=4}
 ggplot(arrange(mtcars,am,disp),aes(x=factor(am),y=mpg))+
   geom_point(position=position_jitter(width=0.05))+
   geom_pointrange(stat='summary',fun.data=mean_se,
@@ -886,7 +881,7 @@ ggplot(arrange(mtcars,am,disp),aes(x=factor(am),y=mpg))+
 ::: columns
 
 :::: column
-\tiny
+
 
 ```{r, echo = TRUE, eval = FALSE}
 ggplot(mtcars,aes(x=disp,y=mpg))+
@@ -894,7 +889,7 @@ ggplot(mtcars,aes(x=disp,y=mpg))+
   geom_smooth(method='lm',formula=y~x)
 ```
 
-```{r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=6}
+```{r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=4}
 ggplot(mtcars,aes(x=disp,y=mpg))+
   annotate('text',y=30,x=400,label='linear model')+
   geom_point() + geom_smooth(method='lm',formula=y~x)
@@ -911,7 +906,7 @@ ggplot(mtcars,aes(x=disp,y=mpg))+
   geom_point() +
   geom_smooth(method='gam',formula=y~s(x))
 ```
-``` {r, echo = FALSE, eval = TRUE,fig.width=6,fig.height=6}
+``` {r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=4}
 ggplot(mtcars,aes(x=disp,y=mpg))+
   annotate('text',y=30,x=400,label='GAM smoother')+
   geom_point() + geom_smooth(method='gam',formula=y~s(x))
@@ -938,7 +933,7 @@ ggplot(mtcars,aes(x=log(disp),y=log(mpg)))+
 #     usually do log(x) in their head
 ```
 
-```{r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=6}
+```{r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=4}
 ggplot(mtcars,aes(x=log(disp),y=log(mpg)))+
   geom_point() +
   geom_smooth(method='lm',formula=y~x)
@@ -948,7 +943,6 @@ ggplot(mtcars,aes(x=log(disp),y=log(mpg)))+
 
 :::: column
 
-\tiny
 
 ```{r, echo = TRUE, eval = FALSE}
 ggplot(mtcars,aes(x=disp,y=mpg))+
@@ -958,7 +952,7 @@ ggplot(mtcars,aes(x=disp,y=mpg))+
 # sqrt is also popular
 ```
 
-```{r, echo = FALSE, eval = TRUE,fig.width=6,fig.height=6}
+```{r, echo = FALSE, eval = TRUE, fig.width=6,fig.height=4}
 ggplot(mtcars,aes(x=disp,y=mpg))+
   geom_point() +
   geom_smooth(method='lm',formula=y~x)+
@@ -976,12 +970,15 @@ ggplot(mtcars,aes(x=disp,y=mpg))+
 - Avoid "non-data ink" (see [Edward Tufte's](https://www.amazon.ca/Visual-Display-Quantitative-Information/dp/1930824130) work)
 - Our eyes are good at estimating linear positions, but bad at estimating area, volume, colour shading, and angles:
 
+\pause
+
 ```{r, echo = FALSE, eval = TRUE,fig.width=12,fig.height=4}
 d1 <- data.frame(x=factor(c('a','b','c')),y=c(23,46,31))
 
 p1 <- ggplot(d1,aes(x=x,y=y))+geom_col()+theme_classic()
 p2 <- ggplot(d1,aes(x=x,y=1))+geom_point(aes(size=y))+theme_classic()+scale_size(range=c(5,15))
-p3 <- ggplot(d1, aes(x="", y=y, fill=x)) + geom_bar(width = 1, stat = "identity")+coord_polar("y") + theme_void() + theme(axis.text.x=element_text(size=0))
+p3 <- ggplot(d1, aes(x="", y=y, fill=x)) + geom_bar(width = 1, stat = "identity")+
+  coord_polar("y") + theme_void() + theme(axis.text.x=element_text(size=0))
 
 ggarrange(p1,p2,p3,ncol=3)
 
@@ -991,7 +988,7 @@ ggarrange(p1,p2,p3,ncol=3)
 
 Make these figures! Datasets are found in `mpg`, `msleep`, `trees`, and `starwars` (built into the `ggplot2` and `dplyr` packages)
 
-```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, out.width='100%'}
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=8}
 p1 <- ggplot(mpg,aes(x=displ,y=cty))+
   geom_point() +
   geom_smooth(method='gam',formula=y~s(x),col='red')+
@@ -1005,7 +1002,9 @@ p2 <- ggplot(msleep,aes(x=bodywt,y=brainwt))+
   theme_bw()
 
 p3 <- ggplot(trees,aes(x=Girth,y=Height,col=Volume,size=Volume))+
-  geom_point()+theme_grey()
+  geom_point()+theme_grey() +
+  theme(legend.text = element_text(size=8),legend.title = element_text(size=8)) +
+  guides(colour = "none") #Turns off colour legend
 
 p4 <- ggplot(starwars,aes(x=height))+geom_histogram()+facet_wrap(~sex)+ theme_minimal()+labs(x='Height of Star Wars Characters (cm)')
 
@@ -1022,8 +1021,9 @@ ggarrange(p1,p2,p3,p4,ncol=2,nrow=2)
 - `dplyr` & `tidyr` work with other parts of the tidyverse, such as `ggplot2`
 - Example: filtered summary plot
 
-```{r,echo=T,eval=F,message=F,warning=F,fig.height = 4, fig.width = 5, fig.align = "center"}
-library(ggplot2)
+\pause
+
+```{r, filtPlot, echo=T,eval=F,message=F,warning=F}
 #Code for dplyr begins here
 CO2 %>% filter(conc==1000) %>%
   group_by(Type,Treatment) %>%
@@ -1043,20 +1043,7 @@ CO2 %>% filter(conc==1000) %>%
 
 :::: column
 
-```{r,echo=F,eval=T,message=F,warning=F,fig.height = 4, fig.width = 5}
-library(ggplot2)
-CO2 %>% filter(conc==1000) %>%
-  group_by(Type,Treatment) %>%
-  summarize(meanUp=mean(uptake),
-            maxUp=max(uptake),
-            minUp=min(uptake)) %>%
-  #Code for ggplot begins here
-  ggplot(aes(x=Type,col=Treatment))+
-  geom_pointrange(aes(y=meanUp,
-                      ymax=maxUp,
-                      ymin=minUp))+
-  labs(x='Area',y='Uptake at 1000ppm')+
-  scale_colour_manual(values=c('red','blue'))
+```{r, filtPlot, echo=F,eval=T,message=F,warning=F,fig.height = 4.5, fig.width = 6}
 ```
 
 ::::
@@ -1069,33 +1056,39 @@ CO2 %>% filter(conc==1000) %>%
 
 :::: column
 
-- dplyr & tidyr can pass data frames to and from non-`tidyverse` functions: use '.' operator
+- dplyr & tidyr can pass data frames to and from non-`tidyverse` functions: use `.` operator
 - Example: nonlinear growth model
 
-```{r, co2plot, echo=T,eval=F,message=F,warning=F,fig.height = 4, fig.width = 5}
+\pause
+
+```{r, echo=T,message=F,warning=F}
 co2mod <- CO2 %>%
   filter(Type=='Quebec') %>%
   #Code for nls begins here
   nls(uptake~SSasymp(conc,A,B,C),
       start=list(A=30,B=-15,C=-5),data=.)
+```
 
+\pause
+
+```{r, co2plot, echo=T,eval=F,message=F,warning=F}
+#Makes predictions along CO2 gradient
 data.frame(conc=seq(50,1000,20)) %>%
-  predict(co2mod,newdata=.) %>%
-  data.frame(conc=seq(50,1000,20),predUp=.) %>%
+  mutate(predUp=predict(co2mod,newdata=.)) %>%
   #Code for ggplot begins here
   ggplot(aes(conc,predUp))+
-  geom_line()+
+  geom_line()+ #Data from prediction line
+  #CO2 data
   geom_point(data=filter(CO2,Type=='Quebec'),
              aes(conc,uptake))+
   labs(x='CO2 Concentration',y='Uptake')
-
 ```
 
 ::::
 
 :::: column
 
-```{r, co2plot, eval=TRUE}
+```{r, co2plot, eval=TRUE,fig.height = 6, fig.width = 5}
 ```
 
 ::::
