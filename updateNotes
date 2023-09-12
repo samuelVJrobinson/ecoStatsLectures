@@ -78,3 +78,16 @@ Other ideas:
 - Need to mention somewhere that packages need to be re-loaded every time you restart R
 - No mention of how to do ANOVA or glht tests in early lectures! 
   - Perhaps this could be a separate lecture: "How to write about stats?"
+  
+* Oct 1, 2023: Intro to R lecture - 3hr version with 0.5hr exercise breaks
+- Timing a bit long for the first part - seemed like it took too long to get to the exercise
+  - Maybe break exercise into "fixing" and "plotting" part?
+  - People seemed to do OK with this - some asked about colours on plots (difficult in base R)
+- for loop seemed daunting to some - probably needs to be simplified
+  - walked through the loop, setting index manually, and this seemed to work OK
+  - alternative: walk people through the code for the exp growth model, and have them modify it for the logistic model
+- probably too much to ask to combine both function and for loops into a single exercies 
+  - should do smaller separate exercises for each - loops first, then functions
+- didn't really get to the end part with lists; could probably remove and just explain if needed late
+- people were confused on different types of brackets, and how they work
+    

@@ -37,7 +37,7 @@ set.seed(123)
 
 # Part 1: `dplyr` and `tidyr`
 
-## Normal data manipulation in R
+## Data manipulation in base R
 
 <!-- Note: "plants" dataframe is just used for (non-evaluated) examples, and isn't included in repository -->
 
@@ -213,11 +213,8 @@ as_tibble(iris) #This is usually done automatically
 ## Basic verbs - make new variables
 
 - **mutate**: add new columns or alter existing ones
-  ```{r,echo=FALSE,eval=T,message=F}
-  irisTemp <- mutate(iris,P.Width2=Petal.Width^2) #Squares Petal.Width
-  ```
   ```{r, echo=FALSE,eval=TRUE}
-  head(irisTemp,3)
+  head(iris,3)
   ```
 - Squares the `Petal.Width` column
   ```{r,echo=T,eval=T,message=F}
@@ -341,11 +338,17 @@ bats <- data.frame(bat=letters[1:3], weight = seq(1,3,1),
                     height=seq(2.5,5.5,length=3), wings=rep(2,3))
 ```
 
+Here's some data in both __wide__ and __long__ format:
+
+\pause
+
 ::: columns
 
 :::: column
 
-Some data in __wide__ format: data for each "unit" listed in multiple columns
+\pause
+
+__wide__ format: data for each "unit" listed in multiple columns
 
 ```{r, echo=FALSE}
 bats
@@ -355,7 +358,9 @@ bats
 
 :::: column
 
-The same data in __long__ format: data listed in single column, plus and ID column
+\pause
+
+__long__ format: data listed in single column, plus and ID column
 
 ```{r, echo=FALSE}
 pivot_longer(bats,-bat)
@@ -367,7 +372,7 @@ pivot_longer(bats,-bat)
 
 ## Reshaping - _pivot_longer_: columns to rows
 
-- Change wide dataframe to long dataframe
+Change wide dataframe to long dataframe:
 
 ```{r,echo=T,eval=T,message=F,warning=F}
 (longBats <- bats %>% pivot_longer(cols=weight:wings, #Columns to be made into 2
@@ -377,8 +382,7 @@ pivot_longer(bats,-bat)
 
 ## Reshaping - _pivot_wider_: rows to columns
 
-- This is the inverse of _pivot_longer_
-
+Change long dataframe to wide (reverse of _pivot_longer_)
 
 ```{r,echo=T,tidy=F,eval=T,message=F,warning=F}
 longBats %>% pivot_wider(names_from=trait, #Names of new columns
@@ -501,7 +505,7 @@ Using the *InsectSprays* dataset:
 
 - Find the mean and SD of `counts` for each type of `spray`
 - Reshape dataframe so that each `spray` has its own column, with mean and SD in separate rows
-- Hint: get summary stats first, then `pivot_longer` and `pivot_wider`
+- Hint: get summary stats (mean, SD), then `pivot_longer`, and finally `pivot_wider`
 
 \pause
 
@@ -710,7 +714,9 @@ ggplot(data=mtcars,aes(x=disp,y=mpg))+
 ```{r, themePlot, echo=TRUE, eval = FALSE}
 ggplot(data=mtcars,aes(x=disp,y=mpg))+
   geom_point(aes(col=factor(gear)))+
-  scale_colour_manual(values=c('blue','purple','red'))
+  scale_colour_manual(
+    values=c('blue','purple','red')
+    )
 ```
 
 ::::
@@ -851,14 +857,14 @@ theme_set(theme_grey())
 
 - You can break up the plot into smaller `facets` that are mapped to a given variable
 
-```{r, echo = TRUE, eval = TRUE, fig.width=8,fig.height=4}
+```{r, echo = TRUE, eval = TRUE, fig.width=8,fig.height=3.5}
 ggplot(mtcars,aes(x=disp,y=mpg))+ geom_point(aes(col=wt))+
   facet_grid(factor(am) ~ factor(gear))
 ```
 
 ## Complex plots - summary statistics (mean)
 
-```{r, echo = TRUE,fig.width=8,fig.height=4}
+```{r, echo = TRUE,fig.width=8,fig.height=3.5}
 ggplot(mtcars,aes(x=factor(am),y=mpg))+
   geom_point(position=position_jitter(width=0.05))+ #Adds noise to data in x-dimension
   geom_point(stat='summary',fun=mean,col='red',size=3) #Mean only
@@ -1094,3 +1100,11 @@ data.frame(conc=seq(50,1000,20)) %>%
 ::::
 
 :::
+
+## To do this week: a study in contrasts
+
+Using that dataset that you acquired: 
+
+1. Get some summary statistics for your data (e.g. group means, SDs) using `dplyr`
+2. Make a "presentation quality" plot of some of your data
+3. Make the ugliest, most unreadable plot in human history. A prize will be awarded for the worst!
