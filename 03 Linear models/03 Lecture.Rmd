@@ -10,7 +10,6 @@ output:
     colortheme: "lily"
     highlight: "tango"
     fig_caption: false
-    keep_tex: true
 urlcolor: blue
 df_print: kable
 classoption: aspectratio=169
