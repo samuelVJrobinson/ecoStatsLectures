@@ -1,10 +1,11 @@
 ---
-title: "Linear models 2"
-subtitle: "More bells and whistles"
+title: "Linear models"
+subtitle: "Modeling... linearly!"
 author: "Samuel Robinson, Ph.D."
-date: "October 15, 2020"
+date: "October 8, 2020"
 output: 
   beamer_presentation:
+    incremental: true
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
@@ -16,6 +17,296 @@ header-includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggpubr)
+
+set.seed(123)
+
+#Plots of mtcars data
+
+#Continuous
+p1 <- ggplot(arrange(mtcars,disp),aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
+
+#Categorical
+p2 <- ggplot(arrange(mtcars,am,disp),aes(x=factor(am,labels=c('auto','manual')),y=mpg))+ 
+  geom_point(position=position_jitter(width=0.05))+labs(x='am')+
+  geom_point(aes(y=mpg),stat='summary',fun=mean,col='orange',size=3) #Mean only
+  # geom_pointrange(stat='summary',fun.data=mean_se,fun.args = list(mult = 2),col='orange') #Mean + 2 SE
+
+# #Interaction - use this next lecture
+# p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(am,labels=c('auto','manual'))))+geom_point()+labs(col='am')+
+#   geom_smooth(formula=y~x,method='lm',se=FALSE)+
+#   scale_colour_manual(values=c('blue','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
+
+#Fit models for later use
+modp1 <- lm(mpg~disp,data=arrange(mtcars,disp))
+modp2 <- lm(mpg~am,data=arrange(mtcars,am,disp))
+# modp3 <- lm(mpg~disp*am,data=mtcars)
+
+```
+
+# Part 1: How do they work?
+
+## Motivation
+
+- _I have some bivariate data (2 things measured per row), and I want to know if they're related to each other_
+
+- _I have 2+ groups of data, and I want to know whether the means are different_
+
+<!-- Use this next lecture -->
+<!-- - _I have 2+ groups of bivariate data, and I want to know whether the relationships differ between groups_ -->
+
+```{r examplePlots, echo=FALSE, fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
+ggarrange(p1,p2,ncol=2) #Display mtcars data
+```
+
+## Model terminology {.build}
+
+- All linear models take the form:
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} + \textcolor{blue}{b_2}\textcolor{darkturquoise}{x_2} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+- $y$ is the thing you're interested in predicting
+- $\textcolor{orange}{\hat{y}}$ is the _predicted value_ of $y$
+- $\textcolor{darkturquoise}{x_1...x_i}$ are _predictors_ of _y_
+- $\textcolor{blue}{b_1...b_i}$ are _coefficients_ for each predictor $\textcolor{darkturquoise}{x_i}$
+- $\textcolor{blue}{b_0}$ is the _intercept_, a coefficient that doesn't depend on predictors
+- $y\sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})$ means:
+  - "$y$ follows a Normal distribution with mean $\textcolor{orange}{\hat{y}}$ and SD $\textcolor{red}{\sigma}$"
+
+\pause
+This may look terrifying, but let's use a simple example:
+
+## Example
+
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=3}
+meanDisp <- mean(mtcars$disp) #Mean displacement
+y_meanDisp <- coef(modp1) %*% c(1,meanDisp) #Predicted y at mean displacement
+b0Lab <- paste('b[0] == ',round(coef(modp1)[1],3))
+b1Lab <- paste('b[1] == ',round(coef(modp1)[2],3)) 
+
+p1 + xlim(0,NA) + 
+  geom_hline(yintercept=coef(modp1)[1],linetype='dashed',col='blue') +
+  geom_abline(intercept=coef(modp1)[1],slope=coef(modp1)[2],col='orange',linetype='dashed') +
+  annotate('text', x=meanDisp, y = coef(modp1)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
+  annotate('segment', x = meanDisp, xend = meanDisp, y= y_meanDisp, yend = y_meanDisp*1.2,linetype='dashed',col='blue') +
+  annotate('text', x=meanDisp*1.05, y = y_meanDisp*1.25, col='blue', label=b1Lab, parse=TRUE) +
+  annotate('segment', x = (y_meanDisp*1.2-coef(modp1)[1])/coef(modp1)[2] , xend = meanDisp, y= y_meanDisp*1.2 ,yend = y_meanDisp*1.2,
+           linetype='dashed',col='blue') +
+
+    theme(axis.title.x.bottom=element_text(colour='darkturquoise'),axis.text.x.bottom=element_text(colour='darkturquoise'))
+```
+
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{disp} \\
+mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+- $mpg$ is the thing you're interested in predicting
+- $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
+- $\textcolor{darkturquoise}{disp}$ is the _predictor_ of _mpg_
+- $\textcolor{blue}{b_0}$ is the _intercept_, $\textcolor{blue}{b_1}$ is the _coefficient_ for $\textcolor{darkturquoise}{disp}$
+- $mpg\sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})$ means:
+  - "$mpg$ follows a Normal distribution with mean $\textcolor{orange}{\hat{mpg}}$ and SD $\textcolor{red}{\sigma}$"
+- $\textcolor{red}{\sigma}$ isn't displayed on the figure. Where is it?
+
+::::
+
+:::
+
+
+## Example (cont.)
+
+$\textcolor{red}{\sigma}$ isn't displayed on the figure. Where is it?
+
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=3}
+
+modp1_sigma <- summary(modp1)$sigma #Residual SD
+
+d1 <- data.frame(disp=sort(mtcars$disp),pred=predict(modp1)) %>% #Predictions + residual SD
+  mutate(upr1=pred+modp1_sigma,lwr1=pred-modp1_sigma) %>% 
+  mutate(upr2=pred+modp1_sigma*2,lwr2=pred-modp1_sigma*2) 
+
+p1 + 
+  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr2,ymin=lwr2),fill='red',alpha=0.2)+
+  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr1,ymin=lwr1),fill='red',alpha=0.2)
+```
+
+::::
+
+:::: column
+
+- $\textcolor{red}{\sigma}$ is the "leftover" or "residual" variance
+- i.e. variation between samples that the model couldn't explain
+- Since $y\sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})$, this means that points are normally distributed around the _entire line_ of $\textcolor{orange}{\hat{y}}$
+
+::::
+
+:::
+
+## How do I get R to fit this model?
+
+`lm` is one of the main functions used for linear modeling:
+
+\tiny
+```{r, echo=TRUE} 
+#Formula structure: y ~ x
+mod1 <- lm(mpg ~ disp, #mpg depends on disp
+           data = mtcars) #Name of the dataframe containing mpg & disp
+summary(mod1)
+```
+\normalsize
+For a detailed breakdown of `lm`'s output, click [here](https://stats.stackexchange.com/questions/5135/interpretation-of-rs-lm-output)
+
+## Simulate data
+
+Now that we know how linear models work, we can simulate our own data:
+
+:::{.columns}
+
+::::{.column width="50%"}
+\scriptsize
+
+```{r, echo=TRUE, out.width="100%"}
+#Parameters:
+
+b0 <- 1 #Intercept
+b1 <- 2 #Slope 
+sigma <- 3 #SD
+
+#Make up some data:
+
+x <- 0:30 #Predictor values
+
+#Predicted y values
+pred_y <- b0 + b1*x 
+
+#Add "noise" around pred_y
+actual_y <- rnorm(n = length(pred_y),
+                  mean = pred_y,
+                  sd= sigma)
+
+```
+::::
+
+::::{.column width="50%"}
+\scriptsize
+```{r, echo=TRUE, fig.width=5,fig.height=5}
+#Plot the data we just made
+plot(x,pred_y,col='orange',pch=19,
+     ylab='y') 
+points(x,actual_y,col='black',pch=19)
+```
+
+::::
+
+:::
+
+## Fit a model from simulated data
+\small
+How does R do at finding the coefficients?
+
+Remember: $b_0 = 1, b_1 = 2, \sigma = 3$
+\tiny
+```{r, echo=TRUE, fig.width=5,fig.height=5}
+#Put the simulated data into a dataframe
+fakeDat <- data.frame(x = x, y = actual_y, pred = pred_y) 
+mod1sim <- lm(y ~ x, data = fakeDat) #Fit a linear model
+summary(mod1sim)
+```
+
+## What about categorical data?
+
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=3}
+
+b0Lab <- paste('b[0] == ',round(coef(modp2)[1],2))
+b1Lab <- paste('b[1] == ',round(coef(modp2)[2],2)) 
+
+  p2 +
+    annotate('text', x=1.5, y = coef(modp2)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
+    geom_hline(yintercept=coef(modp2)[1],linetype='dashed',col='blue') +
+    
+    annotate('text', x=2.35, y = (coef(modp2)[1] + coef(modp2)[2])*1.05, col='blue', label=b1Lab, parse=TRUE)+
+    annotate('segment', x = 2.25, xend = 2.25, y= coef(modp2)[1], yend = coef(modp2)[1] + coef(modp2)[2],linetype='dashed',col='blue') +
+    
+    theme(axis.title.x.bottom=element_text(colour='darkturquoise'),
+            axis.text.x.bottom=element_text(colour='darkturquoise'))
+```
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{am} \\
+mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+This uses _exactly the same_ math!
+
+- $mpg$ is the thing you're interested in predicting
+- $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
+- $\textcolor{darkturquoise}{am}$ is the _predictor_ of _mpg_
+  - set of 0s and 1s, not continuous
+- $\textcolor{blue}{b_0}$ is the _intercept_, $\textcolor{blue}{b_1}$ is the _coefficient_ for $\textcolor{darkturquoise}{am}$
+- Where is $\textcolor{red}{\sigma}$?
+
+::::
+
+:::
+
+## How do I get R to fit this model?
+
+Syntax is exactly the same for this model
+
+\tiny
+```{r, echo=TRUE} 
+#Formula structure: y ~ x
+mod2 <- lm(mpg ~ am, #mpg depends on am
+           data = mtcars) #Name of the dataframe containing mpg & am
+summary(mod2)
+```
+
+## A challenger approaches!
+
+- Simulate your own data with 2 discrete levels. My suggestion:
+  - ~~Steal~~Borrow my code, and change the predictor from continuous to discrete
+  - Useful command: `rep` (replicate)
+    - e.g. `rep(x=c(0,1),each=10)`
+  - Useful command: `rnorm` (generate normally-distributed data)
+    - e.g. `rnorm(n=100,mean=0,sd=1)`
+- Use `lm` to fit a model to the data you just simulated
+  - How does R do at guessing your coefficients?
+
+# Part 2: More bells and whistles
+
+```{r setup2, include=FALSE}
 library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
@@ -338,3 +629,527 @@ head(mod2Matrix,28) #Show first 28 rows of model matrix
   - Think about how these variables might be related to weight using your `brain`
   - Fit a model using `lm`
   - Make some plots, using `effects` or `ggeffects`
+
+
+# Part 3: Models behaving badly
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggpubr)
+library(knitr)
+library(kableExtra)
+
+set.seed(123)
+
+#Functions
+logit <- function(x) log(x/(1-x))
+invLogit <- function(x) exp(x)/(1+exp(x))
+
+#Plots of mtcars data
+#Continuous
+p1 <- ggplot(arrange(mtcars,disp),aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
+
+#Interaction
+p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(gear)))+geom_point()+labs(col='gears')+
+  geom_smooth(formula=y~x,method='lm',se=FALSE)+
+  scale_colour_manual(values=c('blue','purple','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
+
+#Fit models for later use
+modp1 <- lm(mpg~disp,data=arrange(mtcars,disp))
+modp3 <- lm(mpg~disp*factor(gear),data=mtcars)
+
+#Generate data that violate lm assumptions:
+n <- 100
+x <- runif(n,-10,10)
+corMat <- matrix(c(1,0.95,0.95,1),ncol=2) #Correlation matrix (r=0.95)
+x2 <- (cbind(x,runif(n,-10,10)) %*% chol(corMat))[,2] #Makes correlated predictor x2 via Cholesky matrix of corMat
+x3 <- x+1e5
+yhat <- 1 - 0.2*x #Expected value
+y0 <- yhat + rnorm(n,0,2) #OK
+y1 <- yhat + 0.1*x^2 + rnorm(n,0,2) #Polynomial function
+y2 <- rpois(n,exp(yhat))  #Poisson process
+y3 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+y4 <- (1 - 2e-4*(x3))+rnorm(n,0,1e-3)
+d1 <- data.frame(x,x2,x3,yhat,y0,y1,y2,y3,y4)
+d1$s.y4 <- scale(y4)
+d1$s.x3 <- scale(x3)
+# rm(n,x,x2,yhat,y0,y1,y2,y3)
+
+```
+
+
+## Motivation 
+
+Are my model results reliable?
+
+- Residual checks
+- Transformations
+- Collinearity
+- How much stuff should I put into my model?
+  
+
+## Assumptions of linear regression
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=3}
+meanDisp <- mean(mtcars$disp) #Mean displacement
+y_meanDisp <- coef(modp1) %*% c(1,meanDisp) #Predicted y at mean displacement
+b0Lab <- paste('b[0] == ',round(coef(modp1)[1],3))
+b1Lab <- paste('b[1] == ',round(coef(modp1)[2],3)) 
+
+p1 + theme(axis.title.x.bottom=element_text(colour='darkturquoise'),axis.text.x.bottom=element_text(colour='darkturquoise'))
+```
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{disp} \\
+mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+There are 3 main assumptions to this model:
+
+1. The relationship between $\textcolor{darkturquoise}{disp}$ and $mpg$ is linear
+2. $mpg$ (the data) is Normally distributed around $\textcolor{orange}{\hat{mpg}}$ (the line)
+3. $\textcolor{red}{\sigma}$ is the same everywhere
+
+This is pretty easy to see if you only have 1 variable, but...
+
+::::
+
+::: 
+
+## What if I have many variables?
+
+```{r, fig.height=3, fig.width=5}
+p3
+```
+
+Difficult to see if the assumptions are met
+
+## Solution: residual checks
+
+Some common ways of checking the assumptions: __residual plots__
+
+\tiny
+
+```{r, echo=TRUE, out.width='100%', fig.asp=0.5} 
+mod1 <- lm(mpg~disp*factor(gear),data=mtcars) #Fits model
+par(mfrow=c(1,2),mar=c(3,3,1,1)+1) #Splits plot into 2
+plot(mod1, which=c(1,2)) #1st and 2nd residual plots
+```
+
+\normalsize
+
+1. Points in Plot 1 should show _no pattern_ (shotgun blast)
+2. Points in Plot 2 should be _roughly_ on top of the 1:1 line
+
+## Problem 1: Non-linear relationship
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y1~x,data=d1)
+```
+
+$y1$ clearly follows a hump-shaped relationship, not a linear one
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m1 <-lm(y1~x,data=d1) 
+plot(m1, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Solution: transform predictors
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~poly(x,2),col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y1~poly(x,2),data=d1)
+```
+\small
+
+_log_ and _square-root_ transformations are common
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y1~poly(x,2),data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+\small
+- Warning: Polynomials can do weird things; consider whether this is biologically reasonable!
+
+## Problem 2a: Non-normal response
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+geom_hline(yintercept=0,linetype='dashed')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y2~x,data=d1)
+```
+
+$y2$ is count data (integers $\geq{0}$). _Very_ common in ecological data.
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y2~x,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Solution: transform data to meet assumptions
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,log(y2+1)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(log(y2+1)~x,data=d1)
+```
+Square-root transformations are also common
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(log(y2+1)~x,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Problem 2b: Non-normal response
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+```{r echo=TRUE, eval=FALSE}
+lm(y3~x,data=d1)
+```
+
+$y3$ is binomial data (success/failure, 0 or 1). _Very_ common in ecological data.
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y3~x,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Solution: use a Generalized Linear Model (GLM)
+
+```{r, echo=FALSE, fig.width=5, fig.height=3} 
+ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
+```
+
+- This is a topic for another lecture. Hold tight!
+
+
+## Problem: variables are on different scales
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(x3,y4))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+\small
+
+```{r echo=TRUE, eval=FALSE}
+lm(y4~x3,data=d1)
+```
+- $y4$ is tiny, while $x3$ is huge
+- OK for now, but can cause problems when fitting complicated models (GLMs)
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y4~x3,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+
+## Solution: scale data/predictors before fitting
+
+::: columns
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
+ggplot(d1,aes(scale(x3),scale(y4)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```
+
+\small
+
+```{r echo=TRUE, eval=FALSE}
+#Subtracts mean, divides by SD
+d1$s.y4 <- scale(y4)
+d1$s.x3 <- scale(x3) 
+lm(s.y4~s.x3,data=d1) #Refit
+```
+
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=2, fig.height=2.5} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(s.y4~s.x3,data=d1)
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0,cex=0.7)
+```
+
+\small
+
+- Residuals are the same as before
+- Coefficients are now related to _scaled_ data and predictor
+
+::::
+
+:::
+
+
+## But wait... there's more (assumptions)!
+
+::: columns
+
+:::: column
+
+One more assumption:
+
+4. If you have 2+ predictors in your model, the predictors are not related to each other
+
+- Say we have 2 predictors, $x$ and $x2$:
+
+```{r echo=TRUE, eval=FALSE}
+lm(y0~x+x2,data=d1)
+```
+
+- Model fits, and residuals look OK, but there's trouble ahead!
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3, fig.height=4} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y0~x+x2,data=d1) 
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+```
+
+::::
+
+:::
+
+## Uh oh! Collinearity!
+::: columns
+
+:::: column
+
+\tiny
+```{r, echo=TRUE, fig.width=4,fig.height=3} 
+#Function to print correlation (r) value
+corText <- function(x,y){
+  text(0.5,0.5,round(cor(x,y),3))
+} 
+
+#Pairplot of y0, x, and x2
+pairs(d1[,c('y0','x','x2')],lower.panel=corText)
+```
+
+\normalsize
+
+`pairs()` is useful for looking at relations among your data
+
+::::
+
+:::: column
+
+- $x$ and $x2$ mean basically the same thing!
+- Also revealed using variance-inflation factors (VIFs):
+
+\small
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(car)
+#VIF scores:
+# 1 = no problem
+# 1-5 = some problems
+# 5+ = big problems!
+vif(m2) 
+```
+
+::::
+
+:::
+
+## Is collinearity really that bad?
+
+::: columns
+
+:::: column
+
+\small
+
+```{r, echo=TRUE} 
+#Correct model
+m1 <- lm(y0~x,data=d1)
+```
+
+\tiny
+
+```{r, echo=FALSE,eval=TRUE} 
+kable(summary(m1)$coef[,-3]) %>% row_spec(2,color='red')
+```
+
+::::
+
+:::: column 
+
+\small
+
+```{r, echo=TRUE} 
+#Incorrect model
+m2 <- lm(y0~x+x2,data=d1)
+```
+
+\tiny
+
+```{r, echo=FALSE,eval=TRUE} 
+kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
+```
+
+::::
+
+:::
+
+- Increases SE of each term, so model may "miss" important terms
+- Gets worse with increasing correlation, or if many terms are correlated!
+
+## How do we fix this? Depends on your goals:
+
+::: columns
+
+:::: column
+
+1. I care about predicting things
+- Use dimensional reduction (e.g. PCA) and re-run model
+
+2. I care about what's causing things
+- Design experiment to separate cause and effect
+- Think about what is causing what. _Graphical models_ are helpful for this
+  - Not all variables have to be included!
+
+::::
+
+:::: column
+
+
+```{r echo=FALSE, out.width='80%'}  
+  include_graphics('./dag.png',dpi=NA)
+```
+
+- Simple graphical model, where the effect of A on D is _mediated_ by B.
+- "Correct" `lm` model of D:
+
+`lm(D ~ B + C)`
+
+::::
+
+:::
+
+
+## A challenger approaches!
+
+- Guess what... more bat data! This time there are 6 variables that were measured. We're interested in predicting `bats` (counts of bats per night).
+- Formulate a causal model that seems reasonable
+  - Draw it out on paper/in PowerPoint using flow diagrams 
+- Fit an `lm` model of `bats` from your causal model, check the assumptions, and update as necessary
+
+
+## Here's the answer
+
+```{r echo=FALSE, out.width='70%'}  
+  include_graphics('./dag2.png',dpi=NA)
+```
+
+This is the __true__ process that generated the data. Model for `bats` should look like:
+
+`lm(log(bats+0.1)~poly(temp,2)+light+bugs,data=dat)`
