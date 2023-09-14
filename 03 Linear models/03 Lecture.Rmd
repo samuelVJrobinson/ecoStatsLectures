@@ -2,17 +2,27 @@
 title: "Linear models"
 subtitle: "Modeling... linearly!"
 author: "Samuel Robinson, Ph.D."
-date: "October 8, 2020"
+date: "Sep. 22, 2023"
 output: 
   beamer_presentation:
     incremental: true
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
+    fig_caption: false
+    keep_tex: true
+urlcolor: blue
 df_print: kable
+classoption: aspectratio=169
 header-includes: 
-  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
-  \useinnertheme{circles}
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+  - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  - \let\endoldShaded\endShaded
+  - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
+  - \let\oldverbatim\verbatim %Change fontsize of code chunk output
+  - \let\endoldverbatim\endverbatim
+  - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
 ---
 
 ```{r setup, include=FALSE}
@@ -20,56 +30,110 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
+library(knitr)
+library(kableExtra)
 
 set.seed(123)
+
+#Fit models for later use
+modp1 <- lm(mpg~disp,data=arrange(mtcars,disp)) # Simple linear - continuous predictor
+modp2a <- lm(mpg~am,data=arrange(mtcars,am,disp)) # Simple linear - categorial predictor with 2 levels
+modp2b <- lm(mpg~factor(gear),data=arrange(mtcars,am,disp)) # Simple linear - categorial predictor with 3 levels
+modp3 <- lm(mpg~disp+factor(gear),data=arrange(mtcars,am,disp)) # Multiple linear - continuous and categorial predictor
+modp4 <- lm(mpg~disp*factor(gear),data=mtcars) # Multiple linear - continuous, categorial, and interaction
 
 #Plots of mtcars data
 
 #Continuous
 p1 <- ggplot(arrange(mtcars,disp),aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
 
-#Categorical
-p2 <- ggplot(arrange(mtcars,am,disp),aes(x=factor(am,labels=c('auto','manual')),y=mpg))+ 
+#Categorical - 2 levels
+p2a <- ggplot(arrange(mtcars,am,disp),aes(x=factor(am,labels=c('auto','manual')),y=mpg))+  
   geom_point(position=position_jitter(width=0.05))+labs(x='am')+
   geom_point(aes(y=mpg),stat='summary',fun=mean,col='orange',size=3) #Mean only
-  # geom_pointrange(stat='summary',fun.data=mean_se,fun.args = list(mult = 2),col='orange') #Mean + 2 SE
+  
+#Categorical - 3 levels
+p2b <- ggplot(arrange(mtcars,gear,mpg),aes(x=factor(gear),y=mpg))+ 
+  geom_point(position=position_jitter(width=0.05))+labs(x='gears')+
+  geom_point(aes(y=mpg),stat='summary',fun=mean,col='orange',size=3) #Mean only
 
-# #Interaction - use this next lecture
-# p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(am,labels=c('auto','manual'))))+geom_point()+labs(col='am')+
-#   geom_smooth(formula=y~x,method='lm',se=FALSE)+
-#   scale_colour_manual(values=c('blue','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
+#Continuous + categorial
+p3 <- ggplot(cbind(modp3$model,pred=predict(modp3)),aes(x=disp,y=mpg,col=`factor(gear)`))+geom_point()+labs(col='gears')+
+  geom_line(aes(y=pred))+
+  scale_colour_manual(values=c('blue','purple','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
 
-#Fit models for later use
-modp1 <- lm(mpg~disp,data=arrange(mtcars,disp))
-modp2 <- lm(mpg~am,data=arrange(mtcars,am,disp))
-# modp3 <- lm(mpg~disp*am,data=mtcars)
+#Interaction
+p4 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(gear)))+geom_point()+labs(col='gears')+
+  geom_smooth(formula=y~x,method='lm',se=FALSE)+
+  scale_colour_manual(values=c('blue','purple','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
 
 ```
 
 # Part 1: How do they work?
 
+## Outline
+
+::: columns
+
+:::: column
+
+- What are linear models? How do I fit them?
+
+- Making sure the model is working properly
+
+- Plotting and interpreting model results
+
+:::: 
+
+:::: column
+
+![](xkcd_extrapolating.png){width=100%}
+
+::::
+
+:::
+
 ## Motivation
 
-- _I have some bivariate data (2 things measured per row), and I want to know if they're related to each other_
+>- _I measured 2 things and I want to know if they're related to each other_
 
-- _I have 2+ groups of data, and I want to know whether the means are different_
-
-<!-- Use this next lecture -->
-<!-- - _I have 2+ groups of bivariate data, and I want to know whether the relationships differ between groups_ -->
+>- _I have groups of data, and I want to know whether the means are different_
 
 ```{r examplePlots, echo=FALSE, fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
-ggarrange(p1,p2,ncol=2) #Display mtcars data
+ggarrange(p1,p2a,ncol=2) #Display mtcars data
 ```
 
-## Model terminology {.build}
+## Terminology 
 
-- All linear models take the form:
+Linear models go by many different names. All these models are all doing _exactly the same thing_:
+
+- Linear regression
+
+- Least-squares regression
+
+- Simple linear model (SLM)
+
+- Multiple linear model/regression
+
+- Analysis of Variance (ANOVA)
+
+- Analysis of Covariance (ANCOVA)
+
+\pause
+
+I use a set of terminology that I find very helpful, from [Berliner (1996)](https://link.springer.com/chapter/10.1007/978-94-011-5430-7_3). I'll be using it here, as well as for describing more complex models.
+
+## Model terminology
+
+All linear models take the form:
 \begin{equation*} 
 \begin{split}
 \textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} + \textcolor{blue}{b_2}\textcolor{darkturquoise}{x_2} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
 y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
+
+\pause
 
 - $y$ is the thing you're interested in predicting
 - $\textcolor{orange}{\hat{y}}$ is the _predicted value_ of $y$
@@ -121,7 +185,7 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 - $mpg$ is the thing you're interested in predicting
 - $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
 - $\textcolor{darkturquoise}{disp}$ is the _predictor_ of _mpg_
-- $\textcolor{blue}{b_0}$ is the _intercept_, $\textcolor{blue}{b_1}$ is the _coefficient_ for $\textcolor{darkturquoise}{disp}$
+- $\textcolor{blue}{b_0}$ is the _intercept_, $\textcolor{blue}{b_1}$ is the _coefficient_ (slope) for $\textcolor{darkturquoise}{disp}$
 - $mpg\sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})$ means:
   - "$mpg$ follows a Normal distribution with mean $\textcolor{orange}{\hat{mpg}}$ and SD $\textcolor{red}{\sigma}$"
 - $\textcolor{red}{\sigma}$ isn't displayed on the figure. Where is it?
@@ -147,9 +211,31 @@ d1 <- data.frame(disp=sort(mtcars$disp),pred=predict(modp1)) %>% #Predictions + 
   mutate(upr1=pred+modp1_sigma,lwr1=pred-modp1_sigma) %>% 
   mutate(upr2=pred+modp1_sigma*2,lwr2=pred-modp1_sigma*2) 
 
+#Create sideways normal curves
+curveDf <- data.frame(disp=c(150,350), mpg=coef(modp1)[1]+coef(modp1)[2]*c(150,350))
+
+#Modified from https://stackoverflow.com/questions/62551795/make-ggplot-with-regression-line-and-normal-distribution-overlay
+mkCurve <- function(x,y,xrange,yrange){
+  mu <- y
+  rg <- mu + yrange
+  seq <- seq(rg[1], rg[2], length.out = 100)
+  d <- data.frame(
+    disp = dnorm(seq, mean = mu, sd = 3.2) + x,
+    mpg = seq
+  )
+  #Scale x-axis to xrange
+  d$disp <- min(d$disp)+(d$disp-min(d$disp))*xrange/c(max(d$disp)-min(d$disp))
+  return(d)
+}
+
+curveDf <- with(curveDf,mapply(mkCurve,x=disp,y=mpg,MoreArgs=list(xrange=50,yrange=c(-10,10)),SIMPLIFY=FALSE)) %>% 
+  bind_rows(.id='ID')
+
 p1 + 
   geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr2,ymin=lwr2),fill='red',alpha=0.2)+
-  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr1,ymin=lwr1),fill='red',alpha=0.2)
+  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr1,ymin=lwr1),fill='red',alpha=0.2)+
+  geom_path(data=curveDf,aes(group=ID),col='red')+
+  geom_vline(xintercept = c(150,350),linetype='dashed')
 ```
 
 ::::
@@ -159,6 +245,7 @@ p1 +
 - $\textcolor{red}{\sigma}$ is the "leftover" or "residual" variance
 - i.e. variation between samples that the model couldn't explain
 - Since $y\sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})$, this means that points are normally distributed around the _entire line_ of $\textcolor{orange}{\hat{y}}$
+- If you took a vertical slice at each part of the x-axis, the distribution would be _Normal_
 
 ::::
 
@@ -168,14 +255,11 @@ p1 +
 
 `lm` is one of the main functions used for linear modeling:
 
-\tiny
 ```{r, echo=TRUE} 
-#Formula structure: y ~ x
-mod1 <- lm(mpg ~ disp, #mpg depends on disp
-           data = mtcars) #Name of the dataframe containing mpg & disp
-summary(mod1)
+#Formula= y ~ x, data = Name of the dataframe containing mpg & disp
+mod1 <- lm(mpg ~ disp, data = mtcars); summary(mod1)
 ```
-\normalsize
+
 For a detailed breakdown of `lm`'s output, click [here](https://stats.stackexchange.com/questions/5135/interpretation-of-rs-lm-output)
 
 ## Simulate data
@@ -211,9 +295,9 @@ actual_y <- rnorm(n = length(pred_y),
 
 ::::{.column width="50%"}
 \scriptsize
-```{r, echo=TRUE, fig.width=5,fig.height=5}
+```{r, echo=TRUE, fig.width=5,fig.height=4}
 #Plot the data we just made
-plot(x,pred_y,col='orange',pch=19,
+plot(x,pred_y,col='orange',pch=19,type='l',
      ylab='y') 
 points(x,actual_y,col='black',pch=19)
 ```
@@ -223,17 +307,19 @@ points(x,actual_y,col='black',pch=19)
 :::
 
 ## Fit a model from simulated data
-\small
-How does R do at finding the coefficients?
 
-Remember: $b_0 = 1, b_1 = 2, \sigma = 3$
-\tiny
+How does R do at finding the coefficients? Remember: $b_0 = 1, b_1 = 2, \sigma = 3$
+
 ```{r, echo=TRUE, fig.width=5,fig.height=5}
-#Put the simulated data into a dataframe
-fakeDat <- data.frame(x = x, y = actual_y, pred = pred_y) 
-mod1sim <- lm(y ~ x, data = fakeDat) #Fit a linear model
-summary(mod1sim)
+fakeDat <- data.frame(x = x, y = actual_y, pred = pred_y) #Simulated data in a dataframe 
+mod1sim <- lm(y ~ x, data = fakeDat); summary(mod1sim) #Fit model
 ```
+
+\pause
+
+Modeling philosophy: all models are approximating a __generative process__.
+
+_It is up to us to think about what this process might be like._
 
 ## What about categorical data?
 
@@ -243,15 +329,15 @@ summary(mod1sim)
 
 ```{r, fig.height=3, fig.width=3}
 
-b0Lab <- paste('b[0] == ',round(coef(modp2)[1],2))
-b1Lab <- paste('b[1] == ',round(coef(modp2)[2],2)) 
+b0Lab <- paste('b[0] == ',round(coef(modp2a)[1],2))
+b1Lab <- paste('b[1] == ',round(coef(modp2a)[2],2)) 
 
-  p2 +
-    annotate('text', x=1.5, y = coef(modp2)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
-    geom_hline(yintercept=coef(modp2)[1],linetype='dashed',col='blue') +
+  p2a +
+    annotate('text', x=1.5, y = coef(modp2a)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
+    geom_hline(yintercept=coef(modp2a)[1],linetype='dashed',col='blue') +
     
-    annotate('text', x=2.35, y = (coef(modp2)[1] + coef(modp2)[2])*1.05, col='blue', label=b1Lab, parse=TRUE)+
-    annotate('segment', x = 2.25, xend = 2.25, y= coef(modp2)[1], yend = coef(modp2)[1] + coef(modp2)[2],linetype='dashed',col='blue') +
+    annotate('text', x=2.35, y = (coef(modp2a)[1] + coef(modp2a)[2])*1.05, col='blue', label=b1Lab, parse=TRUE)+
+    annotate('segment', x = 2.25, xend = 2.25, y= coef(modp2a)[1], yend = coef(modp2a)[1] + coef(modp2a)[2],linetype='dashed',col='blue') +
     
     theme(axis.title.x.bottom=element_text(colour='darkturquoise'),
             axis.text.x.bottom=element_text(colour='darkturquoise'))
@@ -293,9 +379,9 @@ mod2 <- lm(mpg ~ am, #mpg depends on am
 summary(mod2)
 ```
 
-## A challenger approaches!
+## First challenge
 
-- Simulate your own data with 2 discrete levels. My suggestion:
+- Simulate some data with 2 (discrete) levels. My suggestion:
   - ~~Steal~~Borrow my code, and change the predictor from continuous to discrete
   - Useful command: `rep` (replicate)
     - e.g. `rep(x=c(0,1),each=10)`
@@ -306,50 +392,14 @@ summary(mod2)
 
 # Part 2: More bells and whistles
 
-```{r setup2, include=FALSE}
-library(tidyverse)
-theme_set(theme_classic())
-library(ggpubr)
-
-set.seed(123)
-
-#Fit models
-modp1 <- lm(mpg~disp,data=arrange(mtcars,disp))
-modp2 <- lm(mpg~factor(gear),data=arrange(mtcars,am,disp))
-modp3 <- lm(mpg~disp+factor(gear),data=arrange(mtcars,am,disp))
-modp4 <- lm(mpg~disp*factor(gear),data=mtcars)
-
-#Plots
-
-#Continuous
-p1 <- ggplot(arrange(mtcars,disp),aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
-
-#Categorical - 3 levels
-p2 <- ggplot(arrange(mtcars,gear,mpg),aes(x=factor(gear),y=mpg))+ 
-  geom_point(position=position_jitter(width=0.05))+labs(x='gears')+
-  geom_point(aes(y=mpg),stat='summary',fun=mean,col='orange',size=3) #Mean only
-
-#Continuous + categorial
-p3 <- ggplot(cbind(modp3$model,pred=predict(modp3)),aes(x=disp,y=mpg,col=`factor(gear)`))+geom_point()+labs(col='gears')+
-  geom_line(aes(y=pred))+
-  scale_colour_manual(values=c('blue','purple','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
-
-#Interaction
-p4 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(gear)))+geom_point()+labs(col='gears')+
-  geom_smooth(formula=y~x,method='lm',se=FALSE)+
-  scale_colour_manual(values=c('blue','purple','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
-
-```
-
-
-## Motivation {.build}
+## Motivation
 
 > - _I have 2+ groups of data, and I want to know whether the means are different_
 
 > - _I have 2+ groups of bivariate data, and I want to know whether the relationships differ between groups_
 
-```{r examplePlots, echo=FALSE, fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
-ggarrange(p2,p4,ncol=2) #Display mtcars data
+```{r examplePlots2, echo=FALSE, fig.height=3, fig.width=8, message=FALSE, warning=FALSE}
+ggarrange(p2b,p4,ncol=2) #Display mtcars data
 ```
 
 ## Categorial data, 3 categories
@@ -360,19 +410,19 @@ ggarrange(p2,p4,ncol=2) #Display mtcars data
 
 ```{r, fig.height=3, fig.width=3}
 
-b0Lab <- paste('b[0] == ',round(coef(modp2)[1],2))
-b1Lab <- paste('b[1] == ',round(coef(modp2)[2],2))
-b2Lab <- paste('b[2] == ',round(coef(modp2)[3],2))
+b0Lab <- paste('b[0] == ',round(coef(modp2b)[1],2))
+b1Lab <- paste('b[1] == ',round(coef(modp2b)[2],2))
+b2Lab <- paste('b[2] == ',round(coef(modp2b)[3],2))
 
 
-  p2 + annotate('text', x=1.5, y = coef(modp2)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
-    geom_hline(yintercept=coef(modp2)[1],linetype='dashed',col='blue') +
+  p2b + annotate('text', x=1.5, y = coef(modp2b)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
+    geom_hline(yintercept=coef(modp2b)[1],linetype='dashed',col='blue') +
     
-    annotate('text', x=2.35, y = (coef(modp2)[1] + coef(modp2)[2])*1.05, col='blue', label=b1Lab, parse=TRUE)+
-    annotate('segment', x = 2.25, xend = 2.25, y= coef(modp2)[1], yend = coef(modp2)[1] + coef(modp2)[2],linetype='dashed',col='blue') +
+    annotate('text', x=2.35, y = (coef(modp2b)[1] + coef(modp2b)[2])*1.05, col='blue', label=b1Lab, parse=TRUE)+
+    annotate('segment', x = 2.25, xend = 2.25, y= coef(modp2b)[1], yend = coef(modp2b)[1] + coef(modp2b)[2],linetype='dashed',col='blue') +
     
-    annotate('text', x=3.35, y = (coef(modp2)[1] + coef(modp2)[3])*1.05, col='blue', label=b2Lab, parse=TRUE)+
-    annotate('segment', x = 3.25, xend = 3.25, y= coef(modp2)[1], yend = coef(modp2)[1] + coef(modp2)[3],linetype='dashed',col='blue') +
+    annotate('text', x=3.35, y = (coef(modp2b)[1] + coef(modp2b)[3])*1.05, col='blue', label=b2Lab, parse=TRUE)+
+    annotate('segment', x = 3.25, xend = 3.25, y= coef(modp2b)[1], yend = coef(modp2b)[1] + coef(modp2b)[3],linetype='dashed',col='blue') +
     
     theme(axis.title.x.bottom=element_text(colour='darkturquoise'),
             axis.text.x.bottom=element_text(colour='darkturquoise'))
@@ -391,13 +441,13 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 The more factor levels, the more coefficients:
 
->- $mpg$ is the thing you're interested in predicting
->- $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
->- $\textcolor{darkturquoise}{gear}$ is the _predictor_ of _mpg_
-  >- set of 0s and 1s
-  >- $\textcolor{darkturquoise}{gears_4}=$ "is this data point from a 4-gear car?"
->- $\textcolor{blue}{b_0}=$ _intercept_
->- $[\textcolor{blue}{b_1},\textcolor{blue}{b_2}]=$ are _coefficients_ for $\textcolor{darkturquoise}{gears}$
+- $mpg$ is the thing you're interested in predicting
+- $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
+- $\textcolor{darkturquoise}{gear}$ is the _predictor_ of _mpg_
+  - set of 0s and 1s
+  - $\textcolor{darkturquoise}{gears_4}=$ "is this data point from a 4-gear car?"
+- $\textcolor{blue}{b_0}=$ _intercept_ (first level of `gear` factor)
+- $[\textcolor{blue}{b_1},\textcolor{blue}{b_2}]=$ are _coefficients_ for $\textcolor{darkturquoise}{gears}$
 
 ::::
 
@@ -417,10 +467,10 @@ summary(mod1)
 \tiny
 ```{r, echo=TRUE} 
 mod1Matrix <- model.matrix(mod1) #Get model matrix (columns used to predict mpg)
-head(mod1Matrix,28) #Show first 28 rows of model matrix
+head(mod1Matrix,20) #Show first 20 rows of model matrix
 ```
 
-## What about if 2 things are both important?
+## What if 2 things are _both_ important?
 
 ::: columns
 
@@ -442,10 +492,10 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 :::: column
 
->- Suppose that both $\textcolor{darkturquoise}{disp}$ and $\textcolor{darkturquoise}{gears}$ are important for predicting $mpg$?
->- This is very similar to the last example, except that now we've added $\textcolor{darkturquoise}{disp}$
->- $\textcolor{darkturquoise}{gears}$ now changes the intercept, while $\textcolor{darkturquoise}{disp}$ changes the slope of all the lines 
->- Does it look like $\textcolor{darkturquoise}{gear}$ is very important?
+- Suppose that both $\textcolor{darkturquoise}{disp}$ and $\textcolor{darkturquoise}{gears}$ are important for predicting $mpg$?
+- This is very similar to the last example, except that now we've added $\textcolor{darkturquoise}{disp}$
+- $\textcolor{darkturquoise}{gears}$ now changes the intercept, while $\textcolor{darkturquoise}{disp}$ changes the slope of all the lines 
+- Does it look like $\textcolor{darkturquoise}{gear}$ is very important?
 
 ::::
 
@@ -462,22 +512,22 @@ summary(mod2)
 ```
 
 ## Dummy variables
+
 \tiny
 ```{r, echo=TRUE} 
 mod2Matrix <- model.matrix(mod2) #Get model matrix (columns used to predict mpg)
-colnames(mod2Matrix) <- gsub('factor\\(gear\\)','gear',colnames(mod2Matrix)) #Shorten colnames
-head(mod2Matrix,28) #Show first 28 rows of model matrix
+head(mod2Matrix,20) #Show first 20 rows of model matrix
 ```
 
 ## Interlude: problems with plotting raw data
 
->- Say that I've fit the following model:  
+- Say that I've fit the following model:  
 `mpg ~ disp + factor(gear)`
->- All of the plots below are using raw data, but which one is "telling the truth"?
->- Answer: __c__. _a_ and _b_ are hiding the effect of the other variable
+- All of the plots below are using raw data, but which one is "telling the truth"?
+- Answer: __c__. _a_ and _b_ are hiding the effect of the other variable
 
 ```{r, echo=FALSE, fig.height=3, fig.width=8} 
-ggarrange(p1,p2,p3,ncol=3,labels=letters[1:3])
+ggarrange(p1,p2b,p3,ncol=3,labels=letters[1:3])
 ```
 
 ## How do I plot these model results?
@@ -486,15 +536,19 @@ ggarrange(p1,p2,p3,ncol=3,labels=letters[1:3])
 
 :::: column
 
-Rule for plotting model results:  
+Rules for plotting model results:  
+
+\pause 
 
 1. If the model uses `N` variables, you should show all `N` effects _simultaneously_
 2. If this is impractical, you should use a __partial effects plot__
 
+\pause
+
 Other names for partial effects:
 
 - _counterfactual_ plot, _predictor effect_ plot, _leverage_ plot
-- Try using \texttt{effects} or \texttt{ggeffects}. Requires the \texttt{effects} and \texttt{ggeffect} packages
+- Try using \texttt{effects} or \texttt{ggeffect} packages for making these plots
 
 ```{r include=FALSE}
 n <- 100; ncoef <- 5 #Number of data points and coefficients
@@ -518,15 +572,19 @@ simMod <- lm(y~X1+X2+X3+X4+X5,data=pred)
 plot(y~X5,data=pred,pch=19,cex.lab=3) 
 ```
 
-\normalsize
-The effect of \emph{X5} is actually \textbf{very} strong ($p<0.0001$), but it doesn't look like it from this plot!
 ::::
 
 :::
 
+\pause
+
+\normalsize
+The effect of \emph{X5} is actually \textbf{very} strong ($p<0.0001$), but it doesn't look like it from this plot!
+
+
 ## Partial effects plots - using _effects_
 \tiny
-```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=5}
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=4}
 library(effects) #Load effects package
 simModEff <- predictorEffects(simMod,partial.residuals=TRUE) #Calculate partial effects
 #Plot partial effects
@@ -535,7 +593,7 @@ plot(simModEff,lines=list(col='red'), partial.residuals=list(pch=19,col='black',
 
 ## Partial effects plots - using _ggpredict_
 \tiny
-```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=5}
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=4}
 library(ggeffects) #Load ggeffects package
 simModEff2 <- ggeffect(simMod,terms=c('X5')) #Calculate partial effects for X5
 plot(simModEff2) #Plot effect of X5
@@ -545,7 +603,7 @@ plot(simModEff2) #Plot effect of X5
 
 What if the slopes _and_ intercepts differ between groups?
 
-```{r, fig.height=3, fig.width=5}
+```{r, fig.height=3, fig.width=4.5}
   p4 
 ```
 
@@ -594,9 +652,9 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
 
->- Interactions occur when predictors are _multiplied_
->- In this case, $\textcolor{darkturquoise}{disp}$ is multiplied by $\textcolor{darkturquoise}{gears_4}$ and $\textcolor{darkturquoise}{gears_5}$
->- $\textcolor{darkturquoise}{gears}$ now changes the intercept and the slope of the relationship between $mpg$ and $\textcolor{darkturquoise}{disp}$
+- Interactions occur when predictors are _multiplied_
+- In this case, $\textcolor{darkturquoise}{disp}$ is multiplied by $\textcolor{darkturquoise}{gears_4}$ and $\textcolor{darkturquoise}{gears_5}$
+- $\textcolor{darkturquoise}{gears}$ now changes the intercept and the slope of the relationship between $mpg$ and $\textcolor{darkturquoise}{disp}$
 ::::
 
 :::
@@ -616,49 +674,27 @@ Beware of fitting too many interactions, or else the \emph{Bilbo effect} occurs!
 \tiny
 ```{r, echo=TRUE} 
 mod2Matrix <- model.matrix(mod2) #Get model matrix (columns used to predict mpg)
-colnames(mod2Matrix) <- gsub('factor\\(gear\\)','gear',colnames(mod2Matrix)) #Shorten colnames
-head(mod2Matrix,28) #Show first 28 rows of model matrix
+head(mod2Matrix,20) #Show first 20 rows of model matrix
 ```
 
-## A challenger approaches!
+## Second challenge
 
-- Since you're all bat folks, here's some bat data!
+- Since we're all biologists, here's some bat data!
   - `batDat.csv`
 - Data: 100 bat weights from 2 cities, recorded along with sex and age
 - How do these variables affect bat weight? 
-  - Think about how these variables might be related to weight using your `brain`
+  - Think about how these variables might be related to weight using __your brain__
   - Fit a model using `lm`
   - Make some plots, using `effects` or `ggeffects`
 
-
 # Part 3: Models behaving badly
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
-library(tidyverse)
-theme_set(theme_classic())
-library(ggpubr)
-library(knitr)
-library(kableExtra)
-
+```{r setup3, include=FALSE}
 set.seed(123)
 
 #Functions
 logit <- function(x) log(x/(1-x))
 invLogit <- function(x) exp(x)/(1+exp(x))
-
-#Plots of mtcars data
-#Continuous
-p1 <- ggplot(arrange(mtcars,disp),aes(x=disp,y=mpg))+geom_point()+geom_smooth(formula=y~x,method='lm',se=FALSE,col='orange')
-
-#Interaction
-p3 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(gear)))+geom_point()+labs(col='gears')+
-  geom_smooth(formula=y~x,method='lm',se=FALSE)+
-  scale_colour_manual(values=c('blue','purple','red'))+theme(legend.justification=c(1,1), legend.position=c(1,1))
-
-#Fit models for later use
-modp1 <- lm(mpg~disp,data=arrange(mtcars,disp))
-modp3 <- lm(mpg~disp*factor(gear),data=mtcars)
 
 #Generate data that violate lm assumptions:
 n <- 100
@@ -691,6 +727,7 @@ Are my model results reliable?
   
 
 ## Assumptions of linear regression
+
 ::: columns
 
 :::: column
@@ -717,9 +754,13 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 There are 3 main assumptions to this model:
 
+\pause
+
 1. The relationship between $\textcolor{darkturquoise}{disp}$ and $mpg$ is linear
 2. $mpg$ (the data) is Normally distributed around $\textcolor{orange}{\hat{mpg}}$ (the line)
 3. $\textcolor{red}{\sigma}$ is the same everywhere
+
+\pause
 
 This is pretty easy to see if you only have 1 variable, but...
 
@@ -729,11 +770,24 @@ This is pretty easy to see if you only have 1 variable, but...
 
 ## What if I have many variables?
 
-```{r, fig.height=3, fig.width=5}
+::: columns
+
+:::: column
+
+```{r, fig.height=5, fig.width=5}
 p3
 ```
 
-Difficult to see if the assumptions are met
+::::
+
+:::: column
+
+- Difficult to see if the assumptions are met
+- In general, we use __residual plots__ or __simulation__ to assess whether model assumptions are met
+
+::::
+
+:::
 
 ## Solution: residual checks
 
@@ -741,7 +795,7 @@ Some common ways of checking the assumptions: __residual plots__
 
 \tiny
 
-```{r, echo=TRUE, out.width='100%', fig.asp=0.5} 
+```{r, echo=TRUE, out.width='100%', fig.asp=0.45} 
 mod1 <- lm(mpg~disp*factor(gear),data=mtcars) #Fits model
 par(mfrow=c(1,2),mar=c(3,3,1,1)+1) #Splits plot into 2
 plot(mod1, which=c(1,2)) #1st and 2nd residual plots
@@ -749,8 +803,8 @@ plot(mod1, which=c(1,2)) #1st and 2nd residual plots
 
 \normalsize
 
-1. Points in Plot 1 should show _no pattern_ (shotgun blast)
-2. Points in Plot 2 should be _roughly_ on top of the 1:1 line
+- Points in Plot 1 should show _no pattern_ (shotgun blast)
+- Points in Plot 2 should be _roughly_ on top of the 1:1 line
 
 ## Problem 1: Non-linear relationship
 

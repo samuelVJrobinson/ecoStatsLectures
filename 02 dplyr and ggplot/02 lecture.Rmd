@@ -11,8 +11,8 @@ output:
     highlight: "tango"
     fig_caption: false
 urlcolor: blue
-classoption: aspectratio=169
 df_print: kable
+classoption: aspectratio=169
 header-includes: 
   - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
   - \useinnertheme{circles}
@@ -398,7 +398,7 @@ longBats %>% pivot_wider(names_from=trait, #Names of new columns
 
 - `pivot_wider`: reshapes data into _wide_ form
 
-## Exercises!
+## Second challenge
 
 ::: columns
 
@@ -499,7 +499,7 @@ iris %>% group_by(Species) %>%
 
 - You can use most of the subset and window functions across groups
 
-## Exercises!
+## Third challenge
 
 Using the *InsectSprays* dataset:
 
@@ -664,6 +664,13 @@ Top line of code says:
 
 :::
 
+## Fourth challenge
+
+You all brought some of your own data... didn't you??\footnote{If not, type `data()` in console to see some built-in R datasets}
+
+\pause
+
+Make a simple plot of some of your data! Don't worry if it's messy or weird
 
 ## Colours in plots
 
@@ -990,7 +997,7 @@ ggarrange(p1,p2,p3,ncol=3)
 
 ```
 
-## A challenger approaches:
+## Final challenge
 
 Make these figures! Datasets are found in `mpg`, `msleep`, `trees`, and `starwars` (built into the `ggplot2` and `dplyr` packages)
 
