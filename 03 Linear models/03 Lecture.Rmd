@@ -233,8 +233,8 @@ curveDf <- with(curveDf,mapply(mkCurve,x=disp,y=mpg,MoreArgs=list(xrange=50,yran
   bind_rows(.id='ID')
 
 p1 + 
-  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr2,ymin=lwr2),fill='red',alpha=0.2)+
-  geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr1,ymin=lwr1),fill='red',alpha=0.2)+
+  # geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr2,ymin=lwr2),fill='red',alpha=0.2)+
+  # geom_ribbon(data=d1,aes(x=disp,y=NULL,ymax=upr1,ymin=lwr1),fill='red',alpha=0.2)+
   geom_path(data=curveDf,aes(group=ID),col='red')+
   geom_vline(xintercept = c(150,350),linetype='dashed')
 ```
@@ -316,12 +316,6 @@ fakeDat <- data.frame(x = x, y = actual_y, pred = pred_y) #Simulated data in a d
 mod1sim <- lm(y ~ x, data = fakeDat); summary(mod1sim) #Fit model
 ```
 
-\pause
-
-Modeling philosophy: all models are approximating a __generative process__.
-
-_It is up to us to think about what this process might be like._
-
 ## What about categorical data?
 
 ::: columns
@@ -391,6 +385,60 @@ summary(mod2)
     - e.g. `rnorm(n=100,mean=0,sd=1)`
 - Use `lm` to fit a model to the data you just simulated
   - How does R do at guessing your coefficients?
+  
+  
+## Modeling philosophy
+
+All parametric models are approximating a __generative process__ 
+
+\pause
+
+When we're fitting the model `lm(y ~ x)`, our implicit model of the process is:
+
+- "I think that there is some kind of _average value_ of __y__, that I'll call $\textcolor{orange}{\hat{y}}$" (parametric)
+- "I think that $\textcolor{orange}{\hat{y}}$ responds to __x__ in a __straight line__" (linear in parameters)
+- "I think that $\textcolor{orange}{\hat{y}}$ is spitting out __normally distributed__ data around it" (normal residuals)
+- "I think that __y__ values aren't affected by the other __y__ values that come before them" (independence)
+- "I think that the normal distribution is _about the same_ anywhere along $\textcolor{orange}{\hat{y}}$" (stationary)
+
+\pause 
+
+All of these can be changed, as we'll see during the following weeks!
+
+## Modeling philosophy (cont.)
+
+::: columns
+
+:::: column
+
+- When we gather data, we're seeing the outcome of this generative process, and trying to guess what the underlying process is.
+
+- __It is up to us to think about what this process might be like.__
+
+\pause
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})\\
+\textcolor{blue}{b_0} = 1, \textcolor{blue}{b_1} = & 2, \textcolor{red}{\sigma} = 3 \text{ : "True" values} \\
+\textcolor{blue}{\hat{b_0}} = 2.0, \textcolor{blue}{\hat{b_1}} = & 1.9, \textcolor{red}{\hat{\sigma}} = 2.9 \text{ : Estimated values} \\
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=4,fig.height=5}
+plot(x,pred_y,col='orange',pch=19,type='l',ylab='y') 
+abline(2.02,1.93,col='orange',lty=2)
+points(x,actual_y,col='black',pch=19)
+```
+::::
+
+:::
+
 
 # Part 2: More bells and whistles
 
@@ -404,7 +452,7 @@ summary(mod2)
 ggarrange(p2b,p4,ncol=2) #Display mtcars data
 ```
 
-## Categorial data, 3 categories
+## Categorical data, 3 categories
 
 ::: columns
 
@@ -497,8 +545,8 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 
 - Suppose that both $\textcolor{darkturquoise}{disp}$ and $\textcolor{darkturquoise}{gears}$ are important for predicting $mpg$?
 - This is very similar to the last example, except that now we've added $\textcolor{darkturquoise}{disp}$
-- $\textcolor{darkturquoise}{gears}$ now changes the intercept, while $\textcolor{darkturquoise}{disp}$ changes the slope of all the lines 
-- Does it look like $\textcolor{darkturquoise}{gear}$ is very important?
+- $\textcolor{darkturquoise}{gears}$ now changes the intercepts, while $\textcolor{darkturquoise}{disp}$ changes the overall slope
+- Now that both variables are included, does it look like $\textcolor{darkturquoise}{gear}$ is very important?
 
 ::::
 
@@ -522,12 +570,29 @@ mod2Matrix <- model.matrix(mod2) #Get model matrix (columns used to predict mpg)
 head(mod2Matrix,20) #Show first 20 rows of model matrix
 ```
 
+## Second challenge 
+
+- You all brought some of your own data... didn't you??
+
+- Make a simple model of your data! Choose a _numeric_ variable to predict, and some other variables that might be good at predicting it. Fit a model and see what it says
+
+- `lm` model input:
+
+\pause
+
+`model1 <- lm(y ~ x1 + x2 + ..., data = myDataFrame)`
+
+`summary(model1)` 
+
+
 ## Interlude: problems with plotting raw data
 
 - Say that I've fit the following model:  
 `mpg ~ disp + factor(gear)`
 - All of the plots below are using raw data, but which one is "telling the truth"?
 - Answer: __c__. _a_ and _b_ are hiding the effect of the other variable
+
+\pause
 
 ```{r, echo=FALSE, fig.height=3, fig.width=8} 
 ggarrange(p1,p2b,p3,ncol=3,labels=letters[1:3])
@@ -539,12 +604,12 @@ ggarrange(p1,p2b,p3,ncol=3,labels=letters[1:3])
 
 :::: column
 
-Rules for plotting model results:  
+Rules for plotting model results with $>1$ terms:  
 
 \pause 
 
-1. If the model uses `N` variables, you should show all `N` effects _simultaneously_
-2. If this is impractical, you should use a __partial effects plot__
+1. If the model uses `N` terms, you should show all `N` effects _simultaneously_
+2. If this is impossible, you should use a __partial effects plot__
 
 \pause
 
@@ -553,7 +618,7 @@ Other names for partial effects:
 - _counterfactual_ plot, _predictor effect_ plot, _leverage_ plot
 - Try using \texttt{effects} or \texttt{ggeffect} packages for making these plots
 
-```{r include=FALSE}
+```{r echo=FALSE, eval=TRUE}
 n <- 100; ncoef <- 5 #Number of data points and coefficients
 pred <- data.frame(replicate(n=ncoef,expr=rnorm(n,0,2))) #Predictor matrix
 beta <- runif(ncoef,-5,5) #Coefficients
@@ -566,14 +631,18 @@ pred$y <- y
 
 :::: column
 
+\pause
+
 Incorrect example, using raw data:
 \tiny
-```{r echo=TRUE}
+```{r echo=TRUE, fig.height=4, fig.width=6}
 #Fit model with 5 variables (all important)
 simMod <- lm(y~X1+X2+X3+X4+X5,data=pred) 
-#Incorrect way, using raw data 
+#Plot x5 and y
 plot(y~X5,data=pred,pch=19,cex.lab=3) 
 ```
+
+\vspace{-0.5cm}
 
 ::::
 
@@ -594,13 +663,35 @@ simModEff <- predictorEffects(simMod,partial.residuals=TRUE) #Calculate partial 
 plot(simModEff,lines=list(col='red'), partial.residuals=list(pch=19,col='black',cex=0.25))
 ```
 
-## Partial effects plots - using _ggpredict_
-\tiny
-```{r echo=TRUE, message=FALSE, warning=FALSE, fig.width=8,fig.height=4}
-library(ggeffects) #Load ggeffects package
-simModEff2 <- ggeffect(simMod,terms=c('X5')) #Calculate partial effects for X5
-plot(simModEff2) #Plot effect of X5
+## Partial effects plots - using _ggeffects_
+
+::: columns
+
+:::: column
+```{r, ggeffectsPlot, echo=TRUE, eval=FALSE}
+#Load ggeffects package
+library(ggeffects) 
+
+#Calculate partial effects for X5
+simModEff2 <- ggeffect(simMod,terms=c('X5')) 
+
+#Plot the effect of X5
+plot(simModEff2) 
 ```
+
+- You can also turn `ggeffect` objects into a dataframe and make your own custom plots
+
+::::
+
+:::: column
+
+```{r, ggeffectsPlot, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, fig.width=4,fig.height=4}
+```
+
+::::
+
+:::
+
 
 ## Interactions
 
@@ -675,20 +766,26 @@ Beware of fitting too many interactions, or else the \emph{Bilbo effect} occurs!
 
 ## Dummy variables
 \tiny
-```{r, echo=TRUE} 
+```{r, echo=TRUE, eval=FALSE} 
 mod2Matrix <- model.matrix(mod2) #Get model matrix (columns used to predict mpg)
+colnames(mod2Matrix) <- gsub('(factor\\(|\\))','',colnames(mod2Matrix)) #Shrink column headers
 head(mod2Matrix,20) #Show first 20 rows of model matrix
 ```
 
-## Second challenge
+## Third challenge
 
-- Since we're all biologists, here's some bat data!
-  - `batDat.csv`
-- Data: 100 bat weights from 2 cities, recorded along with sex and age
-- How do these variables affect bat weight? 
-  - Think about how these variables might be related to weight using __your brain__
-  - Fit a model using `lm`
-  - Make some plots, using `effects` or `ggeffects`
+- Make some plots of your model results using `ggeffects`
+
+- If you're feeling bold, try adding an __interaction__ term to your model
+
+- Interaction syntax:
+
+  - `lm (y ~ X1 * X2)` and `lm (y ~ X1 + X2 + X1:X)` do the same thing
+
+- If you have more than 2 terms, you can specify certain interactions like this:
+
+  - `lm (y ~ X1 * X2 * X3)`: Full model (everything interacts)
+  - `lm (y ~ X1 + X2 + X3 + X2:X3)`: interaction only between `X2` and `X3`
 
 # Part 3: Models behaving badly
 
