@@ -79,7 +79,9 @@ Other ideas:
 - No mention of how to do ANOVA or glht tests in early lectures! 
   - Perhaps this could be a separate lecture: "How to write about stats?"
   
-* Oct 1, 2023: Intro to R lecture - 3hr version with 0.5hr exercise breaks
+----------------------------------------------------------------------------
+  
+* Sep 8, 2023: Intro to R lecture - 3hr version with 0.5hr exercise breaks
 - Timing a bit long for the first part - seemed like it took too long to get to the exercise
   - Maybe break exercise into "fixing" and "plotting" part?
   - People seemed to do OK with this - some asked about colours on plots (difficult in base R)
@@ -90,4 +92,15 @@ Other ideas:
   - should do smaller separate exercises for each - loops first, then functions
 - didn't really get to the end part with lists; could probably remove and just explain if needed late
 - people were confused on different types of brackets, and how they work
+
+* Sep 15, 2023
+- A bit long at the beginning with "show and tell"
+- Might be good to have the dplyr/tidyr cheat sheets highlighted somehow. People asked to flip back and forth b/w the examples and the exercises. Alternatively, just get everyone to download it
+- `across` and `transmute` examples probably could be removed
+  - Could probably keep slides on basic verbs, and then make an "extended technique" slide with extras (no exercises for these ones)
+- Would be useful to have a simple breakdown of pivot_wider and pivot_longer (e.g. on mini-summary slide?), and what the specific arguments are
+- Last grouping slide could be removed
+- For ggplot slides, could probably just show what parts of the formula are data, aesthetics, and geoms, rather than explaining it
+- Could probably skip the "make your own theme" slide + summary stats slides (too much extra stuff to explain)  
+
     

@@ -27,7 +27,9 @@ header-includes:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
-theme_set(theme_classic())
+custTheme <- theme_classic()+
+  theme(plot.margin = unit(c(0.1,0.1,0.1,0.1),'cm'))
+theme_set(custTheme)
 library(ggpubr)
 library(knitr)
 library(kableExtra)
@@ -163,12 +165,16 @@ p1 + xlim(0,NA) +
   annotate('text', x=meanDisp, y = coef(modp1)[1]*1.05, col='blue', label=b0Lab, parse=TRUE) +
   annotate('segment', x = meanDisp, xend = meanDisp, y= y_meanDisp, yend = y_meanDisp*1.2,linetype='dashed',col='blue') +
   annotate('text', x=meanDisp*1.05, y = y_meanDisp*1.25, col='blue', label=b1Lab, parse=TRUE) +
-  annotate('segment', x = (y_meanDisp*1.2-coef(modp1)[1])/coef(modp1)[2] , xend = meanDisp, y= y_meanDisp*1.2 ,yend = y_meanDisp*1.2,
-           linetype='dashed',col='blue') +
-
-    theme(axis.title.x.bottom=element_text(colour='darkturquoise'),axis.text.x.bottom=element_text(colour='darkturquoise'))
+  annotate('segment', x = (y_meanDisp*1.2-coef(modp1)[1])/coef(modp1)[2] , xend = meanDisp, 
+           y= y_meanDisp*1.2 ,yend = y_meanDisp*1.2,linetype='dashed',col='blue') +
+  theme(axis.title.x.bottom=element_text(colour='darkturquoise'),
+          axis.text.x.bottom=element_text(colour='darkturquoise'))+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
+::::
+
+:::: column
 
 \begin{equation*} 
 \begin{split}
@@ -176,10 +182,6 @@ p1 + xlim(0,NA) +
 mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
-
-::::
-
-:::: column
 
 - $mpg$ is the thing you're interested in predicting
 - $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
@@ -342,18 +344,19 @@ b1Lab <- paste('b[1] == ',round(coef(modp2a)[2],2))
             axis.text.x.bottom=element_text(colour='darkturquoise'))
 ```
 
-\begin{equation*} 
-\begin{split}
-\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{am} \\
-mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
-\end{split}
-\end{equation*}
 
 ::::
 
 :::: column
 
 This uses _exactly the same_ math!
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{am} \\
+mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
 
 - $mpg$ is the thing you're interested in predicting
 - $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
@@ -427,18 +430,18 @@ b2Lab <- paste('b[2] == ',round(coef(modp2b)[3],2))
             axis.text.x.bottom=element_text(colour='darkturquoise'))
 ```
 
+::::
+
+:::: column
+
+The more factor levels, the more coefficients:
+
 \begin{equation*} 
 \begin{split}
 \textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{gears_4} + \textcolor{blue}{b_2}\textcolor{darkturquoise}{gears_5} \\
 mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
-
-::::
-
-:::: column
-
-The more factor levels, the more coefficients:
 
 - $mpg$ is the thing you're interested in predicting
 - $\textcolor{orange}{\hat{mpg}}$ is the _predicted value_ of $mpg$
@@ -479,6 +482,10 @@ head(mod1Matrix,20) #Show first 20 rows of model matrix
 p3
 ```
 
+::::
+
+:::: column
+
 \begin{equation*} 
 \begin{split}
 \textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{disp} \\
@@ -487,9 +494,6 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
 
-::::
-
-:::: column
 
 - Suppose that both $\textcolor{darkturquoise}{disp}$ and $\textcolor{darkturquoise}{gears}$ are important for predicting $mpg$?
 - This is very similar to the last example, except that now we've added $\textcolor{darkturquoise}{disp}$
@@ -602,7 +606,7 @@ plot(simModEff2) #Plot effect of X5
 
 What if the slopes _and_ intercepts differ between groups?
 
-```{r, fig.height=3, fig.width=4.5}
+```{r, fig.width=8,fig.height=4}
   p4 
 ```
 
