@@ -841,6 +841,10 @@ b1Lab <- paste('b[1] == ',round(coef(modp1)[2],3))
 p1 + theme(axis.title.x.bottom=element_text(colour='darkturquoise'),axis.text.x.bottom=element_text(colour='darkturquoise'))
 ```
 
+::::
+
+:::: column
+
 \begin{equation*} 
 \begin{split}
 \textcolor{orange}{\hat{mpg}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{disp} \\
@@ -848,17 +852,14 @@ mpg & \sim Normal(\textcolor{orange}{\hat{mpg}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
 
-::::
-
-:::: column
 
 There are 3 main assumptions to this model:
 
 \pause
 
-1. The relationship between $\textcolor{darkturquoise}{disp}$ and $mpg$ is linear
-2. $mpg$ (the data) is Normally distributed around $\textcolor{orange}{\hat{mpg}}$ (the line)
-3. $\textcolor{red}{\sigma}$ is the same everywhere
+1. The relationship between $\textcolor{darkturquoise}{disp}$ and $mpg$ is __linear__
+2. $mpg$ (the data) is __Normally distributed__ around $\textcolor{orange}{\hat{mpg}}$ (the line)
+3. $\textcolor{red}{\sigma}$ is the __same everywhere__
 
 \pause
 
@@ -874,7 +875,7 @@ This is pretty easy to see if you only have 1 variable, but...
 
 :::: column
 
-```{r, fig.height=5, fig.width=5}
+```{r, fig.height=3, fig.width=3}
 p3
 ```
 
@@ -893,15 +894,17 @@ p3
 
 Some common ways of checking the assumptions: __residual plots__
 
-\tiny
-
-```{r, echo=TRUE, out.width='100%', fig.asp=0.45} 
+```{r, echo=FALSE, eval=FALSE} 
 mod1 <- lm(mpg~disp*factor(gear),data=mtcars) #Fits model
-par(mfrow=c(1,2),mar=c(3,3,1,1)+1) #Splits plot into 2
-plot(mod1, which=c(1,2)) #1st and 2nd residual plots
+plot(mod1, which=c(1,2)) #1st and 2nd residual plots - others don't add much
 ```
 
-\normalsize
+```{r, echo=FALSE, out.width='100%', fig.asp=0.4} 
+mod1 <- lm(mpg~disp*factor(gear),data=mtcars) #Fits model
+par(mfrow=c(1,2),mar=c(3,3,1,1)+1) #Splits plot into 2
+plot(mod1, which=c(1,2)) #1st and 2nd residual plots - others don't add much
+```
+
 
 - Points in Plot 1 should show _no pattern_ (shotgun blast)
 - Points in Plot 2 should be _roughly_ on top of the 1:1 line
@@ -912,24 +915,23 @@ plot(mod1, which=c(1,2)) #1st and 2nd residual plots
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```{r, echo=FALSE, fig.width=3, fig.height=2.5} 
+ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
-```{r echo=TRUE, eval=FALSE}
-lm(y1~x,data=d1)
-```
+Model: `lm(y1~x,data=d1)`
 
-$y1$ clearly follows a hump-shaped relationship, not a linear one
+- $y1$ clearly follows a U-shaped relationship, not a linear one
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=4} 
+```{r, echo=FALSE, fig.width=3,fig.height=3} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m1 <-lm(y1~x,data=d1) 
-plot(m1, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m1, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
 
 ::::
@@ -942,33 +944,30 @@ plot(m1, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~poly(x,2),col='orange')
+```{r, echo=FALSE, fig.width=3, fig.height=2} 
+ggplot(d1,aes(x,y1))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~poly(x,2),col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
-```{r echo=TRUE, eval=FALSE}
-lm(y1~poly(x,2),data=d1)
-```
-\small
+Model: `lm(y1~poly(x,2),data=d1)`
 
-_log_ and _square-root_ transformations are common
+- _log_ and _square-root_ transformations are common
+- Can also use _additive_ (wiggly) models
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=4} 
+```{r, echo=FALSE, fig.width=3,fig.height=2.5} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(y1~poly(x,2),data=d1) 
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
+- Warning: Polynomials can do weird things; consider whether this is biologically reasonable!
 
 ::::
 
 :::
-
-\small
-- Warning: Polynomials can do weird things; consider whether this is biologically reasonable!
 
 ## Problem 2a: Non-normal response
 
@@ -976,24 +975,23 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+geom_hline(yintercept=0,linetype='dashed')
+```{r, echo=FALSE, fig.width=3, fig.height=2.5} 
+ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+geom_hline(yintercept=0,linetype='dashed')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
-```{r echo=TRUE, eval=FALSE}
-lm(y2~x,data=d1)
-```
+Model: `lm(y2~x,data=d1)`
 
-$y2$ is count data (integers $\geq{0}$). _Very_ common in ecological data.
+- $y2$ is count data (integers $\geq{0}$). _Very_ common in ecological data.
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=4} 
+```{r, echo=FALSE, fig.width=3,fig.height=3} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(y2~x,data=d1) 
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
 
 ::::
@@ -1006,23 +1004,23 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(x,log(y2+1)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```{r, echo=FALSE, fig.width=3, fig.height=2.5} 
+ggplot(d1,aes(x,log(y2+1)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
-```{r echo=TRUE, eval=FALSE}
-lm(log(y2+1)~x,data=d1)
-```
-Square-root transformations are also common
+Model: `lm(log(y2+1)~x,data=d1)`
+
+- Square-root transformations are also common
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=4} 
+```{r, echo=FALSE, fig.width=3,fig.height=3} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(log(y2+1)~x,data=d1) 
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
 
 ::::
@@ -1035,24 +1033,23 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```{r, echo=FALSE, fig.width=3, fig.height=2.5} 
+ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
-```{r echo=TRUE, eval=FALSE}
-lm(y3~x,data=d1)
-```
+Model: `lm(y3~x,data=d1)`
 
-$y3$ is binomial data (success/failure, 0 or 1). _Very_ common in ecological data.
+- $y3$ is binomial data (success/failure). _Very_ common in ecological data.
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=4} 
+```{r, echo=FALSE, fig.width=3,fig.height=3} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(y3~x,data=d1) 
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
 
 ::::
@@ -1061,8 +1058,11 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 ## Solution: use a Generalized Linear Model (GLM)
 
-```{r, echo=FALSE, fig.width=5, fig.height=3} 
-ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
+```{r, echo=FALSE, fig.width=5, fig.height=2.5} 
+ggplot(d1,aes(x,y3))+
+  geom_point()+
+  geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
 - This is a topic for another lecture. Hold tight!
@@ -1074,25 +1074,25 @@ ggplot(d1,aes(x,y3))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,m
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(x3,y4))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```{r, echo=FALSE, fig.width=3, fig.height=2.5} 
+ggplot(d1,aes(x3,y4))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 \small
 
-```{r echo=TRUE, eval=FALSE}
-lm(y4~x3,data=d1)
-```
+Model: `lm(y4~x3,data=d1)`
+
 - $y4$ is tiny, while $x3$ is huge
-- OK for now, but can cause problems when fitting complicated models (GLMs)
+- OK for now, but can cause problems when fitting other models
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=4} 
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(y4~x3,data=d1) 
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
 
 ::::
@@ -1106,8 +1106,9 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=3} 
-ggplot(d1,aes(scale(x3),scale(y4)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```{r, echo=FALSE, fig.width=3, fig.height=2.5} 
+ggplot(d1,aes(scale(x3),scale(y4)))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
 \small
@@ -1124,13 +1125,11 @@ lm(s.y4~s.x3,data=d1) #Refit
 
 :::: column
 
-```{r, echo=FALSE, fig.width=2, fig.height=2.5} 
+```{r, echo=FALSE, fig.width=3, fig.height=2.5} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(s.y4~s.x3,data=d1)
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0,cex=0.7)
+plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0,cex=0.75)
 ```
-
-\small
 
 - Residuals are the same as before
 - Coefficients are now related to _scaled_ data and predictor
@@ -1151,21 +1150,17 @@ One more assumption:
 4. If you have 2+ predictors in your model, the predictors are not related to each other
 
 - Say we have 2 predictors, $x$ and $x2$:
-
-```{r echo=TRUE, eval=FALSE}
-lm(y0~x+x2,data=d1)
-```
-
+  `lm(y0~x+x2,data=d1)`
 - Model fits, and residuals look OK, but there's trouble ahead!
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, fig.width=3, fig.height=4} 
+```{r, echo=FALSE, fig.width=3, fig.height=3} 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 m2 <-lm(y0~x+x2,data=d1) 
-plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
+plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
 
 ::::
@@ -1177,32 +1172,30 @@ plot(m2, which=c(1,2),caption='',cex.axis=1e-5,tck=0)
 
 :::: column
 
-\tiny
+
 ```{r, echo=TRUE, fig.width=4,fig.height=3} 
 #Function to print correlation (r) value
 corText <- function(x,y){
-  text(0.5,0.5,round(cor(x,y),3))
-} 
-
+  text(0.5,0.5,round(cor(x,y),3))} 
 #Pairplot of y0, x, and x2
-pairs(d1[,c('y0','x','x2')],lower.panel=corText)
+pairs(d1[,c('y0','x','x2')],
+      lower.panel=corText)
 ```
 
-\normalsize
-
-`pairs()` is useful for looking at relations among your data
 
 ::::
 
 :::: column
 
+\pause
+
 - $x$ and $x2$ mean basically the same thing!
 - Also revealed using variance-inflation factors (VIFs):
 
-\small
+\pause
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-library(car)
+library(car) 
 #VIF scores:
 # 1 = no problem
 # 1-5 = some problems
@@ -1210,17 +1203,27 @@ library(car)
 vif(m2) 
 ```
 
+\pause
+
+Causes:
+
+- Structural: one term is a function of the other
+- Data: other underlying (possibly unmeasured) relationships
+
 ::::
 
 :::
 
 ## Is collinearity really that bad?
 
+- Increases SE of each term, so model may "miss" important terms
+- Gets worse with increasing correlation, or if many terms are correlated
+
+\pause
+
 ::: columns
 
 :::: column
-
-\small
 
 ```{r, echo=TRUE} 
 #Correct model
@@ -1237,8 +1240,6 @@ kable(summary(m1)$coef[,-3]) %>% row_spec(2,color='red')
 
 :::: column 
 
-\small
-
 ```{r, echo=TRUE} 
 #Incorrect model
 m2 <- lm(y0~x+x2,data=d1)
@@ -1254,8 +1255,6 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 
 :::
 
-- Increases SE of each term, so model may "miss" important terms
-- Gets worse with increasing correlation, or if many terms are correlated!
 
 ## How do we fix this? Depends on your goals:
 
@@ -1263,18 +1262,20 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 
 :::: column
 
-1. I care about predicting things
-- Use dimensional reduction (e.g. PCA) and re-run model
+1. I _only_ care about predicting things
+- Use dimensional reduction (e.g. PCA) and re-run lm model
+- Use a machine learning model (e.g. Random Forest)
 
 2. I care about what's causing things
 - Design experiment to separate cause and effect
-- Think about what is causing what. _Graphical models_ are helpful for this
+- Think about __what__ is causing __what__. Graphical models are helpful for this
   - Not all variables have to be included!
 
 ::::
 
 :::: column
 
+\pause
 
 ```{r echo=FALSE, out.width='80%'}  
   include_graphics('./dag.png',dpi=NA)
@@ -1282,8 +1283,7 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 
 - Simple graphical model, where the effect of A on D is _mediated_ by B.
 - "Correct" `lm` model of D:
-
-`lm(D ~ B + C)`
+    `lm(D ~ B + C)`
 
 ::::
 
@@ -1307,3 +1307,11 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 This is the __true__ process that generated the data. Model for `bats` should look like:
 
 `lm(log(bats+0.1)~poly(temp,2)+light+bugs,data=dat)`
+
+## To do this week: draw out your hypotheses
+
+- Create a causal diagram of your own data
+
+1. List all of the things you measured as _boxes_
+2. Draw relationships between ovals using _arrows_
+3. If a relationship is unclear, use a _double-headed arrow_
