@@ -70,8 +70,6 @@ p4 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(gear)))+geom_point()+labs(col='g
 
 ```
 
-# Part 1: How do they work?
-
 ## Outline
 
 ::: columns
@@ -84,6 +82,8 @@ p4 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(gear)))+geom_point()+labs(col='g
 
 - Plotting and interpreting model results
 
+- How to think about models
+
 :::: 
 
 :::: column
@@ -93,6 +93,9 @@ p4 <- ggplot(mtcars,aes(x=disp,y=mpg,col=factor(gear)))+geom_point()+labs(col='g
 ::::
 
 :::
+
+# Part 1: How do they work?
+
 
 ## Motivation
 
@@ -411,6 +414,8 @@ All of these can be changed, as we'll see during the following weeks!
 
 :::: column
 
+\vspace{0.5cm}
+
 - When we gather data, we're seeing the outcome of this generative process, and trying to guess what the underlying process is.
 
 - __It is up to us to think about what this process might be like.__
@@ -673,10 +678,10 @@ plot(simModEff,lines=list(col='red'), partial.residuals=list(pch=19,col='black',
 library(ggeffects) 
 
 #Calculate partial effects for X5
-simModEff2 <- ggeffect(simMod,terms=c('X5')) 
+simModEff2 <- ggpredict(simMod,terms=c('X5')) 
 
 #Plot the effect of X5
-plot(simModEff2) 
+plot(simModEff2,residuals=TRUE) 
 ```
 
 - You can also turn `ggeffect` objects into a dataframe and make your own custom plots
@@ -818,11 +823,14 @@ d1$s.x3 <- scale(x3)
 
 ## Motivation 
 
-Are my model results reliable?
+Are my models behaving themselves?
 
 - Residual checks
+
 - Transformations
+
 - Collinearity
+
 - How much stuff should I put into my model?
   
 
@@ -1194,6 +1202,8 @@ pairs(d1[,c('y0','x','x2')],
 
 \pause
 
+\normalsize
+
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 library(car) 
 #VIF scores:
@@ -1217,6 +1227,7 @@ Causes:
 ## Is collinearity really that bad?
 
 - Increases SE of each term, so model may "miss" important terms
+
 - Gets worse with increasing correlation, or if many terms are correlated
 
 \pause
@@ -1277,41 +1288,154 @@ kable(summary(m2)$coef[,-3]) %>% row_spec(2,color='red')
 
 \pause
 
-```{r echo=FALSE, out.width='80%'}  
-  include_graphics('./dag.png',dpi=NA)
+```{r echo=FALSE, fig.height=2.5,fig.width=3,message=FALSE}  
+library(ggdag)
+
+#Coordinates for nodes
+nodeCoords <- data.frame(name=LETTERS[1:4], labs=LETTERS[1:4], 
+                         x=c(0,1,1,2),y=c(0,1,-1,0))
+
+#Define model using dagify
+tidy_ggdag <- tidy_dagitty(dagify(
+  D ~ C,
+  D ~ B,
+  B ~ A,
+  coords= list(x = setNames(nodeCoords$x,nodeCoords$name),
+               y = setNames(nodeCoords$y,nodeCoords$name)),
+  labels=setNames(nodeCoords$labs,nodeCoords$name)
+))
+
+tidy_ggdag$data %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend))+ 
+  geom_dag_edges(arrow_directed=arrow(angle=20,type='open'))+
+  geom_dag_point(shape=0) +
+  geom_dag_text(aes(label=label),size=6,col='black')+
+  lims(x=c(-0.25,2.25),y=c(-1.25,1.25))+
+  theme_dag_blank()
 ```
 
 - Simple graphical model, where the effect of A on D is _mediated_ by B.
 - "Correct" `lm` model of D:
-    `lm(D ~ B + C)`
+  - `lm(D ~ B + C)`
 
 ::::
 
 :::
 
 
-## A challenger approaches!
+## Fourth challenge
 
-- Guess what... more bat data! This time there are 6 variables that were measured. We're interested in predicting `bats` (counts of bats per night).
-- Formulate a causal model that seems reasonable
+- Let's say you're an ecologist studying foraging. You're interested in predicting `bats` (bat calls per night), and there are 6 variables that you measured that might _somehow_ relate to bat foraging,
+- Formulate a graphical model that seems reasonable
   - Draw it out on paper/in PowerPoint using flow diagrams 
-- Fit an `lm` model of `bats` from your causal model, check the assumptions, and update as necessary
+- Fit an `lm` model of `bats` using your graphical model, check the assumptions, and update as necessary
+
+\large
+```{r, echo=FALSE,eval=TRUE}
+dat <- read.csv('./batDat.csv')
+head(dat)
+```
 
 
 ## Here's the answer
 
-```{r echo=FALSE, out.width='70%'}  
-  include_graphics('./dag2.png',dpi=NA)
+```{r echo=FALSE, fig.width=7,fig.height=2.5}  
+
+#Coordinates for nodes
+nodeCoords2 <- data.frame(name=c('humidity','temp','bugs','bats','light','clouds'),
+                         x=c(0,1,0.5,1.5,2,2.5),y=c(0.5,1,0,0,1,0))
+
+#Define model using dagify
+tidy_ggdag2 <- tidy_dagitty(dagify(
+  humidity ~ temp,
+  bugs ~ temp,
+  bats ~ bugs,
+  bats ~ temp,
+  bats ~ light,
+  light ~ clouds,
+  coords= list(x = setNames(nodeCoords2$x,nodeCoords2$name),
+               y = setNames(nodeCoords2$y,nodeCoords2$name)),
+  labels=setNames(nodeCoords2$name,nodeCoords2$name)
+))
+
+tidy_ggdag2$data %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend))+ 
+  geom_dag_edges(arrow_directed=arrow(angle=20,type='open'))+
+  # geom_dag_point(shape=NA) +
+  geom_dag_text(aes(label=label),size=6,col='black')+
+  lims(x=c(-0.25,3.25),y=c(-0.25,1.25))+
+  theme_dag_blank()
+
 ```
 
 This is the __true__ process that generated the data. Model for `bats` should look like:
 
-`lm(log(bats+0.1)~poly(temp,2)+light+bugs,data=dat)`
+`lm(logbats~poly(temp,2)+light+bugs,data=mutate(dat,logbats=log(bats+0.1)))`
+
+## Model results 
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE,fig.height=3,fig.width=7}
+
+dat <- dat %>% mutate(logBats=log(bats+1)) #Pre-transform
+
+mod1 <- lm(logBats~poly(temp,2)+log(light)+bugs,data=dat)
+
+pltThm <- theme_classic()+theme(plot.title=element_blank())
+
+q1 <- ggpredict(mod1,terms='temp') %>% plot(residuals=TRUE)+pltThm
+q2 <- ggpredict(mod1,terms='light') %>% plot(residuals=TRUE)+pltThm
+q3 <- ggpredict(mod1,terms='bugs') %>% plot(residuals=TRUE)+pltThm
+
+ggarrange(q1,q2,q3,nrow=1,ncol=3)
+
+```
 
 ## To do this week: draw out your hypotheses
 
-- Create a causal diagram of your own data
+::: columns
+
+:::: column
+
+Create a graphical model of your own data
 
 1. List all of the things you measured as _boxes_
-2. Draw relationships between ovals using _arrows_
-3. If a relationship is unclear, use a _double-headed arrow_
+2. Think about how things might go together
+3. Draw relationships between ovals using _arrows_
+4. Fit some starter models of your data, check whether they met the assumptions
+5. Make some simple plots!
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, fig.width=3,fig.height=3}
+#Define model using dagify
+tidy_ggdag <- tidy_dagitty(dagify(
+  D ~ C,
+  D ~ B,
+  B ~ A,
+  A ~~ C,
+  coords= list(x = setNames(nodeCoords$x,nodeCoords$name),
+               y = setNames(nodeCoords$y,nodeCoords$name)),
+  labels=setNames(nodeCoords$labs,nodeCoords$name)
+))
+
+tidy_ggdag$data %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend))+ 
+  geom_dag_edges(aes(edge_linetype=ifelse(direction=='<->','dashed','solid')),
+    arrow_directed=arrow(angle=20,type='open'),
+                 arrow_bidirected=arrow(angle=20,ends = "both", type ="open"),
+                 curvature=0
+                 )+
+  geom_dag_point(shape=0) +
+  geom_dag_text(aes(label=label),size=6,col='black')+
+  lims(x=c(-0.25,2.25),y=c(-1.25,1.25))+
+  theme_dag_blank()
+
+
+
+```
+
+::::
+
+:::
