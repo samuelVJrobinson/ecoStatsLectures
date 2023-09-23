@@ -771,7 +771,7 @@ Beware of fitting too many interactions, or else the \emph{Bilbo effect} occurs!
 
 ## Dummy variables
 \tiny
-```{r, echo=TRUE, eval=FALSE} 
+```{r, echo=TRUE, eval=TRUE} 
 mod2Matrix <- model.matrix(mod2) #Get model matrix (columns used to predict mpg)
 colnames(mod2Matrix) <- gsub('(factor\\(|\\))','',colnames(mod2Matrix)) #Shrink column headers
 head(mod2Matrix,20) #Show first 20 rows of model matrix
@@ -785,7 +785,7 @@ head(mod2Matrix,20) #Show first 20 rows of model matrix
 
 - Interaction syntax:
 
-  - `lm (y ~ X1 * X2)` and `lm (y ~ X1 + X2 + X1:X)` do the same thing
+  - `lm (y ~ X1 * X2)` and `lm (y ~ X1 + X2 + X1:X2)` do the same thing
 
 - If you have more than 2 terms, you can specify certain interactions like this:
 
@@ -1370,7 +1370,7 @@ tidy_ggdag2$data %>%
 
 This is the __true__ process that generated the data. Model for `bats` should look like:
 
-`lm(logbats~poly(temp,2)+light+bugs,data=mutate(dat,logbats=log(bats+0.1)))`
+`lm(log(bats+0.1)~poly(temp,2)+light+bugs)`
 
 ## Model results 
 
@@ -1400,7 +1400,7 @@ Create a graphical model of your own data
 
 1. List all of the things you measured as _boxes_
 2. Think about how things might go together
-3. Draw relationships between ovals using _arrows_
+3. Draw relationships between boxes using _arrows_
 4. Fit some starter models of your data, check whether they met the assumptions
 5. Make some simple plots!
 
