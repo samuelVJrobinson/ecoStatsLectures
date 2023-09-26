@@ -880,3 +880,542 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
 ![](modResults.png)
 
 
+# Part 3: Models behaving badly
+
+
+```{r setup3, include=FALSE}
+library(MASS) #glm.nb
+library(tidyverse)
+theme_set(theme_classic())
+library(ggeffects)
+library(ggpubr)
+library(knitr)
+
+
+set.seed(123)
+
+#Functions
+logit <- function(x) log(x/(1-x))
+invLogit <- function(x) exp(x)/(1+exp(x))
+
+#Generate data that violate lm assumptions:
+n <- 100
+x <- runif(n,-10,10)
+
+xMat <- model.matrix(~x)
+coefs <- c(1,-0.2)
+yhat <- xMat %*% coefs
+
+
+#Expected value
+y0 <- yhat + rnorm(n,0,2) #OK
+y1 <- rpois(n,exp(yhat))  #Poisson process
+y2 <- rnbinom(n,mu=exp(yhat),size=1)  #NB process
+# y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+
+d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
+
+#Second df for partial residual example
+A <- sample(letters[1:3],n,TRUE)
+xMat <- model.matrix(~A+x)
+coefs <- c(1,-1,0.5,-0.2)
+yhat <- xMat %*% coefs
+
+y0 <- yhat + rnorm(n,0,2) #Normal
+y1 <- rpois(n,exp(yhat))  #Poisson process
+y2 <- rbinom(n,1,invLogit(yhat))  #Binomial process
+
+d2 <- data.frame(A,x,yhat,y0,y1,y2) #Dataframe
+
+rm(n,x,y0,y1,y2,xMat,A,yhat)
+
+```
+
+## Motivation
+
+- Are my model results reliable?
+  - Residual checks
+  - Overdispersion
+  - Zero-inflation
+- Model selection - which terms should I use?
+  - log-likelihood, $\chi^2$ tests, and AIC
+  - ML vs REML
+- Other things
+  - Binomial GLMs with >1 trial
+  - Offsets in count models
+  - $R^2$ for GLMs
+- Show-and-tell!
+
+## Problem 1: Residual checks
+
+::: columns
+
+:::: column
+
+- In LMs, residual checks are used to make sure that:
+1. Terms are linearly related
+2. Generating process is valid
+3. Variance is constant
+- "Regular" residuals don't work this way for GLMs!
+
+```{r}
+m1 <- glm(y1~x,data=d1,family='poisson')
+plot(y1~x,data=d1,pch=19)
+lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
+# x, yhat, y
+resNo <- 81 #Line number to use as example
+lines(rep(d1$x[resNo],2),c(exp(d1$yhat[resNo]),d1$y1[resNo]),col='red')
+r1 <- d1$y1[resNo] - exp(d1$yhat[resNo])
+text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
+     labels=paste('Residual = +',round(r1,3)),adj=-0.1,col='red',cex=3)
+```
+
+::::
+
+:::: column
+
+```{r}
+plot(predict(m1),residuals(m1,type='response'),xlab='Predicted value',ylab='Residuals');abline(h=0,lty='dashed')
+points(x=predict(m1)[resNo],y=residuals(m1,type='response')[resNo],col='black',pch=19)
+lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='response')[resNo]),col='red')
+```
+
+```{r}
+colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
+pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
+qqnorm(residuals(m1,type='response'),col=colVec,pch=pchVec); qqline(residuals(m1,type='response'))
+
+```
+
+
+::::
+
+:::
+
+## There are _many_ kinds of residuals!
+
+In addition to _response_ (regular) residuals there are:
+
+- Working residuals
+- Pearson residuals
+- __Deviance residuals__
+
+Deviance residuals use _likelihood_:
+
+\begin{equation*}
+r_{dev} = sign(y-\hat{y})\sqrt{2(log(L(y|\theta_s))-log(L(y|\theta))))}
+\end{equation*}
+
+- This may look scary, but R does this all for you!
+- These are analogous to regular residuals in LMs
+- For more about the different kinds of residuals, see [here](https://www.datascienceblog.net/post/machine-learning/interpreting_generalized_linear_models/)
+
+## Solution: use deviance residuals for GLMs
+
+::: columns
+
+:::: column
+
+Keep in mind:
+
+- Residuals from GLMs will never be as "pretty" as those from LMs
+- _Especially_ true for:
+  - Binomial GLMs
+  - Poisson/Negative Binomial GLMs with many zeros
+
+```{r}
+m1 <- glm(y1~x,data=d1,family='poisson')
+plot(y1~x,data=d1,pch=19)
+lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
+# x, yhat, y
+resNo <- 81 #Line number to use as example
+lines(rep(d1$x[resNo],2),c(exp(d1$yhat[resNo]),d1$y1[resNo]),col='red')
+r1 <- d1$y1[resNo] - exp(d1$yhat[resNo])
+text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
+     labels=paste('Residual = +',round(r1,3)),adj=-0.1,col='red',cex=3)
+```
+
+::::
+
+:::: column
+
+```{r}
+plot(predict(m1),residuals(m1,type='deviance'),xlab='Predicted value',ylab='Deviance Residuals');abline(h=0,lty='dashed')
+points(x=predict(m1)[resNo],y=residuals(m1,type='deviance')[resNo],col='black',pch=19)
+lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='deviance')[resNo]),col='red')
+```
+
+```{r}
+colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
+pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
+qqnorm(residuals(m1,type='deviance'),col=colVec,pch=pchVec); qqline(residuals(m1,type='deviance'))
+
+```
+
+
+::::
+
+:::
+
+## Problem 2: Overdispersion
+
+::: columns
+
+:::: column
+
+- Binomial and Poisson families have __no__ variance term (e.g. _SD_).
+- Sometimes this assumption doesn't work! (Very common for Poisson models)
+- Strong overdispersion biases SEs, meaning that p-values are useless
+
+::::
+
+:::: column
+
+```{r}
+m2 <- glm(y2~x,data=d1,family='poisson')
+
+do.call('cbind',predict(m2,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
+  mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>%
+  mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>%
+  ggplot(aes(x=x))+geom_point(aes(y=y))+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))
+```
+
+Example: data are much more variable than the predictions from the model
+
+::::
+
+:::
+
+## Problem 2: Overdispersion
+
+```{r, size='tiny'}
+summary(m1)
+```
+
+- In Poisson or Binomial models, Residual deviance $\div$ Degrees of Freedom should be $\sim$ 1
+- Residual deviance is the sum of all deviance from the model
+- This model looks OK (`r round(m1$deviance,2)` $\div$ `r round(m1$df.residual,2)` = `r with(m1, round(deviance/df.residual,2))`)
+
+## Problem 2: Overdispersion
+
+```{r, size='tiny'}
+m2 <- glm(y2~x,data=d1,family='poisson')
+summary(m2)
+```
+
+- This model does __not__ look OK (`r round(m2$deviance,2)` $\div$ `r round(m2$df.residual,2)` = `r with(m2, round(deviance/df.residual,2))`)
+- Generated using Negative Binomial, but fit to Poisson
+
+## Causes
+
+Overdispersion can be caused by different things:
+
+- Using the wrong probability distribution
+  - e.g. Poisson, but should be Negative Binomial
+- Lots of zeros in count data
+  - e.g. Very short observation period
+- Leaving out an important term
+  - e.g. An important _interaction_ term was omitted
+- Random effects\footnotemark not accounted for
+  - e.g. Data collected at different sites, but ignored
+
+\footnotetext{Random effects discussed later}
+
+## Solutions for overdispersion
+
+Try the following (in this order):
+
+1. Consider terms that may have been left out
+    1. Fixed effects
+    2. Random effects
+2. Try distributions that account for overdispersion
+    1. Negative Binomial, Beta Binomial, Zero-inflated Poisson\footnotemark
+    2. Quasi-binomial\footnotemark[\value{footnote}] and quasi-poisson\footnotemark[\value{footnote}]
+    3. Transform counts to presence/absence
+3. Lower your expectations, and use a lower critical p-value (e.g. 0.01 instead of 0.05)
+4. Design a better study :(
+
+\footnotetext{These can be annoying to deal with, so avoid if possible}
+
+## Negative Binomial Regression
+
+```{r, echo=TRUE, size='tiny'}
+library(MASS) #Required for NB models
+m3 <- glm.nb(y2~x,data=d1)
+summary(m3) #No longer overdispersed!
+```
+
+<!-- - Model is no longer overdispersed (Residual deviance $\div$ d.f. = `r round(m3$deviance,2)` $\div$ `r m3$df.residual` = `r round(m3$deviance/m3$df.residual,2)` ) -->
+
+## Negative Binomial Regression
+
+::: columns
+
+:::: column
+
+```{r fig.height=5,fig.width=4}
+do.call('cbind',predict(m2,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
+  mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>%
+  mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>%
+  ggplot(aes(x=x))+geom_point(aes(y=y))+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))+labs(title='Poisson regression')
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=5,fig.width=4}
+do.call('cbind',predict(m3,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
+  mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>%
+  mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>%
+  ggplot(aes(x=x))+geom_point(aes(y=y))+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))+labs(title='Negative Binomial Regression')
+```
+
+::::
+
+:::
+
+## Zero-inflation: drunk monks
+
+An analogy:
+
+1. Monks at a monastery make copies of manuscripts. Most days they make very few (0 or 1), but occasionally they make many (2-5)
+2. Some days they decide to try out the beer that's been brewing in the cellar! No manuscripts get made on those days.
+3. The number of manuscripts made (per day) follows a _zero-inflated Poisson distribution_
+
+This is _mixture_ of a Poisson and a Binomial:
+
+<!-- \begin{equation*} -->
+<!-- ZIPoisson(y | \lambda, \phi) = -->
+<!-- \begin{cases} -->
+<!-- Poisson(0|\lambda)\text{ OR }Binomial(0|\phi) & \text{if } y = 0 \\ -->
+<!-- Poisson(y|\lambda) & \text{if } y > 0 -->
+<!-- \end{cases} -->
+<!-- \end{equation*} -->
+
+\begin{tikzpicture}[scale=0.5]
+	\begin{pgfonlayer}{nodelayer}
+		\node [style=rectangle] (0) at (-8.25, 0) {Binomial ($\phi$)};
+		\node [style=rectangle] (5) at (-3.75, 1) {No work};
+		\node [style=rectangle] (6) at (-3.75, -1) {Work};
+		\node [style=rectangle] (8) at (0.5, -1) {Poisson ($\lambda$)};
+		\node [style=invisRect] (10) at (1.75, -3.25) {};
+		\node [style=invisRect] (11) at (7, 1) {0 manuscripts};
+		\node [style=invisRect] (12) at (7, -1) {1+ Manuscripts};
+	\end{pgfonlayer}
+	\begin{pgfonlayer}{edgelayer}
+		\draw [style=oneWay] (0) to (6);
+		\draw [style=oneWay] (6) to (8);
+		\draw [style=oneWay] (0) to (5);
+		\draw [style=oneWay] (5) to (11);
+		\draw [style=oneWay] (8) to (12);
+		\draw [style=oneWay] (8) to (11);
+	\end{pgfonlayer}
+\end{tikzpicture}
+
+
+## Zero-inflation: graphical model
+
+```{r, fig.width=7, fig.height=5}
+n <- 200
+data.frame(p=rpois(n,2),zi=rbinom(n,1,0.1)) %>%
+  mutate(proc=ifelse(zi==1,'Extra Zeros','Poisson'),p=ifelse(zi==1,0,p)) %>%
+  group_by(proc,p) %>% count() %>% ungroup() %>%
+  mutate(proc=factor(proc,levels=c('Extra Zeros','Poisson'))) %>%
+  ggplot(aes(x=factor(p)))+geom_col(aes(y=n,fill=proc))+
+  labs(x='Counts',y='Frequency',fill='Process')+scale_fill_manual(values=c('red','black'))+
+  theme(legend.position = c(0.8,0.8))
+
+```
+
+## Problem: hard to fit
+
+- Hard for R to tell the difference between ZIP/ZINB, and a Poisson/NB with a low mean ($\lambda$).
+- This needs a lot of data in order to work! Consider longer sampling periods in order to reduce zeros
+
+::: columns
+
+:::: column
+
+```{r, fig.width=5, fig.height=5}
+data.frame(p=rpois(n,0.8)) %>%
+  group_by(p) %>% count() %>% ungroup() %>%
+  ggplot(aes(x=factor(p)))+geom_col(aes(y=n),fill='black')+
+  labs(x='Counts',y='Frequency')
+
+```
+
+::::
+
+:::: column
+
+```{r, fig.width=5, fig.height=5}
+n <- 200
+data.frame(p=rpois(n,1),zi=rbinom(n,1,0.1)) %>%
+  mutate(proc=ifelse(zi==1,'Extra Zeros','Poisson'),p=ifelse(zi==1,0,p)) %>%
+  group_by(proc,p) %>% count() %>% ungroup() %>%
+  mutate(proc=factor(proc,levels=c('Extra Zeros','Poisson'))) %>%
+  ggplot(aes(x=factor(p)))+geom_col(aes(y=n,fill=proc))+
+  labs(x='Counts',y='Frequency',fill='Process')+scale_fill_manual(values=c('red','black'))+
+  theme(legend.position = c(0.8,0.8))
+
+```
+
+::::
+
+:::
+
+
+## Model selection
+
+How many terms should be in my model?
+
+- Same principle as in regular linear models: __what do you think the process is?__
+  - Just because a term is "not significant" doesn't mean it should be dropped out!
+  - Just because a term is "significant" doesn't mean it should be left in!
+  - I find graphical models very helpful for this (see Lecture 4, p. 17)
+  - Avoid selecting models based on $R^2$. Avoid stargazing\footnotemark (hunting for "better" p-values or AIC scores)
+- To test whether terms are important in predicting your data (similar to), use _likelihood-ratio tests_
+  - `drop1(model,test='Chisq')`
+  - AIC tests usually say the same thing as LR tests
+
+\footnotetext{"My God, it's full of stars!" -2001, A Space Odyssey}
+
+<!-- ## _log_ likelihood -->
+
+<!-- ::: columns -->
+
+<!-- :::: column -->
+
+<!-- - Probabilities multiplied together quickly become _very small_ -->
+<!-- - Computers can't distinguish between extremely big or small numbers -->
+<!-- - Therefore, it uses _log-likelihoods_ (also easier to calculate) -->
+
+<!-- :::: -->
+
+<!-- :::: column -->
+
+<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2} -->
+<!-- #Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1) -->
+<!-- llfun2 <- function(lphi){ -->
+<!--   phi <- invLogit(lphi) -->
+<!--   ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi) -->
+<!--   return(ll) -->
+<!-- }  -->
+
+<!-- ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
+
+<!-- ``` -->
+
+<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2} -->
+
+<!-- ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
+
+<!-- ``` -->
+
+<!-- :::: -->
+
+<!-- ::: -->
+
+## ML vs REML
+
+- Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased)
+- Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but...
+- This means that models with different numbers of terms don't have the same REML estimates
+- Likelihood between these models technically can't be compared!
+
+Solution:
+
+  1. Use ML if comparing between models with different fixed effects, then...
+  2. Re-fit with REML once you've decided on a model
+
+## Other useful things about GLMs!
+
+- Binomial GLMs with >1 trial
+- Offsets in count models
+- $R^2$ for GLMs
+- Partial effects plots
+
+## Binomial GLMs with >1 trial
+
+- If you're measuring single "success/failures", 1s and 0s are used
+- If multiple trials occur, R requires counts of successes and failures
+- Example: "I counted male and female critters at different sites. Does temperature affect sex ratios?"
+
+```{r, eval=FALSE, echo=TRUE}
+#Number of females and males are in 2 separate columns in d1
+glm(cbind(females,males) ~ temp, family='binomial',data = d1)
+```
+
+This will correctly account for different numbers of critters ("trials") at each site
+
+
+## Offsets in count models
+
+- Poisson/NB models assume that counts occur over the same period of time
+- Count models use integers only, so you can't just do: $counts \div hours$
+- Solution: use _offsets_ to deal with different observation times
+  - Predictor with a slope fixed at 1
+- Example: "I counted critters for different lengths of time at each site. Does temperature affect counts?"
+
+```{r, eval=FALSE, echo=TRUE}
+#hours = observation time at each site, and
+#   must be log-transformed before being used in an offset
+#
+glm(counts ~ offset(log(hours)) + temp, family='poisson',data = d1)
+```
+
+This will return estimates that have been scaled to a 1-hour observation time
+
+## R-squared for GLMs
+
+- Bad news: there isn't really any good way to get $R^2$ (explained variance) for non-`lm` models
+- OK news: there are many _pseudo_-$R^2$ measures that are _sort of_ like $R^2$, but nobody really agrees on which one is best
+- Good news: ecologists tend to not know or care about this
+
+Solution: pick a single type of $R^2$ and use that, or omit it completely \footnotemark
+
+- See [here](https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#how-do-i-compute-a-coefficient-of-determination-r2-or-an-analogue-for-glmms), [here](https://stats.stackexchange.com/questions/46345/how-to-calculate-goodness-of-fit-in-glm-r) or [here](http://statistics.ats.ucla.edu/stat/mult_pkg/faq/general/Psuedo_RSquareds.htm) for more info on $R^2$
+- Try `rsquaredglmm()` from `piecewiseSEM` or `r.squaredGLMM()` from `MuMIn`
+
+\footnotetext{But be prepared to argue with supervisors, committee members, or reviewers! They will want some kind of measure of how well your model predicted your data.}
+
+## Partial effects plots
+
+- `library(ggeffects)` and `library(effects)` work for partial effects plots, but...
+- Residuals are tricky to display, unless you plot them on the link scale
+
+```{r, fig.height=5, fig.width=10}
+m4 <- glm(y1~x+A,data=d2,family='poisson')
+
+p1 <- ggplot(d2,aes(x=x,y=y1,col=A))+geom_point()+geom_smooth(method='glm',formula=y~x,method.args = list(family = "poisson"))+
+  theme(legend.position = 'none')
+p2 <- plot(ggpredict(m4,terms='x'))
+p3 <- plot(ggpredict(m4,terms='A'))
+ggarrange(p1,p2,p3,ncol=3)
+```
+
+## Partial effects plots
+
+- Plots from `effects` use _working residuals_ (not on the link scale)
+
+```{r message=FALSE, warning = FALSE, echo=TRUE, fig.width=8, fig.height=4, size='tiny'}
+library(effects)
+plot(allEffects(m4,residuals=TRUE))
+```
+
+
+## Show-and-tell!
+
+```{r echo=FALSE, out.width='100%'}
+  include_graphics('./showMe.png',dpi=NA)
+```
+
+
+
