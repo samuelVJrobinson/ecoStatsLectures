@@ -1,23 +1,39 @@
 ---
-title: "Some Common Non-Normal Distributions"
+title: "Generalized Linear Models"
 subtitle: '"The trouble with normal is that it always gets worse"'
 author: "Samuel Robinson, Ph.D."
-date: "November 19, 2020"
+date: "Sept 29, 2023"
 output: 
   beamer_presentation:
+    incremental: true
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
+    fig_caption: false
+urlcolor: blue
 df_print: kable
+classoption: aspectratio=169    
 header-includes: 
-  \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
-  \useinnertheme{circles}
+  - \usepackage{tikz}
+  - \usepackage{tikzit}
+  - \input{styles.tikzstyles}
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+  - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  - \let\endoldShaded\endShaded
+  - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
+  - \let\oldverbatim\verbatim %Change fontsize of code chunk output
+  - \let\endoldverbatim\endverbatim
+  - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE)
+
+library(MASS) #glm.nb
 library(tidyverse)
 theme_set(theme_classic())
+library(ggeffects)
 library(ggpubr)
 library(knitr)
 library(kableExtra)
@@ -43,8 +59,13 @@ d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
 
 ```
 
+# Part 1: The exponential family
 
 ## Outline 
+
+::: columns
+
+:::: column
 
 - Meet (some of) the exponential family!
   - Normal
@@ -54,14 +75,27 @@ d1 <- data.frame(x,yhat,y0,y1,y2) #Dataframe
   - Negative Binomial
 - "Play time"
 
+:::: 
+
+:::: column
+
+![](pillows.jpg)
+
+Christmas gifts for the nerds in your life
+
+::::
+
+:::
+
 ## Problem: not everything is normal
 
 ::: columns
 
 :::: column
 
-```{r, echo=FALSE, fig.width=5, fig.height=4} 
-ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')
+```{r, echo=FALSE, fig.width=3, fig.height=2} 
+ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,col='orange')+
+  theme(plot.margin = unit(c(0.1,0.1,0,0.1),'cm'))
 ```
 
 - Some types of data can never be transformed to make the residuals normal
@@ -71,16 +105,11 @@ ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='lm',se=TRUE,formula=y~x,co
 
 :::: column
 
-```{r, echo=FALSE, fig.width=5, fig.height=4} 
-# ggplot(d1,aes(y2))+geom_histogram(bins=3)+labs(y='Count')
-plot(lm(y2~x,data=d1),which=1)
+```{r, echo=FALSE, fig.width=3,fig.height=3.5} 
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+m2 <-lm(y2~x,data=d1) 
+plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
 ```
-
-```{r, echo=FALSE, fig.width=5, fig.height=4} 
-# ggplot(d1,aes(x,y2))+geom_point()+geom_smooth(method='glm',se=TRUE,formula=y~x,method.args=list(family='binomial'),col='orange')
-plot(lm(y2~x,data=d1),which=2)
-```
-
 
 ::::
 
@@ -88,17 +117,19 @@ plot(lm(y2~x,data=d1),which=2)
 
 ## But how do I know which distribution to use?
 
-![](distributions.png)
+![](distributions.png){width=100%}   
 [_And if thou gaze long into an abyss, the abyss will also gaze into thee_ - F. Nietzsche](http://www.stat.rice.edu/~dobelman/courses/texts/leemis.distributions.2008amstat.pdf)
 
 ## Let's take a look at some _common_ ones!
-```{r} 
+
+```{r, fig.height=2.75, fig.width=5} 
 n <- 1000
 dists <- c('Normal','Binomial','Poisson','Bernoulli')
 data.frame(dist=factor(rep(dists,each=n),levels=dists),
            x=c(rnorm(n,0,1),rbinom(n,10,0.25),rpois(n,1),rbinom(n,1,0.6))) %>% 
   ggplot(aes(x=x))+geom_histogram(bins=30)+facet_wrap(~dist,scales='free')+labs(x=NULL,y=NULL)
 ```
+
 Time to meet the Exponential family!
 
 ## The Normal Distribution (aka _Gaussian_)
@@ -118,7 +149,7 @@ Time to meet the Exponential family!
 
 :::: column
 
-[A Galton Board in action](https://thumbs.gfycat.com/QuaintTidyCockatiel-mobile.mp4): ![](galtonBoard.jpg)
+[A Galton Board in action](https://d.stockcharts.com/img/articles/2019/04/1554241718392985801900.gif): ![](galtonBoard.jpg)
 
 ::::
 
@@ -143,6 +174,8 @@ p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\mu},\textcolor{red}{\sigma}) = 
 
 :::: column
 
+\pause
+
 Example: what is the probability of getting a 4, if the mean is 5 and SD is 1?
 
 \begin{equation*}
@@ -153,6 +186,8 @@ p(\textcolor{blue}{4}|\textcolor{darkturquoise}{5},\textcolor{red}{1}) = & \frac
 \end{equation*}
 
 In R, this is easy:
+
+\pause
 
 ```{r, echo=TRUE}
 #d stands for "density"
@@ -215,6 +250,7 @@ data.frame(x=c(0:10)) %>%
 - Common in nature where outcomes are binary
   - e.g. 10 seeds from a plant, how many will germinate?
 - If N = 1, this is called a _Bernoulli trial_
+
 ::::
 
 :::: column
@@ -255,6 +291,8 @@ p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\phi},N) = \binom{N}{\textcolor{
 
 :::: column
 
+\pause
+
 Example: what is the probability of getting 4 successes, if $\textcolor{darkturquoise}{\phi}$ is 0.25 and N is 15?
 
 \small
@@ -266,7 +304,7 @@ p(\textcolor{blue}{4}|\textcolor{darkturquoise}{0.25},15) = & \binom{15}{\textco
 \end{split}
 \end{equation*}
 
-\normalsize
+\pause
 
 In R, this is easy:
 
@@ -335,7 +373,8 @@ data.frame(x=c(0:15)) %>% mutate(d=dbinom(x,n,phi)) %>%
   - Most days, you'll get 0 or maybe 1 letter
   - On some rare days, you'll get 3 or 4 letters
 - Common in nature where rare events are measured over time/space:
-  - e.g. Number of bats caught in a net (per night)
+  - e.g. Number of bugs caught in a net (per sweep)
+- Equivalent to Binomial distribution, where $N$ is unknown
 
 ::::
 
@@ -347,7 +386,6 @@ data.frame(x=0:8) %>% mutate(d=dpois(x,1)) %>%
   labs(x='Letters per day',y='Density')
 ```
 
-- Equivalent to Binomial distribution, where $N$ is unknown
 
 ::::
 
@@ -372,6 +410,8 @@ p(\textcolor{blue}{x}|\textcolor{darkturquoise}{\lambda}) = \frac{\textcolor{dar
 
 :::: column
 
+\pause
+
 Example: what is the probability of getting 2 counts, if $\textcolor{darkturquoise}{\lambda}$ is 1?
 
 \small
@@ -383,7 +423,7 @@ p(\textcolor{blue}{2}|\textcolor{darkturquoise}{1}) = & \frac{\textcolor{darktur
 \end{split}
 \end{equation*}
 
-\normalsize
+\pause
 
 In R, this is easy:
 
@@ -460,6 +500,8 @@ data.frame(x=c(0:8)) %>% mutate(d=dpois(x,lambda)) %>%
 - 2 parameters: $\phi$ and $s$ (if $s$ is large, similar to Binomial) 
   - Also requires: $N$
   
+\pause
+  
 ```{r, eval=FALSE, echo=TRUE}
 #Extra distributions
 library(rmutil) 
@@ -490,11 +532,12 @@ data.frame(x=0:10) %>% mutate(bin=dbinom(x,size=n,prob=phi),betabin=dbetabinom(x
 
 :::: column
 
-Unfortunately, _almost nothing_ in ecology actually follows a Poisson distribution 
+- Unfortunately, _almost nothing_ in ecology actually follows a Poisson distribution 
+- Negative Binomial is similar to a Poisson, but can have longer tails
+- Also called: _Polya_ distibution (`nbinom2` in many GLM commands)
+- Parameters: $\mu$ and $\theta$ (if $\theta$ is large, close to Poisson)
 
-  - Negative Binomial is similar to a Poisson, but can have longer tails
-  - Also called: _Polya_ distibution (`nbinom2` in many GLM commands)
-  - Parameters: $\mu$ and $\theta$ (if $\theta$ is large, close to Poisson)
+\pause
   
 ```{r,eval=FALSE,echo=TRUE}
 #size = theta parameter
@@ -525,40 +568,315 @@ data.frame(x=0:10) %>% mutate(pois=dpois(x,lambda=lambda),nb=dnbinom(x,mu=lambda
 - Count data
   - Poisson, Negative Binomial
 - Count data of successes _and_ failures
-  - Binomial + Beta Binomial
+  - Binomial, Beta Binomial
+
+\pause
 
 These are by _no means_ the only useful distributions, but are fairly common
 
-## A Challenger Approaches! (Part 1)
+## First challenge (Part 1)
 
 Let's say that you've collected data at 2 different sites. Which distributions would you start with for the following data?
 
-- Bat weights 
-- Total bats per box (or small nest)
-- Number of male and female bats
-- Number of pups per female bat
-- Record of occupied/unoccupied nests
+- Insects caught in a trap (per day)
+- Weight of seeds from a plant
+- Occupied/unoccupied nest sites
+- Chemical concentrations
 - Size of trees (DBH or height)
+- Number of male and female bats
 
-## A Challenger Approaches! (Part 2)
+## Second challenge (Part 2)
 
-Now that you've figured out which distribution, try simulating some data from each site, and plot it!
+Now that you've figured out which distribution, try simulating some data from each "site", and plot it!
 
-- Bat weights: _Normal_
-  - `rnorm(n,mean,sd)`
-- Total bats per box: _Poisson or NB_
+- Insects caught in a trap (per day): _Poisson or NB_
   - `rpois(n,lambda)` or `rnbinom(n,mu,size)`
-- Number of male/female bats: _Binomial or Beta Binomial_
-  - `rbinom(n, size, prob)` or `rbetabinom(n,size,m,s)`
-- Number of pups per female bat: _Poisson or NB_
-  - See above
-- Record of occupied/unoccupied nests: _Binomial_
+- Weight of seeds: _Normal_
+  - `rnorm(n,mean,sd)`
+- Occupied/unoccupied nest sites: _Binomial_
   - `rbinom(n, 1, prob)` aka. _Bernoulli_ distribution
-- Size of trees (DBH or height): _log-Normal_
+- Chemical concentrations in a pond: _Normal_
+  - `rnorm(n,mean,sd)`
+- Size of trees (DBH or height):_log-Normal_
   - `exp(rnorm(n,mean,sd))`
+- Number of male and female bats: _Binomial or Beta Binomial_
+  - `rbinom(n, size, prob)` or `rbetabinom(n,size,m,s)`
 
-## Distributional pillows
+# Part 2: Maximum likelihood and GLMs
 
-Christmas gifts for the huge nerds in your life
+```{r setup2, include=FALSE}
+set.seed(123)
 
-![](pillows.jpg)
+#Functions
+logit <- function(x) log(x/(1-x))
+invLogit <- function(x) exp(x)/(1+exp(x))
+
+#Generate data that violate lm assumptions:
+n <- 100
+x1 <- runif(n,-10,10) #Predictors
+x2 <- runif(n,-5,5)
+
+yhat <- 1 - 0.2*x1 + 0.3*x2 #Expected value
+y0 <- yhat + rnorm(n,0,2) #Normal process
+y1 <- rpois(n,exp(yhat))  #Poisson process
+y2 <- rbinom(n,1,invLogit(yhat))  #Binomial (bernoulli) process
+
+d1 <- data.frame(x1,x2,yhat,y0,y1,y2) #Dataframe
+
+```
+
+## Outline
+
+- Maximum likelihood
+  - A way to think about data
+  - Likelihood vs Probability
+- Generalized linear models
+  - Link functions
+  - Predictors -> Linear model
+
+## How is our data made?
+
+Making data can be thought of as a _factory_
+
+- Input: __parameters__ (things that guide the process)
+- Process: __probability function__
+- Output: __data__ (things made by the process)
+
+![](genProcess.png)
+
+## Examples
+
+![](normProc.png)
+
+![](bernProc.png)
+
+
+
+<!-- ## Likelihood vs Probability -->
+
+<!-- These concepts are both related to the chance of seeing something occur -->
+
+<!-- - Probability: "I know that $\mu = 0$ and $\sigma = 1$. What are my chances of getting a number between -1 and +1?" -->
+<!--   - $p(\text{data}|\mu=0,\sigma=1)$  -->
+<!-- - Likelihood: "I got a bunch of numbers. What is the chance that $\mu = 0$ and $\sigma = 1$ made them?" -->
+<!--   - $L(\mu=0,\sigma=1|\text{data})$  -->
+
+<!-- We will mostly deal with _likelihoods_, because we never actually know what $\mu$ and $\sigma$ are! -->
+
+## Likelihood vs Probability
+
+![](bernProb.png)
+
+![](bernLik.png)
+
+
+## Likelihood vs Probability (cont.)
+
+Probability and likelihood both use the same PDF
+
+- "I know that $\phi$ = 0.3. What is the chance of getting 2 heads and a tail?"
+
+```{r, echo=TRUE}
+dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
+```
+
+- "I got 2 heads and a tail. What is the likelihood that $\phi$ = 0.3?"
+
+```{r, echo=TRUE}
+dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
+```
+
+## Likelihood vs Probability (cont.)
+
+Let's see how _likelihood_ changes with different values of $\phi$:
+
+```{r, echo=TRUE}
+#phi = 0.3
+dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
+```
+
+```{r, echo=TRUE}
+#phi = 0.7
+dbinom(1,1,0.7)*dbinom(1,1,0.7)*dbinom(0,1,0.7)
+```
+
+Likelihood of $\phi$ = 0.7 is higher, i.e. $\phi$ = 0.7 matches our data _better_
+
+## Likelihood
+
+```{r, echo=FALSE, eval = TRUE, fig.width= 4, fig.height = 2.5}
+llfun <- function(phi) dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi)
+
+ggplot() + geom_function(fun=llfun) + xlim(0,1) + labs(x=expression(phi),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=2/3,linetype='dashed')
+
+```
+
+The best match (maximum likelihood value) is at $\phi$ = 0.666 (2 heads out of 3 flips)
+
+## Generalized Linear Models
+
+`glm()` will fit a model like this, and find the ML solution
+
+```{r, echo=TRUE, size='tiny'}
+dat <- data.frame(flips=c(1,1,0)) #Data (2 heads, 1 tail)
+mod1 <- glm(flips~1,data=dat,family='binomial') #Note family specification
+summary(mod1)
+```
+
+Wait... our estimate should be 0.666 (2/3), not `r round(coef(mod1),3)`!
+
+## Link functions
+
+- Some parameters of PDFs have _limits_
+  - Normal: $-\infty < \mu < \infty$, $0 < \sigma$
+  - Binomial: $0 < \phi < 1$
+  - Poisson: $0 < \lambda$
+- GLMs use _link functions_ to map values onto the appropriate parameter range
+  - Normal: Identity (i.e. $\times 1$)
+  - Binomial: Logit
+  - Poisson/NB: Log
+- $logit(0.693) = 0.666$, so the GLM actually got it right!
+
+## What do these functions look like?
+
+::: columns
+
+:::: column
+
+```{r, echo = FALSE, eval = TRUE, fig.height=4, fig.width=4}
+ggplot() + geom_function(fun=logit,n=1000) + xlim(0,1) + labs(y='logit(x)',x='x')+
+  annotate('text',x=0.75,y=-3,label='paste(f(x) == ln, bgroup("(", frac("x","1-x"),")"))',parse=TRUE)+
+  annotate('text',x=0.75,y=-5,label='f(x)^-1 == frac(e^x,e^x+1)',parse=TRUE)
+
+# invLogit <- function(x) exp(x)/(1+exp(x))
+
+```
+
+::::
+
+:::: column
+
+```{r, echo = FALSE, eval = TRUE, fig.height=4, fig.width=4}
+ggplot() + geom_function(fun=log,n=1000) + xlim(0,10) + labs(y='log(x)',x='x')+
+  annotate('text',x=6,y=-2,label='f(x) == ln(x)',parse=TRUE)+
+  annotate('text',x=6,y=-3,label='f(x)^-1 == e^x',parse=TRUE)
+```
+
+::::
+
+:::
+
+- These functions map parameter values from the appropriate range (0-1 or 0-$\infty$) onto $-\infty$ to $+\infty$
+
+## Why do we bother with these link function?
+
+::: columns
+
+:::: column
+
+- Likelihood functions are not symmetrical on the regular scale
+- On the link-scale, they are closer to a normal distribution
+- Makes it easier for R to find the ML estimate (and confidence intervals)
+
+::::
+
+:::: column
+
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2}
+ggplot() + geom_function(fun=llfun) + xlim(0,1) + labs(x=expression(phi),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=2/3,linetype='dashed')
+
+```
+
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2}
+#Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1)
+llfun2 <- function(lphi){
+  phi <- invLogit(lphi)
+  ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi)
+  return(ll)
+}
+
+ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
+
+```
+
+::::
+
+:::
+
+## How do linear models fit into this?
+
+::: columns
+
+:::: column
+
+- Usually we aren't interested in finding only a single parameter $\phi$.
+- Solution: $\phi$ becomes a _linear_ function of the predictors
+
+- Simple linear models take the form:
+\begin{equation*}
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+- Generalized linear models are similar, except that:
+1. Expected value ($\phi$) fed through a link function
+2. Data is fit to a non-normal probability function
+
+\vspace{12pt}
+
+\begin{equation*}
+\begin{split}
+logit(\textcolor{orange}{\hat{\phi}}) & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
+flips & \sim Binomial(\textcolor{orange}{\hat{\phi}})
+\end{split}
+\end{equation*}
+
+::::
+
+:::
+
+\center Instead of finding $\phi$, __R finds the coefficients ($\textcolor{blue}{b_0}$, $\textcolor{blue}{b_1}$ ... $\textcolor{blue}{b_i}$) that create $\phi$__
+
+## How do I fit GLMs in R?
+
+Syntax and model output is very similar to `lm`
+
+```{r, echo=TRUE, size='tiny'}
+# y ~ x, where x is the predictor of y (~1 for just intercept)
+mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') #Fit a binomial GLM
+summary(mod_binomial)
+```
+
+Dispersion and deviance will be discussed later...
+
+## How do I get partial effects plots?
+
+`crPlot` (from `car`) and `ggpredict` (`ggeffects`) work with fitted `glm` models
+
+```{r, echo = TRUE, size='tiny', fig.height=2.5,fig.width=5}
+ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
+  ggplot(aes(x, predicted)) + geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.3) +
+  labs(x = 'x1', y = expression(paste('Chance of Success (',phi,')')))
+```
+
+## A challenger approaches!
+
+- Dr. Roberto Darkley (Robert Barkley's evil nemesis) sent 2 people out to check out some bat roosts in Edmonton and Calgary. One of them dutifully counted bats at each roost, but the other one was really lazy, and just recorded "bats or no bats" (1 or 0).
+- Fit a model to each of their data (found in `batDatGLM.csv`) using a GLM
+  - `batCounts` should be modeled using a Poisson GLM, and `batPres` should use a Binomial GLM
+  - Terms to include: `city` and `size` (no interaction)
+- How do the models look? Compare the coefficients and see if they are different
+  - Bonus: make a partial regression plot of terms in the Poisson GLM
+
+## Model results
+
+![](modResults.png)
+
+
