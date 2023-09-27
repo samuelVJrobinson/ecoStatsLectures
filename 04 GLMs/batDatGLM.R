@@ -26,24 +26,3 @@ dat$batCounts <- rpois(N,exp(yhat))  #Poisson process
 dat$batPres <- rbinom(N,1,invLogit(yhat))  #Binomial (bernoulli) process
 
 write.csv(dat,file = 'batDatGLM.csv')
-
-#Fit models
-
-modPois <- glm(batCounts~city+size,data=dat,family='poisson')
-summary(modPois)
-
-modBin <- glm(batPres~city+size,data=dat,family='binomial')
-summary(modBin)
-
-#Compare models
-p1 <- mutate(tidy(modPois),mod='count') %>% 
-  bind_rows(mutate(tidy(modBin),mod='presence')) %>% 
-  select(-statistic,-p.value) %>% 
-  bind_rows(data.frame(term=names(coef(modBin)),estimate=coefs,std.error=0,mod='actual')) %>% 
-  mutate(term=factor(term,labels=c('Intercept','City','Size'))) %>% 
-  ggplot(aes(term,estimate,col=mod))+geom_pointrange(aes(ymax=estimate+std.error*2,ymin=estimate-std.error*2),position=position_dodge(width=0.3))+
-  geom_hline(yintercept=0,linetype='dashed')+
-  scale_colour_manual(values=c('black','red','blue'))+
-  labs(x=NULL,y='Estimate',col='Model')
-
-ggsave(filename = 'modResults.png',plot=p1,width=6, height=4)  

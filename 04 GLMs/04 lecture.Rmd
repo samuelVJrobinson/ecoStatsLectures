@@ -32,6 +32,7 @@ knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE)
 
 library(MASS) #glm.nb
 library(tidyverse)
+library(broom)
 theme_set(theme_classic())
 library(ggeffects)
 library(ggpubr)
@@ -646,9 +647,9 @@ Making data can be thought of as a _factory_
 
 ## Examples
 
-![](normProc.png)
+![](normProc.png){width=75%}
 
-![](bernProc.png)
+![](bernProc.png){width=75%}
 
 
 
@@ -665,9 +666,9 @@ Making data can be thought of as a _factory_
 
 ## Likelihood vs Probability
 
-![](bernProb.png)
+![](bernProb.png){width=75%}
 
-![](bernLik.png)
+![](bernLik.png){width=75%}
 
 
 ## Likelihood vs Probability (cont.)
@@ -680,11 +681,16 @@ Probability and likelihood both use the same PDF
 dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
 ```
 
+\pause
+
 - "I got 2 heads and a tail. What is the likelihood that $\phi$ = 0.3?"
 
 ```{r, echo=TRUE}
 dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
 ```
+\pause
+
+Are we likely to be dealing with probability or likelihood?
 
 ## Likelihood vs Probability (cont.)
 
@@ -694,6 +700,8 @@ Let's see how _likelihood_ changes with different values of $\phi$:
 #phi = 0.3
 dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
 ```
+
+\pause
 
 ```{r, echo=TRUE}
 #phi = 0.7
@@ -711,7 +719,7 @@ ggplot() + geom_function(fun=llfun) + xlim(0,1) + labs(x=expression(phi),y=expre
 
 ```
 
-The best match (maximum likelihood value) is at $\phi$ = 0.666 (2 heads out of 3 flips)
+The best match (__maximum likelihood__ value) is at $\phi$ = 0.666 (2 heads out of 3 flips)
 
 ## Generalized Linear Models
 
@@ -722,6 +730,8 @@ dat <- data.frame(flips=c(1,1,0)) #Data (2 heads, 1 tail)
 mod1 <- glm(flips~1,data=dat,family='binomial') #Note family specification
 summary(mod1)
 ```
+
+\pause
 
 Wait... our estimate should be 0.666 (2/3), not `r round(coef(mod1),3)`!
 
@@ -775,19 +785,23 @@ ggplot() + geom_function(fun=log,n=1000) + xlim(0,10) + labs(y='log(x)',x='x')+
 :::: column
 
 - Likelihood functions are not symmetrical on the regular scale
+
 - On the link-scale, they are closer to a normal distribution
+
 - Makes it easier for R to find the ML estimate (and confidence intervals)
 
 ::::
 
 :::: column
 
-```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2}
-ggplot() + geom_function(fun=llfun) + xlim(0,1) + labs(x=expression(phi),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=2/3,linetype='dashed')
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 1.75}
+ggplot() + geom_function(fun=llfun) + xlim(0,1) +
+  labs(x=expression(phi),y=expression(paste('Likelihood(H,H,T|',phi,')'))) +
+  geom_vline(xintercept=2/3,linetype='dashed')
 
 ```
 
-```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2}
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =1.75}
 #Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1)
 llfun2 <- function(lphi){
   phi <- invLogit(lphi)
@@ -811,8 +825,10 @@ ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('log
 
 - Usually we aren't interested in finding only a single parameter $\phi$.
 - Solution: $\phi$ becomes a _linear_ function of the predictors
+- Remember: simple linear models take the form:
 
-- Simple linear models take the form:
+\pause
+
 \begin{equation*}
 \begin{split}
 \textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
@@ -825,10 +841,12 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 :::: column
 
 - Generalized linear models are similar, except that:
+
 1. Expected value ($\phi$) fed through a link function
+
 2. Data is fit to a non-normal probability function
 
-\vspace{12pt}
+\pause 
 
 \begin{equation*}
 \begin{split}
@@ -841,6 +859,8 @@ flips & \sim Binomial(\textcolor{orange}{\hat{\phi}})
 
 :::
 
+\pause
+
 \center Instead of finding $\phi$, __R finds the coefficients ($\textcolor{blue}{b_0}$, $\textcolor{blue}{b_1}$ ... $\textcolor{blue}{b_i}$) that create $\phi$__
 
 ## How do I fit GLMs in R?
@@ -848,7 +868,7 @@ flips & \sim Binomial(\textcolor{orange}{\hat{\phi}})
 Syntax and model output is very similar to `lm`
 
 ```{r, echo=TRUE, size='tiny'}
-# y ~ x, where x is the predictor of y (~1 for just intercept)
+# y ~ x, where x is the predictor of y
 mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') #Fit a binomial GLM
 summary(mod_binomial)
 ```
@@ -857,14 +877,28 @@ Dispersion and deviance will be discussed later...
 
 ## How do I get partial effects plots?
 
-`crPlot` (from `car`) and `ggpredict` (`ggeffects`) work with fitted `glm` models
+::: columns
 
-```{r, echo = TRUE, size='tiny', fig.height=2.5,fig.width=5}
+:::: column
+
+- `crPlot` (from `car`) and `ggpredict` (`ggeffects`) work with fitted `glm` models:
+
+- Why is the line not straight? Why are the confidence intervals not symmetrical? 
+
+- Answer: the model is _linear_ on the link scale, but _nonlinear_ on the data scale
+
+:::: 
+
+:::: column
+
+```{r, echo = FALSE,  fig.height=2.5,fig.width=3}
 ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
   ggplot(aes(x, predicted)) + geom_line() +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.3) +
   labs(x = 'x1', y = expression(paste('Chance of Success (',phi,')')))
 ```
+
+
 
 ## A challenger approaches!
 
@@ -877,21 +911,36 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
 
 ## Model results
 
-![](modResults.png)
+```{r, width=5, height=3}
+dat <- read.csv('./batDatGLM.csv') #Read in data
 
+#Fit models
+modPois <- glm(batCounts~city+size,data=dat,family='poisson')
+# summary(modPois)
+
+modBin <- glm(batPres~city+size,data=dat,family='binomial')
+# summary(modBin)
+
+#Compare models
+
+actualCoefs <- data.frame(term=names(coef(modBin)),estimate=c(1,-0.2,0.3),
+           std.error=0,mod='actual')
+
+list(count=modPois,presence=modBin) %>% 
+  lapply(.,tidy) %>% bind_rows(.id = 'mod') %>% 
+  select(-statistic,-p.value) %>% 
+  bind_rows(actualCoefs) %>% 
+  mutate(term=factor(term,labels=c('Intercept','City','Size'))) %>% 
+  ggplot(aes(term,estimate,col=mod))+
+  geom_pointrange(aes(ymax=estimate+std.error*2,ymin=estimate-std.error*2),position=position_dodge(width=0.3))+
+  geom_hline(yintercept=0,linetype='dashed')+
+  scale_colour_manual(values=c('black','red','blue'))+
+  labs(x=NULL,y='Estimate',col='Model')
+```
 
 # Part 3: Models behaving badly
 
-
 ```{r setup3, include=FALSE}
-library(MASS) #glm.nb
-library(tidyverse)
-theme_set(theme_classic())
-library(ggeffects)
-library(ggpubr)
-library(knitr)
-
-
 set.seed(123)
 
 #Functions
@@ -958,6 +1007,8 @@ rm(n,x,y0,y1,y2,xMat,A,yhat)
 3. Variance is constant
 - "Regular" residuals don't work this way for GLMs!
 
+\pause
+
 ```{r}
 m1 <- glm(y1~x,data=d1,family='poisson')
 plot(y1~x,data=d1,pch=19)
@@ -975,15 +1026,22 @@ text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
 :::: column
 
 ```{r}
-plot(predict(m1),residuals(m1,type='response'),xlab='Predicted value',ylab='Residuals');abline(h=0,lty='dashed')
+
+# plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
+
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+
+plot(predict(m1),residuals(m1,type='response'),#xlab='Predicted value',ylab='Residuals',
+     cex=0.75,cex.axis=1e-5,tck=0)
+
+abline(h=0,lty='dashed')
 points(x=predict(m1)[resNo],y=residuals(m1,type='response')[resNo],col='black',pch=19)
 lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='response')[resNo]),col='red')
-```
 
-```{r}
 colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
 pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
-qqnorm(residuals(m1,type='response'),col=colVec,pch=pchVec); qqline(residuals(m1,type='response'))
+qqnorm(residuals(m1,type='response'),col=colVec,pch=pchVec,main=NULL) 
+qqline(residuals(m1,type='response'))
 
 ```
 
