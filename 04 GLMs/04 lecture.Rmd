@@ -28,7 +28,8 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE)
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, cache = TRUE)
+options(width = 300)
 
 library(MASS) #glm.nb
 library(tidyverse)
@@ -40,6 +41,7 @@ library(knitr)
 library(kableExtra)
 library(latex2exp)
 library(rmutil) #Beta-binomial
+library(ggdag)
 
 set.seed(123)
 
@@ -586,7 +588,7 @@ Let's say that you've collected data at 2 different sites. Which distributions w
 - Size of trees (DBH or height)
 - Number of male and female bats
 
-## Second challenge (Part 2)
+## First challenge (Part 2)
 
 Now that you've figured out which distribution, try simulating some data from each "site", and plot it!
 
@@ -911,25 +913,27 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
 :::
 
 
-## A challenger approaches!
+## Second challenge
 
-- Dr. Roberto Darkley (Robert Barkley's evil nemesis) sent 2 people out to check out some bat roosts in Edmonton and Calgary. One of them dutifully counted bats at each roost, but the other one was really lazy, and just recorded "bats or no bats" (1 or 0).
-- Fit a model to each of the datasets (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/blob/fall2023/04%20GLMs) in `batDatGLM.csv`) using a GLM
-  - `batCounts` should be modeled using a Poisson GLM, and `batPres` should use a Binomial GLM
+
+- Dr. _Paulo Malpern_ (Paul Galpern's evil nemesis) sent 2 people out to check out some bee habitats in Edmonton and Calgary. Counted bees at each site, but the other one was really lazy, and just recorded "bees or no bees" (1 or 0).
+- Fit a model to each of the datasets (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/blob/fall2023/04%20GLMs) in `beeDatGLM.csv`) using a GLM
+  - `beeCounts` should be modeled using a Poisson GLM, and `batPres` should use a Binomial GLM
   - Terms to include: `city` and `size` (no interaction)
 - How do the models look? Compare the coefficients and see if they are different
   - Bonus: make a partial regression plot of terms in the Poisson GLM
 
+
 ## Model results
 
 ```{r, fig.fullwidth=TRUE, fig.height=5}
-dat <- read.csv('./batDatGLM.csv') #Read in data
+dat <- read.csv('./beeDatGLM.csv') #Read in data
 
 #Fit models
-modPois <- glm(batCounts~city+size,data=dat,family='poisson')
+modPois <- glm(beeCounts~city+floral,data=dat,family='poisson')
 # summary(modPois)
 
-modBin <- glm(batPres~city+size,data=dat,family='binomial')
+modBin <- glm(beePres~city+floral,data=dat,family='binomial')
 # summary(modBin)
 
 #Compare models
@@ -941,7 +945,7 @@ list(count=modPois,presence=modBin) %>%
   lapply(.,tidy) %>% bind_rows(.id = 'mod') %>% 
   select(-statistic,-p.value) %>% 
   bind_rows(actualCoefs) %>% 
-  mutate(term=factor(term,labels=c('Intercept','City','Size'))) %>% 
+  mutate(term=factor(term,labels=c('Intercept','City','Floral'))) %>% 
   ggplot(aes(term,estimate,col=mod))+
   geom_pointrange(aes(ymax=estimate+std.error*2,ymin=estimate-std.error*2),position=position_dodge(width=0.3))+
   geom_hline(yintercept=0,linetype='dashed')+
@@ -1000,12 +1004,9 @@ rm(n,x,y0,y1,y2,xMat,A,yhat)
   - Zero-inflation
 - Model selection - which terms should I use?
   - log-likelihood, $\chi^2$ tests, and AIC
-  - ML vs REML
 - Other things
   - Binomial GLMs with >1 trial
   - Offsets in count models
-  - $R^2$ for GLMs
-- Show-and-tell!
 
 ## Problem 1: Residual checks
 
@@ -1021,7 +1022,7 @@ rm(n,x,y0,y1,y2,xMat,A,yhat)
 
 \pause
 
-```{r, out.width='100%',out.height='60%'}
+```{r poissonResid, fig.width=6,fig.height=5}
 m1 <- glm(y1~x,data=d1,family='poisson')
 plot(y1~x,data=d1,pch=19)
 lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
@@ -1030,14 +1031,14 @@ resNo <- 81 #Line number to use as example
 lines(rep(d1$x[resNo],2),c(exp(d1$yhat[resNo]),d1$y1[resNo]),col='red')
 r1 <- d1$y1[resNo] - exp(d1$yhat[resNo])
 text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
-     labels=paste('Residual = +',round(r1,3)),adj=-0.1,col='red',cex=3)
+     labels=paste('Residual = +',round(r1,3)),adj=-0.1,col='red',cex=2)
 ```
 
 ::::
 
 :::: column
 
-```{r, fig.height=3.5, fig.width=3}
+```{r, fig.height=4.5, fig.width=4}
 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 
@@ -1050,7 +1051,7 @@ lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='response')[resNo]),co
 
 colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
 pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
-qqnorm(residuals(m1,type='response'),col=colVec,pch=pchVec,main=NULL) 
+qqnorm(residuals(m1,type='response'),col=colVec,pch=pchVec,main=NULL,cex=0.75) 
 qqline(residuals(m1,type='response'))
 
 ```
@@ -1086,31 +1087,20 @@ r_{dev} = sign(y-\hat{y})\sqrt{2(log(L(y|\theta_s))-log(L(y|\theta))))}
 
 :::: column
 
-Keep in mind:
-
 - Residuals from GLMs will never be as "pretty" as those from LMs
 - _Especially_ true for:
   - Binomial GLMs
   - Poisson/Negative Binomial GLMs with many zeros
 - Next week we will deal with _simulation testing_ residuals
 
-```{r, out.width='100%',out.height='60%'}
-m1 <- glm(y1~x,data=d1,family='poisson')
-plot(y1~x,data=d1,pch=19)
-lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
-# x, yhat, y
-resNo <- 81 #Line number to use as example
-lines(rep(d1$x[resNo],2),c(exp(d1$yhat[resNo]),d1$y1[resNo]),col='red')
-r1 <- d1$y1[resNo] - exp(d1$yhat[resNo])
-text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
-     labels=paste('Residual = +',round(r1,3)),adj=-0.1,col='red',cex=3)
+```{r poissonResid, fig.width=6,fig.height=4}
 ```
 
 ::::
 
 :::: column
 
-```{r, fig.height=3.5, fig.width=3}
+```{r, fig.height=4.5, fig.width=4}
 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 
@@ -1121,7 +1111,7 @@ lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='deviance')[resNo]),co
 
 colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
 pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
-qqnorm(residuals(m1,type='deviance'),col=colVec,pch=pchVec,main=NULL)
+qqnorm(residuals(m1,type='deviance'),col=colVec,pch=pchVec,main=NULL,cex=0.75)
 qqline(residuals(m1,type='deviance'))
 
 ```
@@ -1145,7 +1135,7 @@ qqline(residuals(m1,type='deviance'))
 
 :::: column
 
-```{r}
+```{r poissonMod, fig.height=4, fig.width=4}
 m2 <- glm(y2~x,data=d1,family='poisson')
 
 do.call('cbind',predict(m2,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
@@ -1153,7 +1143,8 @@ do.call('cbind',predict(m2,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
   mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>%
   ggplot(aes(x=x))+geom_point(aes(y=y))+
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  geom_line(aes(y=fit))
+  geom_line(aes(y=fit))+labs(title='Poisson regression')
+
 ```
 
 Example: data are much more variable than the predictions from the model
@@ -1215,34 +1206,45 @@ Try the following (in this order):
 
 ## Negative Binomial Regression
 
-```{r, echo=TRUE, size='tiny'}
+::: columns
+
+:::: {.column width="40%"}
+
+```{r nbModOutput, echo=TRUE, eval=FALSE}
 library(MASS) #Required for NB models
 m3 <- glm.nb(y2~x,data=d1)
-summary(m3) #No longer overdispersed!
+summary(m3) 
 ```
+
+- Model no longer indicates overdispersion!
+
+::::
+
+:::: {.column width="60%"}
+
+```{r nbModOutput, echo=FALSE, eval=TRUE}
+```
+
+::::
+
+:::
 
 <!-- - Model is no longer overdispersed (Residual deviance $\div$ d.f. = `r round(m3$deviance,2)` $\div$ `r m3$df.residual` = `r round(m3$deviance/m3$df.residual,2)` ) -->
 
-## Negative Binomial Regression
+## Negative Binomial Regression (cont.)
 
 ::: columns
 
 :::: column
 
-```{r fig.height=5,fig.width=4}
-do.call('cbind',predict(m2,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
-  mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>%
-  mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>%
-  ggplot(aes(x=x))+geom_point(aes(y=y))+
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  geom_line(aes(y=fit))+labs(title='Poisson regression')
+```{r poissonMod, fig.height=4,fig.width=4}
 ```
 
 ::::
 
 :::: column
 
-```{r, fig.height=5,fig.width=4}
+```{r, nbMod, fig.height=4,fig.width=4}
 do.call('cbind',predict(m3,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
   mutate(x=d1$x,y=d1$y2,upr=fit+se.fit*2,lwr=fit-se.fit*2) %>%
   mutate(across(c(fit,upr,lwr),exp)) %>% arrange(x) %>%
@@ -1257,11 +1259,13 @@ do.call('cbind',predict(m3,se.fit=TRUE)[c(1:2)]) %>% data.frame() %>%
 
 ## Zero-inflation: drunk monks
 
-An analogy:
+A way to think about this model:
 
 1. Monks at a monastery make copies of manuscripts. Most days they make very few (0 or 1), but occasionally they make many (2-5)
 2. Some days they decide to try out the beer that's been brewing in the cellar! No manuscripts get made on those days.
 3. The number of manuscripts made (per day) follows a _zero-inflated Poisson distribution_
+
+\pause
 
 This is _mixture_ of a Poisson and a Binomial:
 
@@ -1272,6 +1276,8 @@ This is _mixture_ of a Poisson and a Binomial:
 <!-- Poisson(y|\lambda) & \text{if } y > 0 -->
 <!-- \end{cases} -->
 <!-- \end{equation*} -->
+
+\pause
 
 \begin{tikzpicture}[scale=0.5]
 	\begin{pgfonlayer}{nodelayer}
@@ -1296,7 +1302,7 @@ This is _mixture_ of a Poisson and a Binomial:
 
 ## Zero-inflation: graphical model
 
-```{r, fig.width=7, fig.height=5}
+```{r ziMod, fig.width=7, fig.height=5}
 n <- 200
 data.frame(p=rpois(n,2),zi=rbinom(n,1,0.1)) %>%
   mutate(proc=ifelse(zi==1,'Extra Zeros','Poisson'),p=ifelse(zi==1,0,p)) %>%
@@ -1317,8 +1323,8 @@ data.frame(p=rpois(n,2),zi=rbinom(n,1,0.1)) %>%
 
 :::: column
 
-```{r, fig.width=7, fig.height=5}
-# fig.fullwidth=TRUE
+```{r, fig.width=5, fig.height=4}
+
 data.frame(p=rpois(n,0.8)) %>%
   group_by(p) %>% count() %>% ungroup() %>%
   ggplot(aes(x=factor(p)))+geom_col(aes(y=n),fill='black')+
@@ -1330,16 +1336,7 @@ data.frame(p=rpois(n,0.8)) %>%
 
 :::: column
 
-```{r, fig.width=5, fig.height=5}
-n <- 200
-data.frame(p=rpois(n,1),zi=rbinom(n,1,0.1)) %>%
-  mutate(proc=ifelse(zi==1,'Extra Zeros','Poisson'),p=ifelse(zi==1,0,p)) %>%
-  group_by(proc,p) %>% count() %>% ungroup() %>%
-  mutate(proc=factor(proc,levels=c('Extra Zeros','Poisson'))) %>%
-  ggplot(aes(x=factor(p)))+geom_col(aes(y=n,fill=proc))+
-  labs(x='Counts',y='Frequency',fill='Process')+scale_fill_manual(values=c('red','black'))+
-  theme(legend.position = c(0.8,0.8))
-
+```{r, ziMod, fig.width=5, fig.height=4}
 ```
 
 ::::
@@ -1354,8 +1351,7 @@ How many terms should be in my model?
 - Same principle as in regular linear models: __what do you think the process is?__
   - Just because a term is "not significant" doesn't mean it should be dropped out!
   - Just because a term is "significant" doesn't mean it should be left in!
-  - I find graphical models very helpful for this (see Lecture 4, p. 17)
-  - Avoid selecting models based on $R^2$. Avoid stargazing\footnotemark (hunting for "better" p-values or AIC scores)
+  - Avoid selecting models based on $R^2$ or AIC alone. Avoid stargazing\footnotemark (hunting around for "better" p-values or AIC scores)
 - To test whether terms are important in predicting your data (similar to), use _likelihood-ratio tests_
   - `drop1(model,test='Chisq')`
   - AIC tests usually say the same thing as LR tests
@@ -1398,17 +1394,17 @@ How many terms should be in my model?
 
 <!-- ::: -->
 
-## ML vs REML
+<!-- ## ML vs REML -->
 
-- Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased)
-- Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but...
-- This means that models with different numbers of terms don't have the same REML estimates
-- Likelihood between these models technically can't be compared!
+<!-- - Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased) -->
+<!-- - Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but... -->
+<!-- - This means that models with different numbers of terms don't have the same REML estimates -->
+<!-- - Likelihood between these models technically can't be compared! -->
 
-Solution:
+<!-- Solution: -->
 
-  1. Use ML if comparing between models with different fixed effects, then...
-  2. Re-fit with REML once you've decided on a model
+<!--   1. Use ML if comparing between models with different fixed effects, then... -->
+<!--   2. Re-fit with REML once you've decided on a model -->
 
 ## Other useful things about GLMs!
 
@@ -1423,6 +1419,8 @@ Solution:
 - If multiple trials occur, R requires counts of successes and failures
 - Example: "I counted male and female critters at different sites. Does temperature affect sex ratios?"
 
+\pause
+
 ```{r, eval=FALSE, echo=TRUE}
 #Number of females and males are in 2 separate columns in d1
 glm(cbind(females,males) ~ temp, family='binomial',data = d1)
@@ -1430,43 +1428,40 @@ glm(cbind(females,males) ~ temp, family='binomial',data = d1)
 
 This will correctly account for different numbers of critters ("trials") at each site
 
-
 ## Offsets in count models
 
-- Poisson/NB models assume that counts occur over the same period of time
+"I counted critters for different lengths of time at each site. Does temperature affect counts?"
+
 - Count models use integers only, so you can't just do: $counts \div hours$
 - Solution: use _offsets_ to deal with different observation times
   - Predictor with a slope fixed at 1
-- Example: "I counted critters for different lengths of time at each site. Does temperature affect counts?"
 
 ```{r, eval=FALSE, echo=TRUE}
-#hours = observation time at each site, and
-#   must be log-transformed before being used in an offset
-#
+#hours = observation time at each site (must be log-transformed)
 glm(counts ~ offset(log(hours)) + temp, family='poisson',data = d1)
 ```
 
 This will return estimates that have been scaled to a 1-hour observation time
 
-## R-squared for GLMs
+<!-- ## R-squared for GLMs -->
 
-- Bad news: there isn't really any good way to get $R^2$ (explained variance) for non-`lm` models
-- OK news: there are many _pseudo_-$R^2$ measures that are _sort of_ like $R^2$, but nobody really agrees on which one is best
-- Good news: ecologists tend to not know or care about this
+<!-- - Bad news: there isn't really any good way to get $R^2$ (explained variance) for non-`lm` models -->
+<!-- - OK news: there are many _pseudo_-$R^2$ measures that are _sort of_ like $R^2$, but nobody really agrees on which one is best -->
+<!-- - Good news: ecologists tend to not know or care about this -->
 
-Solution: pick a single type of $R^2$ and use that, or omit it completely \footnotemark
+<!-- Solution: pick a single type of $R^2$ and use that, or omit it completely \footnotemark -->
 
-- See [here](https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#how-do-i-compute-a-coefficient-of-determination-r2-or-an-analogue-for-glmms), [here](https://stats.stackexchange.com/questions/46345/how-to-calculate-goodness-of-fit-in-glm-r) or [here](http://statistics.ats.ucla.edu/stat/mult_pkg/faq/general/Psuedo_RSquareds.htm) for more info on $R^2$
-- Try `rsquaredglmm()` from `piecewiseSEM` or `r.squaredGLMM()` from `MuMIn`
+<!-- - See [here](https://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#how-do-i-compute-a-coefficient-of-determination-r2-or-an-analogue-for-glmms), [here](https://stats.stackexchange.com/questions/46345/how-to-calculate-goodness-of-fit-in-glm-r) or [here](http://statistics.ats.ucla.edu/stat/mult_pkg/faq/general/Psuedo_RSquareds.htm) for more info on $R^2$ -->
+<!-- - Try `rsquaredglmm()` from `piecewiseSEM` or `r.squaredGLMM()` from `MuMIn` -->
 
-\footnotetext{But be prepared to argue with supervisors, committee members, or reviewers! They will want some kind of measure of how well your model predicted your data.}
+<!-- \footnotetext{But be prepared to argue with supervisors, committee members, or reviewers! They will want some kind of measure of how well your model predicted your data.} -->
 
 ## Partial effects plots
 
 - `library(ggeffects)` and `library(effects)` work for partial effects plots, but...
 - Residuals are tricky to display, unless you plot them on the link scale
 
-```{r, fig.height=5, fig.width=10}
+```{r, fig.height=4, fig.width=10}
 m4 <- glm(y1~x+A,data=d2,family='poisson')
 
 p1 <- ggplot(d2,aes(x=x,y=y1,col=A))+geom_point()+geom_smooth(method='glm',formula=y~x,method.args = list(family = "poisson"))+
@@ -1486,9 +1481,74 @@ plot(allEffects(m4,residuals=TRUE))
 ```
 
 
-## Show-and-tell!
+## Third challenge
 
-```{r echo=FALSE, out.width='100%'}
-  include_graphics('./showMe.png',dpi=NA)
+- Remember that bat data from last week? (Found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/03%20Linear%20models) in `batDat.csv`). We used a `lm` last week to fit it, but it actually came from a `glm`
+- Fit a `glm` to those data, check how the model fits, and make some partial effects plots
+- Recall: this is the "true" causal relationship here (no interactions)
+
+```{r echo=FALSE, fig.fullwidth=TRUE, fig.height=2.5}  
+
+#Coordinates for nodes
+nodeCoords2 <- data.frame(name=c('humidity','temp','bugs','bats','light','clouds'),
+                         x=c(0,1,0.5,1.5,2,2.5),y=c(0.5,1,0,0,1,0))
+
+#Define model using dagify
+tidy_ggdag2 <- tidy_dagitty(dagify(
+  humidity ~ temp,
+  bugs ~ temp,
+  bats ~ bugs,
+  bats ~ temp,
+  bats ~ light,
+  light ~ clouds,
+  coords= list(x = setNames(nodeCoords2$x,nodeCoords2$name),
+               y = setNames(nodeCoords2$y,nodeCoords2$name)),
+  labels=setNames(nodeCoords2$name,nodeCoords2$name)
+))
+
+tidy_ggdag2$data %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend))+ 
+  geom_dag_edges(arrow_directed=arrow(angle=20,type='open'))+
+  # geom_dag_point(shape=NA) +
+  geom_dag_text(aes(label=label),size=6,col='black')+
+  lims(x=c(-0.25,3.25),y=c(-0.25,1.25))+
+  theme_dag_blank()
+
 ```
 
+## Solution:
+
+::: columns
+
+:::: {.column width='40%'}
+
+```{r warning=FALSE, fig.width=4,fig.height=5}
+
+batDat <- read.csv('../03 Linear models/batDat.csv')
+batsPoisson <- glm(bats~poly(temp,2)+log(light)+bugs,data=batDat,family = 'poisson')
+
+pltThm <- theme_classic()+theme(plot.title=element_blank())
+
+q1 <- ggpredict(batsPoisson,terms='temp') %>% plot(residuals=TRUE)+pltThm
+q2 <- ggpredict(batsPoisson,terms='light') %>% plot(residuals=TRUE)+pltThm
+q3 <- ggpredict(batsPoisson,terms='bugs') %>% plot(residuals=TRUE)+pltThm
+
+ggarrange(q1,q2,q3,nrow=3,ncol=1)
+
+```
+:::: 
+
+:::: {.column width='60%'}
+
+```{r, echo=FALSE}
+summary(batsPoisson)
+```
+
+::::
+
+:::
+
+## To do this week: update your models
+
+- Some of you have non-normal data... time to update those models!
+- For those who don't need to run GLMS, it's your lucky week!
