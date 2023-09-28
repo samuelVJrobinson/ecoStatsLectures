@@ -40,7 +40,7 @@ library(knitr)
 library(kableExtra)
 library(latex2exp)
 library(rmutil) #Beta-binomial
-#test
+
 set.seed(123)
 
 #Functions
@@ -817,6 +817,7 @@ ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('log
 
 :::
 
+
 ## How do linear models fit into this?
 
 ::: columns
@@ -861,19 +862,25 @@ flips & \sim Binomial(\textcolor{orange}{\hat{\phi}})
 
 \pause
 
-\center Instead of finding $\phi$, __R finds the coefficients ($\textcolor{blue}{b_0}$, $\textcolor{blue}{b_1}$ ... $\textcolor{blue}{b_i}$) that create $\phi$__
+\center Instead of finding $\phi$, R finds the coefficients ($\textcolor{blue}{b_0}$, $\textcolor{blue}{b_1}$ ... $\textcolor{blue}{b_i}$) that create $\phi$
 
 ## How do I fit GLMs in R?
 
 Syntax and model output is very similar to `lm`
 
-```{r, echo=TRUE, size='tiny'}
+```{r, echo=TRUE, eval=FALSE}
 # y ~ x, where x is the predictor of y
+mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') #Fit a binomial GLM
+```
+
+
+```{r, echo=FALSE, eval=TRUE}
 mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') #Fit a binomial GLM
 summary(mod_binomial)
 ```
 
 Dispersion and deviance will be discussed later...
+
 
 ## How do I get partial effects plots?
 
@@ -898,12 +905,15 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
   labs(x = 'x1', y = expression(paste('Chance of Success (',phi,')')))
 ```
 
+::::
+
+:::
 
 
 ## A challenger approaches!
 
 - Dr. Roberto Darkley (Robert Barkley's evil nemesis) sent 2 people out to check out some bat roosts in Edmonton and Calgary. One of them dutifully counted bats at each roost, but the other one was really lazy, and just recorded "bats or no bats" (1 or 0).
-- Fit a model to each of their data (found in `batDatGLM.csv`) using a GLM
+- Fit a model to each of the datasets (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/blob/fall2023/04%20GLMs) in `batDatGLM.csv`) using a GLM
   - `batCounts` should be modeled using a Poisson GLM, and `batPres` should use a Binomial GLM
   - Terms to include: `city` and `size` (no interaction)
 - How do the models look? Compare the coefficients and see if they are different
@@ -911,7 +921,7 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
 
 ## Model results
 
-```{r, width=5, height=3}
+```{r, fig.width=6, fig.height=4}
 dat <- read.csv('./batDatGLM.csv') #Read in data
 
 #Fit models
@@ -937,6 +947,8 @@ list(count=modPois,presence=modBin) %>%
   scale_colour_manual(values=c('black','red','blue'))+
   labs(x=NULL,y='Estimate',col='Model')
 ```
+
+
 
 # Part 3: Models behaving badly
 
@@ -1009,7 +1021,7 @@ rm(n,x,y0,y1,y2,xMat,A,yhat)
 
 \pause
 
-```{r}
+```{r, out.width='100%',out.height='60%'}
 m1 <- glm(y1~x,data=d1,family='poisson')
 plot(y1~x,data=d1,pch=19)
 lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
@@ -1025,9 +1037,7 @@ text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
 
 :::: column
 
-```{r}
-
-# plot(m2, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
+```{r, fig.height=3.5, fig.width=3}
 
 par(mfrow=c(2,1),mar=c(0,0,0,0))
 
@@ -1474,6 +1484,4 @@ plot(allEffects(m4,residuals=TRUE))
 ```{r echo=FALSE, out.width='100%'}
   include_graphics('./showMe.png',dpi=NA)
 ```
-
-
 
