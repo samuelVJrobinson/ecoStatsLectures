@@ -688,9 +688,10 @@ dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
 ```{r, echo=TRUE}
 dbinom(1,1,0.3)*dbinom(1,1,0.3)*dbinom(0,1,0.3)
 ```
+
 \pause
 
-Are we likely to be dealing with probability or likelihood?
+Since we're (mostly) collecting data and trying to guess parameters from it, are we dealing with _probability_ or _likelihood_?
 
 ## Likelihood vs Probability (cont.)
 
@@ -875,7 +876,7 @@ mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') #Fit a binomi
 
 
 ```{r, echo=FALSE, eval=TRUE}
-mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') #Fit a binomial GLM
+mod_binomial <- glm(y2 ~ x1 + x2 , data = d1, family = 'binomial') 
 summary(mod_binomial)
 ```
 
@@ -921,7 +922,7 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
 
 ## Model results
 
-```{r, fig.width=6, fig.height=4}
+```{r, fig.fullwidth=TRUE, fig.height=5}
 dat <- read.csv('./batDatGLM.csv') #Read in data
 
 #Fit models
@@ -947,7 +948,6 @@ list(count=modPois,presence=modBin) %>%
   scale_colour_manual(values=c('black','red','blue'))+
   labs(x=NULL,y='Estimate',col='Model')
 ```
-
 
 
 # Part 3: Models behaving badly
@@ -1068,6 +1068,8 @@ In addition to _response_ (regular) residuals there are:
 - Pearson residuals
 - __Deviance residuals__
 
+\pause
+
 Deviance residuals use _likelihood_:
 
 \begin{equation*}
@@ -1090,8 +1092,9 @@ Keep in mind:
 - _Especially_ true for:
   - Binomial GLMs
   - Poisson/Negative Binomial GLMs with many zeros
+- Next week we will deal with _simulation testing_ residuals
 
-```{r}
+```{r, out.width='100%',out.height='60%'}
 m1 <- glm(y1~x,data=d1,family='poisson')
 plot(y1~x,data=d1,pch=19)
 lines(sort(d1$x),exp(cbind(rep(1,nrow(d1)),sort(d1$x)) %*% coef(m1)),lwd=1,col='blue')
@@ -1107,16 +1110,19 @@ text(x=d1$x[resNo],mean(c(exp(d1$yhat[resNo]),y=d1$y1[resNo])),
 
 :::: column
 
-```{r}
-plot(predict(m1),residuals(m1,type='deviance'),xlab='Predicted value',ylab='Deviance Residuals');abline(h=0,lty='dashed')
+```{r, fig.height=3.5, fig.width=3}
+
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+
+plot(predict(m1),residuals(m1,type='deviance'),cex=0.75,cex.axis=1e-5,tck=0)
+abline(h=0,lty='dashed')
 points(x=predict(m1)[resNo],y=residuals(m1,type='deviance')[resNo],col='black',pch=19)
 lines(x=rep(predict(m1)[resNo],2),y=c(0,residuals(m1,type='deviance')[resNo]),col='red')
-```
 
-```{r}
 colVec <- rep('black',nrow(d1)); colVec[resNo] <- 'red'
 pchVec <- rep(1,nrow(d1)); pchVec[resNo] <- 19
-qqnorm(residuals(m1,type='deviance'),col=colVec,pch=pchVec); qqline(residuals(m1,type='deviance'))
+qqnorm(residuals(m1,type='deviance'),col=colVec,pch=pchVec,main=NULL)
+qqline(residuals(m1,type='deviance'))
 
 ```
 
@@ -1311,7 +1317,8 @@ data.frame(p=rpois(n,2),zi=rbinom(n,1,0.1)) %>%
 
 :::: column
 
-```{r, fig.width=5, fig.height=5}
+```{r, fig.width=7, fig.height=5}
+# fig.fullwidth=TRUE
 data.frame(p=rpois(n,0.8)) %>%
   group_by(p) %>% count() %>% ungroup() %>%
   ggplot(aes(x=factor(p)))+geom_col(aes(y=n),fill='black')+
