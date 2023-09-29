@@ -22,7 +22,7 @@ coefs <- c(1,-0.2,0.3) #Same coefficients for both models
 
 yhat <- modMat %*% coefs #Expected value (link scale)
 
-dat$beeCounts <- rpois(N,exp(yhat))  #Poisson process
-dat$beePres <- rbinom(N,1,invLogit(yhat))  #Binomial (bernoulli) process
+dat$beeCounts <- rnbinom(N,mu=exp(yhat),size=1) #NB process
+dat$beePres <- rbinom(N,1,invLogit(yhat))  #Bernoulli process
 
 write.csv(dat,file = 'beeDatGLM.csv',row.names = FALSE)

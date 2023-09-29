@@ -915,43 +915,72 @@ ggpredict(mod_binomial, terms='x1 [all]') %>% #Partial effect of x1 term
 
 ## Second challenge
 
+- Remember that bat data from last week? (Found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/03%20Linear%20models) in `batDat.csv`). We used a `lm` last week to fit it, but it actually came from a `glm`
+- Fit a `glm` to those data, check how the model fits, and make some partial effects plots
+- Recall: this is the "true" causal relationship here (no interactions)
 
-- Dr. _Paulo Malpern_ (Paul Galpern's evil nemesis) sent 2 people out to check out some bee habitats in Edmonton and Calgary. Counted bees at each site, but the other one was really lazy, and just recorded "bees or no bees" (1 or 0).
-- Fit a model to each of the datasets (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/blob/fall2023/04%20GLMs) in `beeDatGLM.csv`) using a GLM
-  - `beeCounts` should be modeled using a Poisson GLM, and `batPres` should use a Binomial GLM
-  - Terms to include: `city` and `size` (no interaction)
-- How do the models look? Compare the coefficients and see if they are different
-  - Bonus: make a partial regression plot of terms in the Poisson GLM
+```{r echo=FALSE, fig.fullwidth=TRUE, fig.height=2.5}  
 
+#Coordinates for nodes
+nodeCoords2 <- data.frame(name=c('humidity','temp','bugs','bats','light','clouds'),
+                         x=c(0,1,0.5,1.5,2,2.5),y=c(0.5,1,0,0,1,0))
+
+#Define model using dagify
+tidy_ggdag2 <- tidy_dagitty(dagify(
+  humidity ~ temp,
+  bugs ~ temp,
+  bats ~ bugs,
+  bats ~ temp,
+  bats ~ light,
+  light ~ clouds,
+  coords= list(x = setNames(nodeCoords2$x,nodeCoords2$name),
+               y = setNames(nodeCoords2$y,nodeCoords2$name)),
+  labels=setNames(nodeCoords2$name,nodeCoords2$name)
+))
+
+tidy_ggdag2$data %>% 
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend))+ 
+  geom_dag_edges(arrow_directed=arrow(angle=20,type='open'))+
+  # geom_dag_point(shape=NA) +
+  geom_dag_text(aes(label=label),size=6,col='black')+
+  lims(x=c(-0.25,3.25),y=c(-0.25,1.25))+
+  theme_dag_blank()
+
+```
 
 ## Model results
 
-```{r, fig.fullwidth=TRUE, fig.height=5}
-dat <- read.csv('./beeDatGLM.csv') #Read in data
+::: columns
 
-#Fit models
-modPois <- glm(beeCounts~city+floral,data=dat,family='poisson')
-# summary(modPois)
+:::: {.column width='40%'}
 
-modBin <- glm(beePres~city+floral,data=dat,family='binomial')
-# summary(modBin)
+```{r warning=FALSE, message=FALSE, fig.width=4,fig.height=5}
 
-#Compare models
+batDat <- read.csv('../03 Linear models/batDat.csv')
+batsPoisson <- glm(bats~poly(temp,2)+log(light)+bugs,data=batDat,family = 'poisson')
 
-actualCoefs <- data.frame(term=names(coef(modBin)),estimate=c(1,-0.2,0.3),
-           std.error=0,mod='actual')
+pltThm <- theme_classic()+theme(plot.title=element_blank())
 
-list(count=modPois,presence=modBin) %>% 
-  lapply(.,tidy) %>% bind_rows(.id = 'mod') %>% 
-  select(-statistic,-p.value) %>% 
-  bind_rows(actualCoefs) %>% 
-  mutate(term=factor(term,labels=c('Intercept','City','Floral'))) %>% 
-  ggplot(aes(term,estimate,col=mod))+
-  geom_pointrange(aes(ymax=estimate+std.error*2,ymin=estimate-std.error*2),position=position_dodge(width=0.3))+
-  geom_hline(yintercept=0,linetype='dashed')+
-  scale_colour_manual(values=c('black','red','blue'))+
-  labs(x=NULL,y='Estimate',col='Model')
+q1 <- ggpredict(batsPoisson,terms='temp') %>% plot(residuals=TRUE)+pltThm
+q2 <- ggpredict(batsPoisson,terms='light') %>% plot(residuals=TRUE)+pltThm
+q3 <- ggpredict(batsPoisson,terms='bugs') %>% plot(residuals=TRUE)+pltThm
+
+ggarrange(q1,q2,q3,nrow=3,ncol=1)
+
 ```
+:::: 
+
+:::: {.column width='60%'}
+
+```{r, echo=FALSE}
+summary(batsPoisson)
+```
+
+::::
+
+:::
+
+
 
 
 # Part 3: Models behaving badly
@@ -1318,6 +1347,7 @@ data.frame(p=rpois(n,2),zi=rbinom(n,1,0.1)) %>%
 
 - Hard for R to tell the difference between ZIP/ZINB, and a Poisson/NB with a low mean ($\lambda$).
 - This needs a lot of data in order to work! Consider longer sampling periods in order to reduce zeros
+- The modeling approaches for this are somewhat bespoke, so if you need to use this, come talk to me!
 
 ::: columns
 
@@ -1410,7 +1440,6 @@ How many terms should be in my model?
 
 - Binomial GLMs with >1 trial
 - Offsets in count models
-- $R^2$ for GLMs
 - Partial effects plots
 
 ## Binomial GLMs with >1 trial
@@ -1435,6 +1464,8 @@ This will correctly account for different numbers of critters ("trials") at each
 - Count models use integers only, so you can't just do: $counts \div hours$
 - Solution: use _offsets_ to deal with different observation times
   - Predictor with a slope fixed at 1
+
+\pause
 
 ```{r, eval=FALSE, echo=TRUE}
 #hours = observation time at each site (must be log-transformed)
@@ -1483,72 +1514,47 @@ plot(allEffects(m4,residuals=TRUE))
 
 ## Third challenge
 
-- Remember that bat data from last week? (Found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/03%20Linear%20models) in `batDat.csv`). We used a `lm` last week to fit it, but it actually came from a `glm`
-- Fit a `glm` to those data, check how the model fits, and make some partial effects plots
-- Recall: this is the "true" causal relationship here (no interactions)
+- Dr. _Paulo Malpern_ (Paul Galpern's evil nemesis) sent 2 people out to check out some bee habitats in Edmonton and Calgary. Counted bees at each site, but the other one was really lazy, and just recorded "bees or no bees" (1 or 0).
+- Fit a model to each of the datasets (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/blob/fall2023/04%20GLMs) in `beeDatGLM.csv`) using a GLM
+  - Terms to include: `city` and `size` (no interaction)
+- How do the models look? Compare the coefficients and see if they are different
+  - Bonus: make partial regression plots of the terms each GLM
 
-```{r echo=FALSE, fig.fullwidth=TRUE, fig.height=2.5}  
 
-#Coordinates for nodes
-nodeCoords2 <- data.frame(name=c('humidity','temp','bugs','bats','light','clouds'),
-                         x=c(0,1,0.5,1.5,2,2.5),y=c(0.5,1,0,0,1,0))
+## Model results
 
-#Define model using dagify
-tidy_ggdag2 <- tidy_dagitty(dagify(
-  humidity ~ temp,
-  bugs ~ temp,
-  bats ~ bugs,
-  bats ~ temp,
-  bats ~ light,
-  light ~ clouds,
-  coords= list(x = setNames(nodeCoords2$x,nodeCoords2$name),
-               y = setNames(nodeCoords2$y,nodeCoords2$name)),
-  labels=setNames(nodeCoords2$name,nodeCoords2$name)
-))
+```{r, fig.fullwidth=TRUE, fig.height=5}
+dat <- read.csv('./beeDatGLM.csv') #Read in data
 
-tidy_ggdag2$data %>% 
-  ggplot(aes(x = x, y = y, xend = xend, yend = yend))+ 
-  geom_dag_edges(arrow_directed=arrow(angle=20,type='open'))+
-  # geom_dag_point(shape=NA) +
-  geom_dag_text(aes(label=label),size=6,col='black')+
-  lims(x=c(-0.25,3.25),y=c(-0.25,1.25))+
-  theme_dag_blank()
+#Fit models
+modPois <- glm(beeCounts~city+floral,data=dat,family='poisson')
+# summary(modPois)
 
+modBin <- glm(beePres~city+floral,data=dat,family='binomial')
+# summary(modBin)
+
+#Compare models
+
+actualCoefs <- data.frame(term=names(coef(modBin)),estimate=c(1,-0.2,0.3),
+           std.error=0,mod='actual')
+
+list(count=modPois,presence=modBin) %>% 
+  lapply(.,tidy) %>% bind_rows(.id = 'mod') %>% 
+  select(-statistic,-p.value) %>% 
+  bind_rows(actualCoefs) %>% 
+  mutate(term=factor(term,labels=c('Intercept','City','Floral'))) %>% 
+  ggplot(aes(term,estimate,col=mod))+
+  geom_pointrange(aes(ymax=estimate+std.error*2,ymin=estimate-std.error*2),position=position_dodge(width=0.3))+
+  geom_hline(yintercept=0,linetype='dashed')+
+  scale_colour_manual(values=c('black','red','blue'))+
+  labs(x=NULL,y='Estimate',col='Model')
 ```
-
-## Solution:
-
-::: columns
-
-:::: {.column width='40%'}
-
-```{r warning=FALSE, fig.width=4,fig.height=5}
-
-batDat <- read.csv('../03 Linear models/batDat.csv')
-batsPoisson <- glm(bats~poly(temp,2)+log(light)+bugs,data=batDat,family = 'poisson')
-
-pltThm <- theme_classic()+theme(plot.title=element_blank())
-
-q1 <- ggpredict(batsPoisson,terms='temp') %>% plot(residuals=TRUE)+pltThm
-q2 <- ggpredict(batsPoisson,terms='light') %>% plot(residuals=TRUE)+pltThm
-q3 <- ggpredict(batsPoisson,terms='bugs') %>% plot(residuals=TRUE)+pltThm
-
-ggarrange(q1,q2,q3,nrow=3,ncol=1)
-
-```
-:::: 
-
-:::: {.column width='60%'}
-
-```{r, echo=FALSE}
-summary(batsPoisson)
-```
-
-::::
-
-:::
 
 ## To do this week: update your models
 
 - Some of you have non-normal data... time to update those models!
-- For those who don't need to run GLMS, it's your lucky week!
+- For those who don't need to run GLMS, try this:
+- I have a dataset of canola plants (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/blob/fall2023/04%20GLMs) in `canolaPlants.csv`) that I collected during my PhD. I was interested in whether plant size (`VegMass`) and distance from the edge of the field (`Distance`) affected how many flowers got turned into seed pods. I counted pods (`Pods`) on plants, as well as missing pods (`Missing`).
+  - Clean up this dataset (there are a couple NAs and unrealistic numbers), fit a GLM that answers my question, and make some plots of your results. Were there any important _interactions_ between the `VegMass` and `Distance`?
+  
+  
