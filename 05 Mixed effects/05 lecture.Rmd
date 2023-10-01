@@ -86,31 +86,34 @@ raneff_slope <- x * model.matrix(~g-1) %*% raneffs[,2]  #Slope vector
 
 yhat <- intercept + slopeX*x + raneff_int + raneff_slope  #Expected value
 y <- rnorm(n,yhat,sigmaR) #Data (normal)
+dat <- data.frame(y,x,site=g) #Assemble into data frame
 y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
-dat <- data.frame(y,y2,x,site=g) #Assemble into data frame
+dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 
-#Generate spatially correlated random intercepts
-
-#Squared-exponential distance function
-covFun <- function(sigma,rho,d) (sigma^2)*exp((-rho^2)*(d^2))
-
-lat <- runif(ngroups,-10,10) #"Latitude"
-lon <- runif(ngroups,-10,10) #"Longitude"
-distMat <- as.matrix(dist(cbind(lat,lon),diag=TRUE,upper=TRUE)) #Matrix of distances
-covMat <- covFun(sigmaG,0.1,distMat) #Covariance matrix
-corMat <- cov2cor(covMat) #Correlation matrix
-cholCorMat <- chol(corMat) #Choleski matrix
-raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
-raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
-yhat <- intercept + slopeX*x + raneff_int  #Expected value
-y <- rnorm(n,yhat,sigmaR) #Data (normal)
-y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
-lat <- model.matrix(~g-1) %*% lat
-lon <- model.matrix(~g-1) %*% lon
-dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
+# #Generate spatially correlated random intercepts
+# 
+# #Squared-exponential distance function
+# covFun <- function(sigma,rho,d) (sigma^2)*exp((-rho^2)*(d^2))
+# 
+# lat <- runif(ngroups,-10,10) #"Latitude"
+# lon <- runif(ngroups,-10,10) #"Longitude"
+# distMat <- as.matrix(dist(cbind(lat,lon),diag=TRUE,upper=TRUE)) #Matrix of distances
+# covMat <- covFun(sigmaG,0.1,distMat) #Covariance matrix
+# corMat <- cov2cor(covMat) #Correlation matrix
+# cholCorMat <- chol(corMat) #Choleski matrix
+# raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
+# raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
+# yhat <- intercept + slopeX*x + raneff_int  #Expected value
+# y <- rnorm(n,yhat,sigmaR) #Data (normal)
+# y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
+# lat <- model.matrix(~g-1) %*% lat
+# lon <- model.matrix(~g-1) %*% lon
+# dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
 
 
 ```
+
+# Part 1: Mixed effects models
 
 ## Motivation
 
@@ -119,7 +122,7 @@ dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
   - Variance partitioning
   - Fixed effects vs. Random effects
 - Working with random effects
-  - What should be a random effect?
+  - Fixed vs. random effects
   - Model validation
 - Exercise
 
@@ -149,7 +152,7 @@ Unfortunately, we need a review of matrix algebra in order to explain this:
 \end{bmatrix}
 $$
   
-- This is a vector $$ b = \begin{bmatrix}
+- This is a vector: $$ b = \begin{bmatrix}
 1 & 2 & 3 
 \end{bmatrix}
 $$
@@ -176,16 +179,14 @@ $$ A \times b = Ab = 1 \times \begin{bmatrix}
 
 ## Why do we call them "linear models"?
 
-Involves a _linear mapping_ of coefficients onto a model matrix
+- _Linear_ mapping of __coefficients__ onto a __model matrix__ (from your data)
 
-Coefficients: $$ \beta = \begin{bmatrix}
+- Coefficients: $$ \beta = \begin{bmatrix}
 0.1 & 1.8 & -0.03 
 \end{bmatrix}
 $$
 
-Model matrix:
-
-$$ X = \begin{bmatrix}
+- Model matrix: $$ X = \begin{bmatrix}
 1 & 1 & 10 \\
 1 & 1 & 12 \\
 1 & 0 & 9 \\
@@ -193,9 +194,7 @@ $$ X = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-Multiplying them looks like: 
-
-$$ \hat{y} = X\beta = 
+- Multiplying them looks like: $$ \hat{y} = X\beta = 
 \begin{bmatrix}
 1.60  \\
 1.54 \\
@@ -207,7 +206,7 @@ $$ \hat{y} = X\beta =
 
 ```{r, echo=TRUE, size='tiny'}
 head(dat)
-m1 <- lm(y~x,data=dat) #Use variable x to predict y
+m1 <- lm(y~x,data=dat) #Uses x to predict y
 summary(m1)
 ```
 
@@ -223,7 +222,7 @@ head(data.frame(pred1=predict(m1),pred2)) #same thing!
 ## Groups are coded by "dummy variables" (0s and 1s)
 
 ```{r, echo=TRUE, size='tiny'}
-m2 <- lm(y~site,data=dat) #Use variable site to predict y
+m2 <- lm(y~site,data=dat) #Use site to predict y
 head(model.matrix(m2)) #0s and 1s used to identify groups
 coef(m2) #This uses the 1st site as the "control" group
 ```
@@ -341,26 +340,40 @@ Results from `lmer` model:
   - _residual_ and _site_ variance ($\textcolor{red}{\sigma}$, $\textcolor{red}{\sigma_{site}}$)
 - Fixed effects: 
   - Intercept and slope estimates ($\textcolor{blue}{\beta}$)
-  - No d.f. and p-value \footnotemark 
+  - No d.f. and p-value \footnotemark
+  - If you need p-values for parameters, you can use the [_lmerTest_](https://rdocumentation.org/packages/lmerTest/versions/3.1-3/topics/lmerTest-package) package (or just calculate them yourself using means/SEs)
 
 ::::
 
 :::
 
-\footnotetext{`lme4` author doesn't think they can be calculated. I largely agree}
+\footnotetext{`lme4` author doesn't think they can be calculated. I somewhat agree}
 
 ## Mixed effect model results
 
+::: columns
+
+:::: column
+
 - In a _random intercepts_ model, the regression line of _x_ on _y_ is allowed to move up or down around the main regression line for each site
+
 - These changes in intercepts are _normally distributed_
 
-```{r, fig.height=3, fig.width=5}
+::::
+
+:::: column
+
+```{r, fig.height=4, fig.width=4, warning=FALSE, message=FALSE}
 p1 <- dat %>% mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>% 
   ggplot(aes(x=x,y=y,col=site))+
-  geom_point()+
+  geom_point(show.legend = FALSE)+
   geom_line(aes(y=gpred),col='black',size=2)
-p1 + geom_line(aes(y=pred))+guides(col=guide_legend(ncol=2))
+p1 + geom_line(aes(y=pred),show.legend = FALSE)+guides(col=guide_legend(ncol=2))
 ```
+
+::::
+
+:::
 
 ## Mixed effect model results (cont.)
 
@@ -373,18 +386,18 @@ p2 <- ggpredict(mm1,terms='x') %>% data.frame() %>% #Gets predictions from mm1
   ggplot(aes(x=x))+ #Plots using ggplot
   geom_ribbon(aes(ymax=conf.high,ymin=conf.low),alpha=0.3) + #Intervals
   geom_line(aes(y=predicted))
-ggarrange(p1+geom_line(aes(y=pred),show.legend = FALSE)+ylim(-20,20),
-          p2+ylim(-20,20)+labs(y='y'),
+ggarrange(p1+geom_line(aes(y=pred),show.legend = FALSE)+ylim(-15,20),
+          p2+ylim(-15,20)+labs(y='y'),
           ncol=2,legend = 'none')
 ```
 
-## Random slope + intercept
+## Random slopes + intercepts
 
 Suppose that _y_ wasn't just higher or lower at each site, but that the effect of _x_ on _y_ was higher or lower at each site
 
 \begin{equation*}
 \begin{split}
-\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{U}\textcolor{purple}{\zeta_{int}} + \textcolor{darkturquoise}{x_i}\textcolor{gray}{U}\textcolor{purple}{\zeta_{slope}} \\
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{U}\textcolor{purple}{\zeta_{int}} + \textcolor{gray}{U\textcolor{darkturquoise}{_x}}\textcolor{purple}{\zeta_{slope}} \\
 y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 \textcolor{purple}{\zeta_{int}} & \sim Normal(0,\textcolor{red}{\sigma_{int}}) \\
 \textcolor{purple}{\zeta_{slope}} & \sim Normal(0,\textcolor{red}{\sigma_{slope}})
@@ -392,9 +405,9 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 \end{equation*}
 
 - $\textcolor{darkturquoise}{X}$ = fixed effects matrix (e.g. intercept, temperature)
-- $\textcolor{darkturquoise}{x_i}$ = individual fixed effect (e.g. temperature)
 - $\textcolor{blue}{\beta}$ = fixed effects coefficients
-- $\textcolor{gray}{U}$ = random effects matrix (e.g. sites)
+- $\textcolor{gray}{U}$ = random intercept matrix (e.g. sites)
+- $\textcolor{gray}{U\textcolor{darkturquoise}{_x}}$ = random slopes matrix (e.g. temperature)
 - $\textcolor{purple}{\zeta_{int}}, \textcolor{purple}{\zeta_{slope}}$ = random intercept and slope coefficients
 - $\textcolor{red}{\sigma},\textcolor{red}{\sigma_{int}},\textcolor{red}{\sigma_{slope}}$ = variance terms
 
@@ -429,6 +442,24 @@ Results from `lmer` model:
 ::::
 
 :::
+
+## Model matrices
+
+- X
+```{r}
+head(model.matrix(mm2))
+```
+
+- U
+```{r}
+head(model.matrix(~site-1,data=dat))
+```
+- Ux
+```{r}
+head(model.matrix(~site-1,data=dat) * dat$x)
+```
+- 
+
 
 ## Mixed effect model results
 
@@ -496,7 +527,7 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
   - People\footnotemark who have read statistics books published after 1980 may ask questions
 - However, if you have a low number of sites (1-10), fixed effects may work better
   - Hard to estimate $\sigma_{site}$ if number of sites is low
-  - Partial pooling doesn't really help if no other sites are available to "borrow strength" from
+  - If stakes are high, it may be better to be more conservative about site intercepts
   - Easier to interpret (p-values, ANOVA, etc.)
   
 \footnotetext{e.g. me}
@@ -516,16 +547,13 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
 
 ![](predPlot.png)
 
+# Part 2: GLMMs
+
 ## Motivation
 
 - How do I check if model results are valid?
   - Residual checks
   - Hypothesis testing
-- What if my response variable is non-normal?
-  - Generalized linear mixed models (GLMMs)
-- Sampling over time or space
-  - "Continuous" random effects
-- Christmas-themed exercise!
 
 ## Mixed effect model example
 
@@ -662,35 +690,29 @@ y & \sim Binomial(\textcolor{orange}{\hat{\phi}}) \\
 
 - `glmer` and `glmer.nb` from `library(lme4)` work for Binomial, Poisson, and Negative Binomial data
 
-```{r, echo=TRUE, eval=FALSE}
+```{r glmerNBexample, echo=TRUE, eval=FALSE}
 library(lme4) 
-glmm1 <- glmer.nb(y2~x+(x|site),data=dat) #Negative binomial GLMM 
-summary(glmm1) #glmer.nb takes a LONG time to run
+glmm1 <- glmer.nb(y~x+(x|site),data=dat2) #Negative binomial GLMM 
+summary(glmm1) #glmer.nb takes a long time to run
 ```
 
 - `glmmTMB` from `library(glmmTMB)` works for those above, _plus_ a bunch of others
   - e.g. Zero-inflation, Beta-binomial, Spatial Models
 
-```{r, echo=TRUE, eval=FALSE}
+```{r glmmTMBexample, echo=TRUE, eval=FALSE}
 library(glmmTMB) 
-glmm2 <- glmmTMB(y2~x+(x|site),data=dat,family=nbinom2())
+glmm2 <- glmmTMB(y~x+(x|site),data=dat2,family=nbinom2())
 summary(glmm2) #Similar results, but quicker
 ```
 
 ## Fitting GLMMs - `glmer.nb`
 
-```{r, echo=FALSE, eval=TRUE, size='tiny'}
-library(lme4) 
-glmm1 <- glmer.nb(y2~x+(x|site),data=dat) #Negative binomial GLMM 
-summary(glmm1) #glmer.nb takes a LONG time to run
+```{r glmerNBexample, echo=FALSE, eval=TRUE, size='tiny'}
 ```
 
 ## Fitting GLMMs - `glmmTMB`
 
-```{r, echo=FALSE, eval=TRUE, size='tiny'}
-library(glmmTMB) 
-glmm2 <- glmmTMB(y2~x+(x|site),data=dat,family=nbinom2())
-summary(glmm2) #Similar results, but quicker
+```{r glmmTMBexample, echo=FALSE, eval=TRUE, size='tiny'}
 ```
 
 ## Residual checks on `glmmTMB` models
@@ -714,228 +736,67 @@ glmm2_eff <- ggpredict(glmm2,terms='x')
 plot(glmm2_eff)
 ```
 
-## Spatial and Temporal Random Effects
+# Part 2: Model selection and inference
 
-"_My data were sampled over time or over a geographic area (or both). Can I just use day or site as a random effect?_"
+## Model selection
 
-- Short answer: "Yes"
-- Long answer: You might be able to do better, because of the __1st Law of Geography__:
+How many terms should be in my model?
 
-_"...everything is related to everything else, but near things are more related than distant things."_ Waldo Tobler
+- Same principle as in regular linear models: __what do you think the process is?__
+  - Just because a term is "not significant" doesn't mean it should be dropped out!
+  - Just because a term is "significant" doesn't mean it should be left in!
+  - Avoid selecting models based on $R^2$ or AIC alone. Avoid stargazing\footnotemark (hunting around for "better" p-values or AIC scores)
+- To test whether terms are important in predicting your data (similar to), use _likelihood-ratio tests_
+  - `drop1(model,test='Chisq')`
+  - AIC tests usually say the same thing as LR tests
 
-- If you have spatial or temporal information, this can help R to estimate random effects more accurately
-  - Can improve prediction accuracy (smaller p-values)
-  - Can give you hints about the underlying causal mechanisms
-  
-## Temporal or Spatial Data
+\footnotetext{"My God, it's full of stars!" -2001, A Space Odyssey}
 
-- Correlation is often present in temporal data or spatial data; causes may be unknown or "uninteresting" 
-- Usually we are interested in accounting for these patterns, in order to better estimate the "interesting" patterns on top of them
+<!-- ## _log_ likelihood -->
 
-::: columns
+<!-- ::: columns -->
 
-:::: column
+<!-- :::: column -->
 
-```{r, fig.height=4, fig.width=4}
-# data.frame(year=as.numeric(time(lynx)),lynxNum=as.numeric(lynx)) %>% 
-#   ggplot(aes(x=year,y=lynxNum))+geom_line()+
-#   labs(x='Year',y='Lynx Numbers')
-plot(sunspots,ylab='Sunspots per year')
-```
+<!-- - Probabilities multiplied together quickly become _very small_ -->
+<!-- - Computers can't distinguish between extremely big or small numbers -->
+<!-- - Therefore, it uses _log-likelihoods_ (also easier to calculate) -->
 
-::::
+<!-- :::: -->
 
-:::: column
+<!-- :::: column -->
 
-```{r, fig.height=4, fig.width=4}
-# ggplot(seals,aes(x=long,y=lat,fill=delta_long))+
-#   geom_raster()+
-#   scale_fill_continuous(type='viridis')+
-#   labs(x='Longitude',y='Latitude')+
-#   theme(legend.position = c(0.2,0.7))
-image(volcano)
-```
+<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2} -->
+<!-- #Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1) -->
+<!-- llfun2 <- function(lphi){ -->
+<!--   phi <- invLogit(lphi) -->
+<!--   ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi) -->
+<!--   return(ll) -->
+<!-- }  -->
 
-::::
+<!-- ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
 
-:::  
-  
-## Covariance
+<!-- ``` -->
 
-- Normal distributions\footnotemark don't just have a single $\sigma$, but a matrix of values 
-- If our data _y_ are _independent_, then it looks like this:
+<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2} -->
 
-\begin{equation*}
-y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma}) 
-\end{equation*}
+<!-- ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
 
-\begin{equation*}
-\textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3] 
-\end{equation*}
+<!-- ``` -->
 
-\begin{equation*}
-\textcolor{red}{\Sigma} = \begin{bmatrix}
-\textcolor{red}{\sigma}^2 & 0 & 0 \\
-0 & \textcolor{red}{\sigma}^2 & 0 \\
-0 & 0 & \textcolor{red}{\sigma}^2
-\end{bmatrix}
-\end{equation*}
+<!-- :::: -->
 
-- Zeros mean "$\mu_1$, $\mu_2$, \& $\mu_3$ aren't related to each other"
-- Diagonal elements = _variance_, off-diagonal = _covariance_
+<!-- ::: -->
 
-\footnotetext{Multivariate Normal}
+<!-- ## ML vs REML -->
 
-## Covariance and Correlation
+<!-- - Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased) -->
+<!-- - Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but... -->
+<!-- - This means that models with different numbers of terms don't have the same REML estimates -->
+<!-- - Likelihood between these models technically can't be compared! -->
 
-In real life, things may not be independent from each other. For example:
+<!-- Solution: -->
 
-- $\textcolor{red}{\sigma}$ = 2 (variance = $\textcolor{red}{\sigma}^2$ = 4)
-- $\mu_1$ and $\mu_2$ are strongly correlated (r=0.7), but $\mu_3$ is not related to anything (r=0). Shown here as a _correlation matrix_ ($\textcolor{red}{R}$):
+<!--   1. Use ML if comparing between models with different fixed effects, then... -->
+<!--   2. Re-fit with REML once you've decided on a model -->
 
-\begin{equation*}
-\textcolor{red}{R} = \begin{bmatrix}
-1 & 0.7 & 0 \\
-0.7 & 1 & 0 \\
-0 & 0 & 1
-\end{bmatrix}
-\end{equation*}
-
-- When multiplied by the variance, this becomes the _covariance matrix_ ($\textcolor{red}{\Sigma}$) 
-
-\begin{equation*}
-\textcolor{red}{\Sigma} = \begin{bmatrix}
-\textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times0 \\
-\textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0 \\
-\textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times1
-\end{bmatrix} = \begin{bmatrix}
-4 & 2.8 & 0 \\
-2.8 & 4 & 0 \\
-0 & 0 & 4
-\end{bmatrix}
-\end{equation*}
-
-
-
-
-## Gaussian Process Modelling
-
-::: columns
-
-:::: column
-
-- We can model covariance between things as a function of _distance_, either in time or space
-- Squared-exponential is fairly common\footnotemark:
-
-\begin{equation*}
-\begin{split}
-\textcolor{red}{\Sigma} = & covariance \\
-\textcolor{red}{\Sigma} = & variance \times correlation \\ 
-\textcolor{red}{\Sigma} = & \textcolor{red}{\sigma}^2 \times e^{-\textcolor{green}{\rho}^2 Dist^2}\\
-\end{split}
-\end{equation*}
-
-- Instead of finding a single $\textcolor{red}{\sigma}$ value, R now looks for $\textcolor{red}{\sigma}$ (maximum covariance) and $\textcolor{green}{\rho}$ (decay with distance)
-
-::::
-
-:::: column
-
-```{r, fig.height=5,fig.width=4}
-expand.grid(dist=seq(0,5,0.1),rho=c(0.5,1,2),sigma=c(1,2)) %>% 
-  mutate(cVal=(sigma^2)*exp((-rho^2)*(dist^2))) %>% 
-  mutate(category=paste0('sigma=',sigma,', rho=',rho)) %>% 
-  mutate(rho=factor(rho)) %>% 
-  ggplot(aes(x=dist,y=cVal,group=category,col=rho))+geom_line(size=1)+
-  labs(x='Distance (km)',y='Covariance')+scale_colour_manual(values=c('red','purple','blue'))+
-  theme(legend.position = c(0.8,0.8))
-```
-
-::::
-
-:::
-
-\footnotetext{Also common: AR-1 (temporal processes), Mat\'{e}rn (spatial processes)}
-
-## Spatial random effects
-
-::: columns
-
-:::: column
-
-- Say that we collected data at 16 sites, and we're interested in the effect of _y_ on _x_
-- Let's first fit a model with a random intercept for site
-
-```{r, echo=TRUE,size='tiny'}
-#Same syntax as lmer models:
-lmm2 <- glmmTMB(y~x+(1|site),data=dat2)
-```
-
-::::
-
-:::: column
-
-- If we plot the intercepts for each site, we see that they are clustered:
-
-```{r,echo=FALSE,fig.height=3,fig.width=4,size='tiny'}
-dat2 %>% select(site,lat,lon) %>% distinct() %>% arrange(site) %>% mutate(int=lmm2$sdr$par.random) %>%
-  ggplot(aes(lon,lat,col=int))+geom_point(aes(size=abs(int)))+
-  labs(title='Random intercepts (1|Site)',x='Longitude',y='Latitude',col='Intercept')+
-  scale_colour_gradient2(low='blue',mid='purple',high='red')+
-  guides(size=FALSE)
-```
-
-::::
-
-:::
-
-
-## Spatial random effects (cont.)
-
-::: columns
-
-:::: column
-
-- Re-fit model with a spatial (exponential) random effect
-
-```{r, echo=TRUE,size='tiny'}
-#Coordinates
-dat2$coords <- numFactor(dat2$lon,dat2$lat) 
-
-#Group factor (only 1 here)
-dat2$group <- factor(rep(1,nrow(dat2))) 
-
-#Fit model with spatial random effect
-lmm3 <- glmmTMB(y~x+exp(coords+0|group),data=dat2)
-```
-
-::::
-
-:::: column
-
-- Clustering effect modeled as a spatial random effect
-
-```{r, echo=FALSE, fig.width=4,fig.height=3,size='tiny'}
-#Plot spatial random effect
-spRanEff <- expand.grid(lon=-10:10,lat=-10:10) %>% 
-  mutate(coords=numFactor(lon,lat),group=factor(rep(1,nrow(.))),x=0) %>% 
-  mutate(pred=predict(object=lmm3,newdata=.,type='response',allow.new.levels = TRUE))
-
-ggplot(spRanEff,aes(lon,lat,fill=pred))+geom_raster()+
-  geom_point(data=dat2,aes(lon,lat,fill=NULL),col='red')+
-  labs(x='Longitude',y='Latitude',title='Spatial random effect',fill='Intercept')
-
-```
-
-
-::::
-
-:::
-
-
-## A challenger approaches
-
-- Ho ho ho! Merry Christmas! In order to maximize the number of presents that you get from Santa Claus, you've decided to apply an analytic approach, and have collected data across Alberta on _number of Christmas presents received_
-- You've also collected data on things that might influence Saint Nick's generosity (_naughtiness_, _presence of milk and cookies_, _chimney width_)
-- Fit a GLMM to the present data, one using spatial random intercepts, and one using "regular" random intercepts
-- Which type of snack should you leave out for Santa? Which area might you consider moving to??

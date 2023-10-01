@@ -1373,69 +1373,6 @@ data.frame(p=rpois(n,0.8)) %>%
 
 :::
 
-
-## Model selection
-
-How many terms should be in my model?
-
-- Same principle as in regular linear models: __what do you think the process is?__
-  - Just because a term is "not significant" doesn't mean it should be dropped out!
-  - Just because a term is "significant" doesn't mean it should be left in!
-  - Avoid selecting models based on $R^2$ or AIC alone. Avoid stargazing\footnotemark (hunting around for "better" p-values or AIC scores)
-- To test whether terms are important in predicting your data (similar to), use _likelihood-ratio tests_
-  - `drop1(model,test='Chisq')`
-  - AIC tests usually say the same thing as LR tests
-
-\footnotetext{"My God, it's full of stars!" -2001, A Space Odyssey}
-
-<!-- ## _log_ likelihood -->
-
-<!-- ::: columns -->
-
-<!-- :::: column -->
-
-<!-- - Probabilities multiplied together quickly become _very small_ -->
-<!-- - Computers can't distinguish between extremely big or small numbers -->
-<!-- - Therefore, it uses _log-likelihoods_ (also easier to calculate) -->
-
-<!-- :::: -->
-
-<!-- :::: column -->
-
-<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2} -->
-<!-- #Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1) -->
-<!-- llfun2 <- function(lphi){ -->
-<!--   phi <- invLogit(lphi) -->
-<!--   ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi) -->
-<!--   return(ll) -->
-<!-- }  -->
-
-<!-- ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
-
-<!-- ``` -->
-
-<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2} -->
-
-<!-- ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
-
-<!-- ``` -->
-
-<!-- :::: -->
-
-<!-- ::: -->
-
-<!-- ## ML vs REML -->
-
-<!-- - Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased) -->
-<!-- - Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but... -->
-<!-- - This means that models with different numbers of terms don't have the same REML estimates -->
-<!-- - Likelihood between these models technically can't be compared! -->
-
-<!-- Solution: -->
-
-<!--   1. Use ML if comparing between models with different fixed effects, then... -->
-<!--   2. Re-fit with REML once you've decided on a model -->
-
 ## Other useful things about GLMs!
 
 - Binomial GLMs with >1 trial
@@ -1514,11 +1451,11 @@ plot(allEffects(m4,residuals=TRUE))
 
 ## Third challenge
 
-- Dr. _Paulo Malpern_ (Paul Galpern's evil nemesis) sent 2 people out to check out some bee habitats in Edmonton and Calgary. Counted bees at each site, but the other one was really lazy, and just recorded "bees or no bees" (1 or 0).
+- Dr. _Paulo Malpern_ (Paul Galpern's evil nemesis) sent 2 people out to check out some bee habitats in Edmonton and Calgary. One of them dutifully counted bees at each site, but the other one was really lazy, and just recorded "bees or no bees" (1 or 0).
 - Fit a model to each of the datasets (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/blob/fall2023/04%20GLMs) in `beeDatGLM.csv`) using a GLM
-  - Terms to include: `city` and `size` (no interaction)
+  - Terms to include: `city` and `floral` (no interaction)
 - How do the models look? Compare the coefficients and see if they are different
-  - Bonus: make partial regression plots of the terms each GLM
+  - Bonus: make partial regression plots of the terms in each GLM
 
 
 ## Model results
