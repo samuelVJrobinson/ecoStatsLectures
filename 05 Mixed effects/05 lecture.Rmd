@@ -1,6 +1,6 @@
 ---
 title: "Mixed effects models"
-subtitle: "Wheels within wheels"
+subtitle: '"Wheels within wheels"'
 author: "Samuel Robinson, Ph.D."
 date: "Oct 6, 2023"
 output: 
@@ -113,18 +113,21 @@ dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 
 ```
 
-# Part 1: Mixed effects models
+## Outline
 
-## Motivation
-
-- What are mixed effects models?
-  - Scary math (matrix algebra)
-  - Variance partitioning
-  - Fixed effects vs. Random effects
-- Working with random effects
+- Linear mixed effects models (LMMs)
+  - A bit of math
   - Fixed vs. random effects
-  - Model validation
-- Exercise
+  - Random intercepts and slopes
+- Generalized linear mixed effects models (GLMMs)
+  - Residuals checks
+  - Some sage advice
+- Hypothesis testing and inference
+  - Slopes and intercepts
+  - Entire terms
+  - AIC, $R^2$, and "Star-Gazing"
+
+# Part 1: Mixed effects models
 
 ## What are mixed effects models?
 
@@ -532,7 +535,7 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
   
 \footnotetext{e.g. me}
 
-## A challenger approaches!
+## First challeng
 
 - You're interested in how forest cover influences the mass of three bat species. Maybe some of the species do better in forests?
 - You've weighed a bunch of bats across different forest covers (`batMass.csv`). However, these were collected across 15 separate sites. Perhaps some of the variation is just caused by the site?
@@ -548,74 +551,6 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
 ![](predPlot.png)
 
 # Part 2: GLMMs
-
-## Motivation
-
-- How do I check if model results are valid?
-  - Residual checks
-  - Hypothesis testing
-
-## Mixed effect model example
-
-Let's go back to our earlier example:
-
-`lmer(y ~ x + (x|site), data = dat)`
-
-- We're interested in predicting _y_ using _x_ (fixed effects)
-- Data was collected at a number of _sites_, which may affect _y_ 
-- Effect of each site is normally distributed (random intercept)
-- Effect of site on slope of _x_ is normally distributed (random slope)
-
-```{r, fig.height=2.5, fig.width=6}
-lmm1 <- lmer(y ~ x + (x|site),data=dat) 
-dat %>% mutate(pred=predict(lmm1),gpred=predict(lmm1,re.form=~0)) %>% 
-  ggplot(aes(x=x,y=y,col=site))+
-  geom_point()+
-  geom_line(aes(y=gpred),col='black',size=2) +
-  geom_line(aes(y=pred))+guides(col=guide_legend(ncol=2))
-```
-
-## Validation
-
-- Similar to linear models, but we _also_ check whether the random intercepts are normally distributed
-<!-- - If one site intercept is very different from the others, this is a clue for investigation! -->
-
-```{r}
-par(mfrow=c(2,3))
-plot(fitted(lmm1),resid(lmm1,type='working'),xlab='Fitted values',ylab='Working residuals'); abline(h=0)
-qqnorm(resid(lmm1,type='working'),main='Residuals');qqline(resid(lmm1,type='working'))
-qqnorm(ranef(lmm1)$site[,1],main='Random Intercepts');qqline(ranef(lmm1)$site[,1])
-qqnorm(ranef(lmm1)$site[,2],main='Random Slopes');qqline(ranef(lmm1)$site[,2])
-plot(ranef(lmm1)$site,xlab='Random Intercept',ylab='Random Slope',main='Intercept-Slope Correlation')
-# par(mfrow=c(1,1))
-```
-
-## Hypothesis testing
-
-Is this fixed effect important? (e.g. ANOVA)
-
-- Use likelihood-based test via `drop1` (likelihood ratio test, AIC)
-- Be careful to fit model with `REML = FALSE`!
-
-```{r, echo=TRUE, text='tiny'}
-lmm1 <- update(lmm1,REML=FALSE) #Refit model using ML rather than REML
-drop1(lmm1,test='Chisq') #x has a strong effect
-```
-
-## Hypothesis testing (cont.)
-
-How do I know this effect is different from _x_?
-
-- Use Wald Z-test (2-sided p-value from Z-test)
-
-```{r, echo=TRUE}
-lmm1 <- update(lmm1,REML=TRUE) #Reset to REML
-meanEst <- fixef(lmm1)[2] #Get mean
-seEst <- sqrt(vcov(lmm1)[2,2]) #Get standard error
-(1-pnorm(meanEst/seEst,0,1))*2 #p-value from 2-sided Z-test
-```
-
-- `glht` from `library(multcomp)` works with `lmer` models if you are comparing between coefficients (e.g. "Is treatment A different from B and C?")
 
 ## What if my response variable is non-normal?
 
@@ -699,7 +634,7 @@ summary(glmm1) #glmer.nb takes a long time to run
 - `glmmTMB` from `library(glmmTMB)` works for those above, _plus_ a bunch of others
   - e.g. Zero-inflation, Beta-binomial, Spatial Models
 
-```{r glmmTMBexample, echo=TRUE, eval=FALSE}
+```{r glmmTMBexample, echo=TRUE, eval=TRUE}
 library(glmmTMB) 
 glmm2 <- glmmTMB(y~x+(x|site),data=dat2,family=nbinom2())
 summary(glmm2) #Similar results, but quicker
@@ -736,7 +671,47 @@ glmm2_eff <- ggpredict(glmm2,terms='x')
 plot(glmm2_eff)
 ```
 
-# Part 2: Model selection and inference
+# Part 3: Hypothesis testing and inference
+
+# I fit a model... now what?
+
+- Congratulations, your model ran and it met the assumptions of regression... 
+- Time to see if your predictions are supported by your data!
+- For each of the terms in your model:
+  - Was the term "important" in your model?
+  - If so, what direction was the effect in?
+- How well did your model fit your data (overall)?
+- Some other bits of advice
+
+## Step 1: was the term "important"?
+
+In linear models, this is done using an ANOVA F-test (also shown at the bottom of a `summary()` statement):
+
+```{r anovaLM}
+lmMod1 <- lm(mpg~disp+gear,data=mtcars)
+anova(lmMod1)
+```
+## But wait, there's more!
+
+Unfortunately, if we have more than 1 term in the model, the order of terms can change your answer:
+
+```{r}
+#lmMod1 <- lm(mpg~disp+gear,data=mtcars)
+lmMod2 <- lm(mpg~gear+disp,data=mtcars)
+anova(lmMod1); anova(lmMod2)
+```
+## Solution: use a Type II ANOVA
+
+- We're usually interested in the strength of a term on its own, _not after other terms are accounted for_ (Type I ANOVA)
+- For this, we use a Type II ANOVA. This can be done using `drop1()` (or `Anova()` in the `car` package)
+-
+```{r }
+drop1(lmMod1,test='F') 
+```
+- 
+```{r}
+drop1(lmMod2,test='F')
+```
 
 ## Model selection
 
@@ -752,279 +727,51 @@ How many terms should be in my model?
 
 \footnotetext{"My God, it's full of stars!" -2001, A Space Odyssey}
 
-<!-- ## _log_ likelihood -->
+## _log_ likelihood
 
-<!-- ::: columns -->
+::: columns
 
-<!-- :::: column -->
+:::: column
 
-<!-- - Probabilities multiplied together quickly become _very small_ -->
-<!-- - Computers can't distinguish between extremely big or small numbers -->
-<!-- - Therefore, it uses _log-likelihoods_ (also easier to calculate) -->
+- Probabilities multiplied together quickly become _very small_
+- Computers can't distinguish between extremely big or small numbers
+- Therefore, it uses _log-likelihoods_ (also easier to calculate)
 
-<!-- :::: -->
+::::
 
-<!-- :::: column -->
+:::: column
 
-<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2} -->
-<!-- #Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1) -->
-<!-- llfun2 <- function(lphi){ -->
-<!--   phi <- invLogit(lphi) -->
-<!--   ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi) -->
-<!--   return(ll) -->
-<!-- }  -->
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2}
+#Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1)
+llfun2 <- function(lphi){
+  phi <- invLogit(lphi)
+  ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi)
+  return(ll)
+}
 
-<!-- ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
+ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
 
-<!-- ``` -->
+```
 
-<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2} -->
+```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2}
 
-<!-- ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
+ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
 
-<!-- ``` -->
+```
 
-<!-- :::: -->
+::::
 
-<!-- ::: -->
+:::
 
-<!-- ## ML vs REML -->
+## ML vs REML
 
-<!-- - Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased) -->
-<!-- - Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but... -->
-<!-- - This means that models with different numbers of terms don't have the same REML estimates -->
-<!-- - Likelihood between these models technically can't be compared! -->
+- Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased)
+- Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but...
+- This means that models with different numbers of terms don't have the same REML estimates
+- Likelihood between these models technically can't be compared!
 
-<!-- Solution: -->
+Solution:
 
-<!--   1. Use ML if comparing between models with different fixed effects, then... -->
-<!--   2. Re-fit with REML once you've decided on a model -->
-
-<!-- # Part 3: ST RE (move to other lecture) -->
-
-<!-- ## Spatial and Temporal Random Effects -->
-
-<!-- "_My data were sampled over time or over a geographic area (or both). Can I just use day or site as a random effect?_" -->
-
-<!-- - Short answer: "Yes" -->
-<!-- - Long answer: You might be able to do better, because of the __1st Law of Geography__: -->
-
-<!-- _"...everything is related to everything else, but near things are more related than distant things."_ Waldo Tobler -->
-
-<!-- - If you have spatial or temporal information, this can help R to estimate random effects more accurately -->
-<!--   - Can improve prediction accuracy (smaller p-values) -->
-<!--   - Can give you hints about the underlying causal mechanisms -->
-
-<!-- ## Temporal or Spatial Data -->
-
-<!-- - Correlation is often present in temporal data or spatial data; causes may be unknown or "uninteresting"  -->
-<!-- - Usually we are interested in accounting for these patterns, in order to better estimate the "interesting" patterns on top of them -->
-
-<!-- ::: columns -->
-
-<!-- :::: column -->
-
-<!-- ```{r, fig.height=4, fig.width=4} -->
-<!-- # data.frame(year=as.numeric(time(lynx)),lynxNum=as.numeric(lynx)) %>%  -->
-<!-- #   ggplot(aes(x=year,y=lynxNum))+geom_line()+ -->
-<!-- #   labs(x='Year',y='Lynx Numbers') -->
-<!-- plot(sunspots,ylab='Sunspots per year') -->
-<!-- ``` -->
-
-<!-- :::: -->
-
-<!-- :::: column -->
-
-<!-- ```{r, fig.height=4, fig.width=4} -->
-<!-- # ggplot(seals,aes(x=long,y=lat,fill=delta_long))+ -->
-<!-- #   geom_raster()+ -->
-<!-- #   scale_fill_continuous(type='viridis')+ -->
-<!-- #   labs(x='Longitude',y='Latitude')+ -->
-<!-- #   theme(legend.position = c(0.2,0.7)) -->
-<!-- image(volcano) -->
-<!-- ``` -->
-
-<!-- :::: -->
-
-<!-- :::   -->
-
-<!-- ## Covariance -->
-
-<!-- - Normal distributions\footnotemark don't just have a single $\sigma$, but a matrix of values  -->
-<!-- - If our data _y_ are _independent_, then it looks like this: -->
-
-<!-- \begin{equation*} -->
-<!-- y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})  -->
-<!-- \end{equation*} -->
-
-<!-- \begin{equation*} -->
-<!-- \textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3]  -->
-<!-- \end{equation*} -->
-
-<!-- \begin{equation*} -->
-<!-- \textcolor{red}{\Sigma} = \begin{bmatrix} -->
-<!-- \textcolor{red}{\sigma}^2 & 0 & 0 \\ -->
-<!-- 0 & \textcolor{red}{\sigma}^2 & 0 \\ -->
-<!-- 0 & 0 & \textcolor{red}{\sigma}^2 -->
-<!-- \end{bmatrix} -->
-<!-- \end{equation*} -->
-
-<!-- - Zeros mean "$\mu_1$, $\mu_2$, \& $\mu_3$ aren't related to each other" -->
-<!-- - Diagonal elements = _variance_, off-diagonal = _covariance_ -->
-
-<!-- \footnotetext{Multivariate Normal} -->
-
-<!-- ## Covariance and Correlation -->
-
-<!-- In real life, things may not be independent from each other. For example: -->
-
-<!-- - $\textcolor{red}{\sigma}$ = 2 (variance = $\textcolor{red}{\sigma}^2$ = 4) -->
-<!-- - $\mu_1$ and $\mu_2$ are strongly correlated (r=0.7), but $\mu_3$ is not related to anything (r=0). Shown here as a _correlation matrix_ ($\textcolor{red}{R}$): -->
-
-<!-- \begin{equation*} -->
-<!-- \textcolor{red}{R} = \begin{bmatrix} -->
-<!-- 1 & 0.7 & 0 \\ -->
-<!-- 0.7 & 1 & 0 \\ -->
-<!-- 0 & 0 & 1 -->
-<!-- \end{bmatrix} -->
-<!-- \end{equation*} -->
-
-<!-- - When multiplied by the variance, this becomes the _covariance matrix_ ($\textcolor{red}{\Sigma}$)  -->
-
-<!-- \begin{equation*} -->
-<!-- \textcolor{red}{\Sigma} = \begin{bmatrix} -->
-<!-- \textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times0 \\ -->
-<!-- \textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0 \\ -->
-<!-- \textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times1 -->
-<!-- \end{bmatrix} = \begin{bmatrix} -->
-<!-- 4 & 2.8 & 0 \\ -->
-<!-- 2.8 & 4 & 0 \\ -->
-<!-- 0 & 0 & 4 -->
-<!-- \end{bmatrix} -->
-<!-- \end{equation*} -->
-
-
-
-
-<!-- ## Gaussian Process Modelling -->
-
-<!-- ::: columns -->
-
-<!-- :::: column -->
-
-<!-- - We can model covariance between things as a function of _distance_, either in time or space -->
-<!-- - Squared-exponential is fairly common\footnotemark: -->
-
-<!-- \begin{equation*} -->
-<!-- \begin{split} -->
-<!-- \textcolor{red}{\Sigma} = & covariance \\ -->
-<!-- \textcolor{red}{\Sigma} = & variance \times correlation \\  -->
-<!-- \textcolor{red}{\Sigma} = & \textcolor{red}{\sigma}^2 \times e^{-\textcolor{green}{\rho}^2 Dist^2}\\ -->
-<!-- \end{split} -->
-<!-- \end{equation*} -->
-
-<!-- - Instead of finding a single $\textcolor{red}{\sigma}$ value, R now looks for $\textcolor{red}{\sigma}$ (maximum covariance) and $\textcolor{green}{\rho}$ (decay with distance) -->
-
-<!-- :::: -->
-
-<!-- :::: column -->
-
-<!-- ```{r, fig.height=5,fig.width=4} -->
-<!-- expand.grid(dist=seq(0,5,0.1),rho=c(0.5,1,2),sigma=c(1,2)) %>%  -->
-<!--   mutate(cVal=(sigma^2)*exp((-rho^2)*(dist^2))) %>%  -->
-<!--   mutate(category=paste0('sigma=',sigma,', rho=',rho)) %>%  -->
-<!--   mutate(rho=factor(rho)) %>%  -->
-<!--   ggplot(aes(x=dist,y=cVal,group=category,col=rho))+geom_line(size=1)+ -->
-<!--   labs(x='Distance (km)',y='Covariance')+scale_colour_manual(values=c('red','purple','blue'))+ -->
-<!--   theme(legend.position = c(0.8,0.8)) -->
-<!-- ``` -->
-
-<!-- :::: -->
-
-<!-- ::: -->
-
-<!-- \footnotetext{Also common: AR-1 (temporal processes), Mat\'{e}rn (spatial processes)} -->
-
-<!-- ## Spatial random effects -->
-
-<!-- ::: columns -->
-
-<!-- :::: column -->
-
-<!-- - Say that we collected data at 16 sites, and we're interested in the effect of _y_ on _x_ -->
-<!-- - Let's first fit a model with a random intercept for site -->
-
-<!-- ```{r, echo=TRUE,size='tiny'} -->
-<!-- #Same syntax as lmer models: -->
-<!-- lmm2 <- glmmTMB(y~x+(1|site),data=dat2) -->
-<!-- ``` -->
-
-<!-- :::: -->
-
-<!-- :::: column -->
-
-<!-- - If we plot the intercepts for each site, we see that they are clustered: -->
-
-<!-- ```{r,echo=FALSE,fig.height=3,fig.width=4,size='tiny'} -->
-<!-- dat2 %>% select(site,lat,lon) %>% distinct() %>% arrange(site) %>% mutate(int=lmm2$sdr$par.random) %>% -->
-<!--   ggplot(aes(lon,lat,col=int))+geom_point(aes(size=abs(int)))+ -->
-<!--   labs(title='Random intercepts (1|Site)',x='Longitude',y='Latitude',col='Intercept')+ -->
-<!--   scale_colour_gradient2(low='blue',mid='purple',high='red')+ -->
-<!--   guides(size=FALSE) -->
-<!-- ``` -->
-
-<!-- :::: -->
-
-<!-- ::: -->
-
-
-<!-- ## Spatial random effects (cont.) -->
-
-<!-- ::: columns -->
-
-<!-- :::: column -->
-
-<!-- - Re-fit model with a spatial (exponential) random effect -->
-
-<!-- ```{r, echo=TRUE,size='tiny'} -->
-<!-- #Coordinates -->
-<!-- dat2$coords <- numFactor(dat2$lon,dat2$lat)  -->
-
-<!-- #Group factor (only 1 here) -->
-<!-- dat2$group <- factor(rep(1,nrow(dat2)))  -->
-
-<!-- #Fit model with spatial random effect -->
-<!-- lmm3 <- glmmTMB(y~x+exp(coords+0|group),data=dat2) -->
-<!-- ``` -->
-
-<!-- :::: -->
-
-<!-- :::: column -->
-
-<!-- - Clustering effect modeled as a spatial random effect -->
-
-<!-- ```{r, echo=FALSE, fig.width=4,fig.height=3,size='tiny'} -->
-<!-- #Plot spatial random effect -->
-<!-- spRanEff <- expand.grid(lon=-10:10,lat=-10:10) %>%  -->
-<!--   mutate(coords=numFactor(lon,lat),group=factor(rep(1,nrow(.))),x=0) %>%  -->
-<!--   mutate(pred=predict(object=lmm3,newdata=.,type='response',allow.new.levels = TRUE)) -->
-
-<!-- ggplot(spRanEff,aes(lon,lat,fill=pred))+geom_raster()+ -->
-<!--   geom_point(data=dat2,aes(lon,lat,fill=NULL),col='red')+ -->
-<!--   labs(x='Longitude',y='Latitude',title='Spatial random effect',fill='Intercept') -->
-
-<!-- ``` -->
-
-
-<!-- :::: -->
-
-<!-- ::: -->
-
-
-<!-- ## A challenger approaches -->
-
-<!-- - Ho ho ho! Merry Christmas! In order to maximize the number of presents that you get from Santa Claus, you've decided to apply an analytic approach, and have collected data across Alberta on _number of Christmas presents received_ -->
-<!-- - You've also collected data on things that might influence Saint Nick's generosity (_naughtiness_, _presence of milk and cookies_, _chimney width_) -->
-<!-- - Fit a GLMM to the present data, one using spatial random intercepts, and one using "regular" random intercepts -->
-<!-- - Which type of snack should you leave out for Santa? Which area might you consider moving to?? -->
+  1. Use ML if comparing between models with different fixed effects, then...
+  2. Re-fit with REML once you've decided on a model
 
