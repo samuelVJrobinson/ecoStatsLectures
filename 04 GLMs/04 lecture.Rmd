@@ -821,6 +821,43 @@ ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('log
 :::
 
 
+<!-- ## _log_ likelihood -->
+
+<!-- ::: columns -->
+
+<!-- :::: column -->
+
+<!-- - Probabilities multiplied together quickly become _very small_ -->
+<!-- - Computers can't distinguish between extremely big or small numbers -->
+<!-- - Therefore, it uses _log-likelihoods_ (also easier to calculate) -->
+
+<!-- :::: -->
+
+<!-- :::: column -->
+
+<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2} -->
+<!-- #Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1) -->
+<!-- llfun2 <- function(lphi){ -->
+<!--   phi <- invLogit(lphi) -->
+<!--   ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi) -->
+<!--   return(ll) -->
+<!-- } -->
+
+<!-- ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
+
+<!-- ``` -->
+
+<!-- ```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2} -->
+
+<!-- ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed') -->
+
+<!-- ``` -->
+
+<!-- :::: -->
+
+<!-- ::: -->
+
+
 ## How do linear models fit into this?
 
 ::: columns

@@ -5,9 +5,11 @@ author: "Samuel Robinson, Ph.D."
 date: "Oct 6, 2023"
 output: 
   beamer_presentation:
+    incremental: true
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
+    fig_caption: false
 urlcolor: blue
 df_print: kable
 classoption: aspectratio=169   
@@ -113,7 +115,13 @@ dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 
 ```
 
+# Part 1: Mixed effects models
+
 ## Outline
+
+::: columns
+
+:::: column
 
 - Linear mixed effects models (LMMs)
   - A bit of math
@@ -125,9 +133,17 @@ dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 - Hypothesis testing and inference
   - Slopes and intercepts
   - Entire terms
-  - AIC, $R^2$, and "Star-Gazing"
+  - AIC, $R^2$, and Star-Gazing
 
-# Part 1: Mixed effects models
+::::
+
+:::: column
+
+![](epicycles.jpg)
+
+::::
+
+:::
 
 ## What are mixed effects models?
 
@@ -138,11 +154,10 @@ Many different names:
 3. Hierarchical models
 4. Empirical/Bayesian hierarchical models
 5. Latent variable models
-6. Split-plot models\footnotemark
+6. Split-plot models
+7. Variance partitioning
 
-I like the term _heirarchical models_, as this is the closest to what I will teach you
-
-\footnotetext{Earlier form of variance partitioning}
+I usually use the term _heirarchical models_, as this is the closest to what I will teach you
 
 ## Scary math
 
@@ -317,7 +332,7 @@ Let's go back to our earlier example:
 - Data was collected at a number of _sites_, which may affect _y_ "somehow"
 - Effect of each site is normally distributed
 
-```{r echo=TRUE, message=FALSE, warning=FALSE, size='tiny'}
+```{r lmerExample, echo=TRUE, message=FALSE, warning=FALSE, size='tiny'}
 head(dat)
 library(lme4) #Mixed effects library 
 mm1 <- lmer(y ~ x + (1|site),data=dat) #site is fit as "random intercepts"
@@ -366,7 +381,7 @@ Results from `lmer` model:
 
 :::: column
 
-```{r, fig.height=4, fig.width=4, warning=FALSE, message=FALSE}
+```{r lmerPlot, fig.height=4, fig.width=4, warning=FALSE, message=FALSE}
 p1 <- dat %>% mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>% 
   ggplot(aes(x=x,y=y,col=site))+
   geom_point(show.legend = FALSE)+
@@ -420,7 +435,7 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 
 :::: column
 
-```{r, echo=TRUE, size='tiny'}
+```{r lmerExample2, echo=TRUE, size='tiny'}
 #Intercept varies with site, and slope of x can
 #   also vary with site (both hierarchical)
 mm2 <- lmer(y ~ x + (x|site),data=dat) 
@@ -470,7 +485,7 @@ head(model.matrix(~site-1,data=dat) * dat$x)
 - Slope of regression line can be more or less steep for each site (random slopes)
 - Changes in intercepts and slopes are _normally distributed_, and in this example, are correlated with each other 
 
-```{r, fig.height=3, fig.width=6}
+```{r lmerPlot2, fig.height=3, fig.width=6}
 dat %>% mutate(pred=predict(mm2),gpred=predict(mm2,re.form=~0)) %>% 
   ggplot(aes(x=x,y=y,col=site))+
   geom_point()+
@@ -535,7 +550,7 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
   
 \footnotetext{e.g. me}
 
-## First challeng
+## First challenge
 
 - You're interested in how forest cover influences the mass of three bat species. Maybe some of the species do better in forests?
 - You've weighed a bunch of bats across different forest covers (`batMass.csv`). However, these were collected across 15 separate sites. Perhaps some of the variation is just caused by the site?
@@ -560,20 +575,20 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
 
 - Linear model (LM)
 
-\begin{equation*} 
+\begin{equation*}
 \begin{split}
 \textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
 y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
 
-:::: 
+::::
 
 :::: column
 
 - Generalized linear model (GLM)
 
-\begin{equation*} 
+\begin{equation*}
 \begin{split}
 logit(\textcolor{orange}{\hat{\phi}}) & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} \\
 y & \sim Binomial(\textcolor{orange}{\hat{\phi}})
@@ -600,7 +615,7 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 \end{split}
 \end{equation*}
 
-:::: 
+::::
 
 :::: column
 
@@ -626,8 +641,8 @@ y & \sim Binomial(\textcolor{orange}{\hat{\phi}}) \\
 - `glmer` and `glmer.nb` from `library(lme4)` work for Binomial, Poisson, and Negative Binomial data
 
 ```{r glmerNBexample, echo=TRUE, eval=FALSE}
-library(lme4) 
-glmm1 <- glmer.nb(y~x+(x|site),data=dat2) #Negative binomial GLMM 
+library(lme4)
+glmm1 <- glmer.nb(y~x+(x|site),data=dat2) #Negative binomial GLMM
 summary(glmm1) #glmer.nb takes a long time to run
 ```
 
@@ -635,7 +650,7 @@ summary(glmm1) #glmer.nb takes a long time to run
   - e.g. Zero-inflation, Beta-binomial, Spatial Models
 
 ```{r glmmTMBexample, echo=TRUE, eval=TRUE}
-library(glmmTMB) 
+library(glmmTMB)
 glmm2 <- glmmTMB(y~x+(x|site),data=dat2,family=nbinom2())
 summary(glmm2) #Similar results, but quicker
 ```
@@ -654,7 +669,7 @@ summary(glmm2) #Similar results, but quicker
 
 - Extract residuals and make your own plots, or use `simulateResiduals` from `library(DHARMa)` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf))
 - `DHARMa` also has useful functions for checking overdispersion and zero-inflation (found [here](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html))
-  
+
 ```{r, message=FALSE, warning=FALSE, fig.height=3, fig.width=5, size='tiny'}
 library(DHARMa)
 glmm2_res <- simulateResiduals(glmm2)
@@ -673,9 +688,9 @@ plot(glmm2_eff)
 
 # Part 3: Hypothesis testing and inference
 
-# I fit a model... now what?
+## I fit a model... now what?
 
-- Congratulations, your model ran and it met the assumptions of regression... 
+- Congratulations, your model ran and it met the assumptions of regression...
 - Time to see if your predictions are supported by your data!
 - For each of the terms in your model:
   - Was the term "important" in your model?
@@ -691,6 +706,7 @@ In linear models, this is done using an ANOVA F-test (also shown at the bottom o
 lmMod1 <- lm(mpg~disp+gear,data=mtcars)
 anova(lmMod1)
 ```
+
 ## But wait, there's more!
 
 Unfortunately, if we have more than 1 term in the model, the order of terms can change your answer:
@@ -698,20 +714,64 @@ Unfortunately, if we have more than 1 term in the model, the order of terms can 
 ```{r}
 #lmMod1 <- lm(mpg~disp+gear,data=mtcars)
 lmMod2 <- lm(mpg~gear+disp,data=mtcars)
-anova(lmMod1); anova(lmMod2)
 ```
+
+-
+  ```{r }
+  anova(lmMod1)
+  ```
+
+-
+  ```{r}
+  anova(lmMod2)
+  ```
+
 ## Solution: use a Type II ANOVA
 
-- We're usually interested in the strength of a term on its own, _not after other terms are accounted for_ (Type I ANOVA)
+- We're usually interested in the importance of a term on its own, _not just after other terms are accounted for_ (Type I ANOVA).
+
 - For this, we use a Type II ANOVA. This can be done using `drop1()` (or `Anova()` in the `car` package)
+
 -
-```{r }
-drop1(lmMod1,test='F') 
-```
-- 
-```{r}
-drop1(lmMod2,test='F')
-```
+  ```{r}
+  drop1(lmMod1,test='F')
+  ```
+
+-
+  ```{r}
+  drop1(lmMod2,test='F') #Same as above
+  ```
+
+## Interactions make ANOVA testing a bit strange
+
+- If interactions are present, it doesn't really make sense to test the main terms __because they depend on the interactions__
+- For example:
+  ```{r}
+  lmMod3 <- lm(mpg ~ gear*disp,data=mtcars)
+  drop1(lmMod3,test='F')
+  ```
+- `Anova` from the `car` package tests other terms _after_ interactions, but the meaning isn't the same. I prefer to keep things simple and just use `drop1()`
+  ```{r}
+  car::Anova(lmMod3,type='II')
+  ```
+
+## GLMs, LMMs, and GLMMs
+
+- `drop1` also works with GLMs, LMMs, and GLMMs, but we use a $\chi^2$ _likelihood ratio test_ rather than an F-test
+
+- Unfortunately, different numbers of data points change your likelihood, so this can wreck LRTs. _This happens a lot if you have NAs in your predictor columns_, so clean up your data before using it in models.
+
+## ML vs REML
+
+- Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased)
+- Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but...
+- This means that models with different numbers of terms don't have the same REML estimates
+- Likelihood between these models technically can't be compared!
+
+Solution:
+
+  1. Use ML if comparing between models with different fixed effects, then...
+  2. Re-fit with REML once you've decided on a model
 
 ## Model selection
 
@@ -726,52 +786,3 @@ How many terms should be in my model?
   - AIC tests usually say the same thing as LR tests
 
 \footnotetext{"My God, it's full of stars!" -2001, A Space Odyssey}
-
-## _log_ likelihood
-
-::: columns
-
-:::: column
-
-- Probabilities multiplied together quickly become _very small_
-- Computers can't distinguish between extremely big or small numbers
-- Therefore, it uses _log-likelihoods_ (also easier to calculate)
-
-::::
-
-:::: column
-
-```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height = 2}
-#Uses logit-phi (-Inf to +Inf) rather than phi (0 to 1)
-llfun2 <- function(lphi){
-  phi <- invLogit(lphi)
-  ll <- dbinom(1,1,phi)*dbinom(1,1,phi)*dbinom(0,1,phi)
-  return(ll)
-}
-
-ggplot() + geom_function(fun=llfun2) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('Likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
-
-```
-
-```{r, echo=FALSE, eval = TRUE, fig.width= 3, fig.height =2}
-
-ggplot() + geom_function(fun=~log(llfun2(.))) + xlim(-5,8) + labs(x=expression(paste('logit(',phi,')')),y=expression(paste('log-likelihood(H,H,T|',phi,')'))) + geom_vline(xintercept=logit(2/3),linetype='dashed')
-
-```
-
-::::
-
-:::
-
-## ML vs REML
-
-- Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased)
-- Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but...
-- This means that models with different numbers of terms don't have the same REML estimates
-- Likelihood between these models technically can't be compared!
-
-Solution:
-
-  1. Use ML if comparing between models with different fixed effects, then...
-  2. Re-fit with REML once you've decided on a model
-
