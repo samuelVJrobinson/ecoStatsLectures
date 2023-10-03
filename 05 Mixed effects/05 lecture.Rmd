@@ -5,7 +5,7 @@ author: "Samuel Robinson, Ph.D."
 date: "Oct 6, 2023"
 output: 
   beamer_presentation:
-    incremental: true
+    incremental: false
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
@@ -115,8 +115,6 @@ dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 
 ```
 
-# Part 1: Mixed effects models
-
 ## Outline
 
 ::: columns
@@ -144,6 +142,17 @@ dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 ::::
 
 :::
+
+# Part 1: Mixed effects models
+
+## Problem: group-level variation
+
+- Sometimes we have to sample within groups: different field sites, individual organisms, etcetera
+- However, often we're not really interested in each group _per se_, but in the __average group__
+- e.g. "What is the effect of __x__ if you remove group-to-group variation?"
+- If you have a small number of groups, you can just include it in your model: `lm(y ~ x + group)`
+  - If you have few samples for each group, this can create problems
+- Another solution is to use __mixed effects models__
 
 ## What are mixed effects models?
 
@@ -385,7 +394,7 @@ Results from `lmer` model:
 p1 <- dat %>% mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>% 
   ggplot(aes(x=x,y=y,col=site))+
   geom_point(show.legend = FALSE)+
-  geom_line(aes(y=gpred),col='black',size=2)
+  geom_line(aes(y=gpred),col='black',linewidth=2)
 p1 + geom_line(aes(y=pred),show.legend = FALSE)+guides(col=guide_legend(ncol=2))
 ```
 
@@ -395,11 +404,10 @@ p1 + geom_line(aes(y=pred),show.legend = FALSE)+guides(col=guide_legend(ncol=2))
 
 ## Mixed effect model results (cont.)
 
-For plotting, we want a partial effects plot that marginalizes across sites (i.e. "What does the trend look like at the average site?")
-
+- For plotting, we want a partial effects plot that marginalizes across sites (i.e. "What does the trend look like at the average site?")
 - `ggpredict` works well for this. If you want partial residuals, you'll have to add them in yourself using `predict` and `residual`
 
-```{r, fig.height=2, fig.width=4,warning=FALSE}
+```{r, fig.height=2, fig.width=5.5,warning=FALSE}
 p2 <- ggpredict(mm1,terms='x') %>% data.frame() %>% #Gets predictions from mm1
   ggplot(aes(x=x))+ #Plots using ggplot
   geom_ribbon(aes(ymax=conf.high,ymin=conf.low),alpha=0.3) + #Intervals
@@ -408,6 +416,135 @@ ggarrange(p1+geom_line(aes(y=pred),show.legend = FALSE)+ylim(-15,20),
           p2+ylim(-15,20)+labs(y='y'),
           ncol=2,legend = 'none')
 ```
+
+## First challenge
+
+How does forest cover influence fish size? Maybe some of the species do better in forested streams?
+
+::: columns
+
+:::: column
+
+- You've weighed fish in streams with different forest covers (`fishMass.csv`). However, perhaps some of the variation is caused by "other things" about the site?
+- Fit a mixed effects model with the fixed effects you're interested in (__forest cover__, __species__), and include __site__ as a random _intercept_
+- How does this compare to a simple linear model where you _ignore_ site?
+
+:::: 
+
+:::: column
+
+```{r message=FALSE, warning=FALSE,fig.width=5,fig.height=5}
+fishDat <- read.csv('./fishMass.csv')
+
+ggplot(fishDat,aes(x=forest,y=mass,col=species))+
+  geom_point()+
+  geom_smooth(method='lm')+
+  scale_colour_brewer(type = 'qual')+
+  labs(x='Forest cover (%)',y='Mass')
+```
+
+::::
+
+:::
+
+## First challenge results
+
+::: columns
+
+:::: column
+
+```{r}
+m1 <- lm(mass~species*forest,data=fishDat) #Ignores site
+summary(m1)
+```
+
+::::
+
+:::: column
+
+```{r}
+m2 <- lmer(mass~species*forest+(1|sites),data=fishDat) #Site as a random intercept
+summary(m2)
+```
+
+::::
+
+:::
+
+## First challenge results (cont.)
+
+::: columns
+
+:::: column
+
+```{r echo=FALSE, warning=FALSE,warning=FALSE,message=FALSE,fig.width=4,fig.height=4}
+ggpredict(m1,terms=c('forest','species')) %>% data.frame() %>% 
+  ggplot(aes(x=x))+
+  geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=group),alpha=0.3)+
+  geom_line(aes(y=predicted,col=group))+
+  scale_colour_brewer(type = 'qual',aesthetics = c('colour','fill'))+
+  labs(x='Forest cover (%)', y='Mass',col='Species',fill='Species',
+       title='Fixed effects model: lm(mass~forest*species)')
+  
+```
+
+::::
+
+:::: column
+
+```{r echo=FALSE,warning=FALSE,message=FALSE,fig.width=4,fig.height=4}
+
+ggpredict(m2,terms=c('forest','species')) %>% data.frame() %>% 
+  ggplot(aes(x=x))+
+  geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=group),alpha=0.3)+
+  geom_line(aes(y=predicted,col=group))+
+  scale_colour_brewer(type = 'qual',aesthetics = c('colour','fill'))+
+  labs(x='Forest cover (%)', y='Mass',col='Species',fill='Species',
+       title='Mixed effects model: lmer(mass~forest*species+(1|sites))')
+
+```
+
+::::
+
+:::
+
+
+## More random effects: slopes!
+
+::: columns
+
+:::: column
+
+```{r echo=FALSE, fig.width=4, fig.height=4}
+dat %>% 
+  mutate(pred=predict(mm1),gpred=predict(mm1,re.form=~0)) %>% 
+  ggplot(aes(x=x,y=y,col=site))+
+  geom_point()+
+  geom_line(aes(y=pred))+
+  geom_line(aes(y=gpred),col='black',linewidth=2)+
+  theme(legend.position = 'none')
+```
+
+::::
+
+:::: column
+
+```{r echo=FALSE,fig.width=5, fig.height=5}
+mm2 <- lmer(y ~ x + (x|site),data=dat) 
+
+dat %>% mutate(pred=predict(mm2),gpred=predict(mm2,re.form=~0)) %>% 
+    ggplot(aes(x=x,y=y,col=site))+
+  geom_point()+
+  geom_line(aes(y=pred))+
+  geom_line(aes(y=gpred),col='black',linewidth=2)+
+  theme(legend.position = 'none')
+
+```
+
+::::
+
+:::
+
 
 ## Random slopes + intercepts
 
@@ -463,34 +600,50 @@ Results from `lmer` model:
 
 ## Model matrices
 
-- X
+$\textcolor{darkturquoise}{X}$: Fixed effects model matrix
+
 ```{r}
 head(model.matrix(mm2))
 ```
 
-- U
+
+::: columns
+
+:::: column
+
+$\textcolor{gray}{U}$: Random intercept model matrix 
+
 ```{r}
+options(width = 60)
 head(model.matrix(~site-1,data=dat))
 ```
-- Ux
-```{r}
-head(model.matrix(~site-1,data=dat) * dat$x)
-```
-- 
 
+::::
+
+:::: column
+
+$\textcolor{gray}{U\textcolor{darkturquoise}{_x}}$: Random slope model matrix
+
+```{r}
+options(width = 60)
+head(round(model.matrix(~site-1,data=dat) * dat$x,2))
+```
+::::
+
+:::
 
 ## Mixed effect model results
 
-- Regression line of _x_ on _y_ is allowed to move up or down around the main regression line for each site (random intercepts)
+- Regression line of _x_ on _y_ is allowed to move up or down for each site (random intercepts)
 - Slope of regression line can be more or less steep for each site (random slopes)
-- Changes in intercepts and slopes are _normally distributed_, and in this example, are correlated with each other 
+- Changes in intercepts and slopes are _normally distributed_, and in this example are _correlated_ with each other 
 
-```{r lmerPlot2, fig.height=3, fig.width=6}
+```{r lmerPlot2, fig.height=2.5, fig.width=6}
 dat %>% mutate(pred=predict(mm2),gpred=predict(mm2,re.form=~0)) %>% 
   ggplot(aes(x=x,y=y,col=site))+
   geom_point()+
-  geom_line(aes(y=gpred),col='black',size=2) +
-  geom_line(aes(y=pred))+guides(col=guide_legend(ncol=2))
+  geom_line(aes(y=gpred),col='black',linewidth=2) +
+  geom_line(aes(y=pred))+theme(legend.position = 'none')
 ```
 
 <!-- ## Mixed effect model validation -->
@@ -520,20 +673,6 @@ dat %>% mutate(pred=predict(mm2),gpred=predict(mm2,re.form=~0)) %>%
 <!-- drop1(mm1,test='Chisq') #x has a very strong effect! -->
 <!-- ``` -->
 
-<!-- ## Hypothesis testing (cont.) -->
-
-<!-- How do I know this effect is different from _x_? -->
-<!-- - Use Wald Z-test (2-sided p-value from Z-test) -->
-
-<!-- ```{r} -->
-<!-- mm1 <- update(mm1,REML=TRUE) #Reset to REML -->
-<!-- meanEst <- fixef(mm1)[2] #Get mean -->
-<!-- seEst <- sqrt(vcov(mm1)[2,2]) #Get standard error -->
-<!-- (1-pnorm(meanEst/seEst,0,1))*2 #p-value from 2-sided Z-test -->
-<!-- ``` -->
-
-<!-- - `glht` from `library(multcomp)` works with `lmer` models if you are comparing between coefficients (e.g. "Is treatment A different from B and C?") -->
-
 ## Why do we need to do any of this?
 
 _"My supervisor told me to just use site as a fixed effect. Why can't I do that?"_ 
@@ -550,20 +689,95 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
   
 \footnotetext{e.g. me}
 
-## First challenge
+## Second challenge
 
-- You're interested in how forest cover influences the mass of three bat species. Maybe some of the species do better in forests?
-- You've weighed a bunch of bats across different forest covers (`batMass.csv`). However, these were collected across 15 separate sites. Perhaps some of the variation is just caused by the site?
-- Fit a mixed effects model with the fixed effects you're interested in (__forest cover__, __species__), and include __site__ as a random effect (_intercept_ or _slope_)
+- Let's go back to the fish weight model...
+- Fit a mixed effects model with the fixed effects you're interested in (__forest cover__, __species__), and include __site__ as a random effect (_intercept_ __or__ _slope_)
 - Your supervisor doesn't like hierarchical models, and tells you to just use site as another fixed term in an `lm` model. Do you get different results if you use their approach?
 
-## Results:
+## Second challenge results
 
-![](coefPlot.png)
+```{r secondChallenge, warning=FALSE, fig.fullwidth=TRUE,fig.height=5}
 
-## Results:
+#Fit model
+m0 <- lm(mass~species*forest-1,data=fishDat) #Ignores sites (pseudoreplication)
+m1 <- lmer(mass~species*forest-1+(1|sites),data=fishDat) #Site as a random intercept
+m2 <- lmer(mass~species*forest-1+(forest|sites),data=fishDat) #Site as a random intercept + slope
+m3 <- lm(mass~species*forest+sites-1,data=fishDat) #"My supervisor told me to"
+m4 <- lm(mass~species*forest+forest*sites-1,data=fishDat) #"My supervisor told me to 2"
 
-![](predPlot.png)
+getCoefs <- function(mod,mult=1.96){ #Extract fixed effects coefficients + SEs
+  if(class(mod)=='lmerMod'){
+    est <- fixef(mod)
+  } else {
+    est <- coef(mod)
+  }
+  se <- sqrt(diag(vcov(mod)))
+  upr <- est+se*mult
+  lwr <- est-se*mult
+  d <- data.frame(est,se,upr,lwr)
+  return(d)
+}
+
+modList <- list(m0=m0,m1=m1,m2=m2,m3=m3,m4=m4)
+
+modLabels <- sapply(modList,function(x){ #Get labels from model formula
+  f <- as.character(formula(x))
+  f <- paste(f[2],f[1],f[3],collapse='')
+  f <- gsub(' - 1','',f)
+  f <- gsub('\\s','',f)
+})
+
+fixCoef <- c(35,20,50,0.01,0.05,-0.15) #Actual coefficients
+
+#Plot of coefficients
+lapply(modList,getCoefs) %>% do.call('rbind',.) %>% 
+  rownames_to_column('coef') %>% 
+  separate(coef,c('mod','coef'),sep='\\.') %>% 
+  filter(!grepl('sites',coef)) %>% 
+  bind_rows(.,data.frame(mod='actual',coef=names(coef(m0)),est=fixCoef,se=0,upr=NA,lwr=NA)) %>% 
+  mutate(mod=factor(mod,levels=rev(unique(mod)),labels=c('actual',rev(modLabels))),
+         coef=factor(coef,levels=names(coef(m0)))) %>% 
+  ggplot(aes(x=mod,y=est))+
+  geom_pointrange(aes(ymax=upr,ymin=lwr,col=ifelse(mod=='actual','a','b')),
+                  position=position_dodge(width=0.5),show.legend = FALSE)+
+  geom_hline(yintercept=0,linetype='dashed')+
+  facet_wrap(~coef,scales='free')+
+  labs(y='Estimate',x='Model')+
+  scale_colour_manual(values=c('black','red'))+
+  coord_flip()
+
+```
+
+
+## Second challenge results (cont.):
+
+```{r secondChallenge2, fig.fullwidth=TRUE,fig.height=5.5}
+
+#Get dataframe of predictions from models
+getPreds <- function(mod,t=c('forest','species')){ 
+  ggpredict(mod,terms=t) %>% data.frame(.)
+}
+
+#Model predictions
+modPreds <- do.call('rbind',lapply(modList,getPreds)) %>% 
+  rownames_to_column('mod') %>% 
+  separate(mod,c('mod','temp'),sep='\\.') %>% select(-temp) %>% 
+  mutate(mod=factor(mod,labels=modLabels))
+
+#Colours
+colValues <- c('red','purple','blue')
+
+actualMeans <- with(fishDat,data.frame(forest,species,pred=model.matrix(m0) %*% fixCoef))
+
+ggplot(modPreds,aes(x=x,y=predicted))+geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=group),alpha=0.3)+
+  geom_line(aes(col=group),linewidth=1)+
+  geom_line(data=actualMeans,aes(x=forest,y=pred,group=species),col='black',linewidth=1)+
+  facet_wrap(~mod)+
+  labs(y='mass',x='forest',col='Species',fill='Species')+
+  scale_fill_manual(values=colValues)+
+  scale_colour_manual(values=colValues)
+```
 
 # Part 2: GLMMs
 
@@ -638,7 +852,7 @@ y & \sim Binomial(\textcolor{orange}{\hat{\phi}}) \\
 
 ## How do I fit GLMMs?
 
-- `glmer` and `glmer.nb` from `library(lme4)` work for Binomial, Poisson, and Negative Binomial data
+- `glmer()` and `glmer.nb()` from `lme4` work for Binomial, Poisson, and Negative Binomial data
 
 ```{r glmerNBexample, echo=TRUE, eval=FALSE}
 library(lme4)
@@ -646,31 +860,42 @@ glmm1 <- glmer.nb(y~x+(x|site),data=dat2) #Negative binomial GLMM
 summary(glmm1) #glmer.nb takes a long time to run
 ```
 
-- `glmmTMB` from `library(glmmTMB)` works for those above, _plus_ a bunch of others
-  - e.g. Zero-inflation, Beta-binomial, Spatial Models
+- `glmmTMB()` from `glmmTMB` works for those above, _plus_ a bunch of others (Zero-inflation, Beta-binomial), and it's generally faster
 
-```{r glmmTMBexample, echo=TRUE, eval=TRUE}
+```{r glmmTMBexample, echo=TRUE, eval=FALSE}
 library(glmmTMB)
 glmm2 <- glmmTMB(y~x+(x|site),data=dat2,family=nbinom2())
 summary(glmm2) #Similar results, but quicker
 ```
 
-## Fitting GLMMs - `glmer.nb`
+## Fitting GLMMs
+
+::: columns
+
+:::: column
 
 ```{r glmerNBexample, echo=FALSE, eval=TRUE, size='tiny'}
 ```
 
-## Fitting GLMMs - `glmmTMB`
+::::
+
+:::: column
 
 ```{r glmmTMBexample, echo=FALSE, eval=TRUE, size='tiny'}
 ```
 
+::::
+
+:::
+
+
 ## Residual checks on `glmmTMB` models
 
-- Extract residuals and make your own plots, or use `simulateResiduals` from `library(DHARMa)` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf))
+- You can extract deviance residuals and make your own plots, but I usually use `simulateResiduals` from `DHARMa` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf))
 - `DHARMa` also has useful functions for checking overdispersion and zero-inflation (found [here](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html))
+- This works fairly well across a whole range of models, so I would try to learn it!
 
-```{r, message=FALSE, warning=FALSE, fig.height=3, fig.width=5, size='tiny'}
+```{r dharmaPlot, message=FALSE, warning=FALSE, fig.height=6, fig.fullwidth=TRUE, size='tiny'}
 library(DHARMa)
 glmm2_res <- simulateResiduals(glmm2)
 plot(glmm2_res) #No residual problems here
@@ -680,7 +905,7 @@ plot(glmm2_res) #No residual problems here
 
 - `ggpredict()` from `library(ggeffects)` works with `glmmTMB` models
 
-```{r}
+```{r glmmPredict, fig.width=7,fig.height=4}
 library(ggeffects)
 glmm2_eff <- ggpredict(glmm2,terms='x')
 plot(glmm2_eff)
@@ -772,6 +997,20 @@ Solution:
 
   1. Use ML if comparing between models with different fixed effects, then...
   2. Re-fit with REML once you've decided on a model
+  
+## Hypothesis testing (cont.)
+
+How do I know this effect is different from _x_?
+- Use Wald Z-test (2-sided p-value from Z-test)
+
+```{r}
+mm1 <- update(mm1,REML=TRUE) #Reset to REML
+meanEst <- fixef(mm1)[2] #Get mean
+seEst <- sqrt(vcov(mm1)[2,2]) #Get standard error
+(1-pnorm(meanEst/seEst,0,1))*2 #p-value from 2-sided Z-test
+```
+
+- `glht` from `library(multcomp)` works with `lmer` models if you are comparing between coefficients (e.g. "Is treatment A different from B and C?")
 
 ## Model selection
 

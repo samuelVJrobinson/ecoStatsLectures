@@ -1,6 +1,6 @@
 #Make mixed effect model example data
 
-setwd("~/Projects/Stats projects/ecoStats2020/10 Mixed effects")
+setwd("./05 Mixed effects/")
 
 set.seed(123)
 
@@ -41,10 +41,9 @@ raneff_slope <- forest * model.matrix(~sites-1) %*% raneffs[,2]  #Slope vector
 yhat <- fixefMat %*% fixCoef + raneff_int + raneff_slope  #Expected value
 mass <- rnorm(n,yhat,sigmaR) #Data
 dat <- data.frame(mass,species,forest,sites) #Assemble into data frame
-write.csv(dat,file='batMass.csv')
+write.csv(dat,file='fishMass.csv',row.names = FALSE)
 
 #Check data
-
 library(tidyverse)
 theme_set(theme_classic())
 library(lme4)
@@ -54,17 +53,11 @@ ggplot(dat,aes(x=forest,y=mass,col=species))+geom_point()+geom_smooth(method='lm
 #Fit model
 dat <- dat %>% mutate(sForest=scale(forest))
 
-m0 <- lm(mass~species*forest-1,data=dat)
-m1 <- lmer(mass~species*forest-1+(1|sites),data=dat)
-m2 <- lmer(mass~species*forest-1+(forest|sites),data=dat)
+m0 <- lm(mass~species*forest-1,data=dat) #Ignores sites (pseudoreplication)
+m1 <- lmer(mass~species*forest-1+(1|sites),data=dat) #Site as a random intercept
+m2 <- lmer(mass~species*forest-1+(forest|sites),data=dat) #Site as a random intercept + slope
 m3 <- lm(mass~species*forest+sites-1,data=dat) #"My supervisor told me to"
 m4 <- lm(mass~species*forest+forest*sites-1,data=dat) #"My supervisor told me to 2"
-
-# m0 <- lm(mass~species*sForest-1,data=dat)
-# m1 <- lmer(mass~species*sForest-1+(1|sites),data=dat)
-# m2 <- lmer(mass~species*sForest-1+(sForest|sites),data=dat)
-# m3 <- lm(mass~species*sForest+sForest*sites-1,data=dat) #"My supervisor told me to"
-# m4 <- lm(mass~sForest*sites+species*sForest-1,data=dat) #"My supervisor told me to 2"
 
 with(dat,xtabs(~sites+species))
 with(dat,xtabs(~sites)) #If any of the sites have 1 record only, you'll get a singularity warning
