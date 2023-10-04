@@ -888,18 +888,62 @@ summary(glmm2) #Similar results, but quicker
 
 :::
 
+## Residual checks for LMMs/GLMMs
 
-## Residual checks on `glmmTMB` models
+- Unfortunately, residual plotting functions aren't set up for mixed effects models. However, you can extract deviance residuals from `lmer`, `glmer`, or `glmmTMB` models and make your own plots:
 
-- You can extract deviance residuals and make your own plots, but I usually use `simulateResiduals` from `DHARMa` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf))
-- `DHARMa` also has useful functions for checking overdispersion and zero-inflation (found [here](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html))
-- This works fairly well across a whole range of models, so I would try to learn it!
+- Added complication: __we also need to check whether the random effects are normally distributed__
 
-```{r dharmaPlot, message=FALSE, warning=FALSE, fig.height=6, fig.fullwidth=TRUE, size='tiny'}
+```{r lmmResid, echo=TRUE, eval=FALSE}
+#Example with LMMs (fish model from before)
+devRes <- residuals(m2,type='deviance') #Get deviance residuals
+m2RE <- ranef(m2)$sites #Get random effects (intercept + slope)
+par(mfrow=c(2,2))
+plot(fitted(m2),devRes,xlab='Fitted',ylab='Deviance residual',main='Residuals'); abline(h=0,lty=2)
+qqnorm(devRes,main='Residual Q-Q'); qqline(devRes) #Deviance residual Q-Q
+qqnorm(m2RE[,1],main='Intercepts Q-Q'); qqline(m2RE[,1]) #Intercepts
+qqnorm(m2RE[,2],main='Slopes Q-Q'); qqline(m2RE[,2]) #Slopes Q-Q
+par(mfrow=c(1,1))
+```
+
+## Residual checks for LMMs/GLMMs (cont.)
+
+```{r lmmResid, echo=FALSE, eval=TRUE, fig.fullwidth=TRUE,fig.height=6}
+```
+
+## Alternative approach: simulation
+
+- Residual plots can be misleading, and can hide information from you. A better way is to compare a set of _simulated data_ from your model to the _actual data_
+- The `simulateResiduals` from `DHARMa` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf)) works well for `glmmTMB` models, as well as LMs, GLMs, and more, so it's worth learning
+
+```{r dharmaPlot, message=FALSE, warning=FALSE, fig.height=4, fig.fullwidth=TRUE}
 library(DHARMa)
 glmm2_res <- simulateResiduals(glmm2)
 plot(glmm2_res) #No residual problems here
 ```
+
+## Simulation (cont.)
+
+- `DHARMa` also has useful functions for checking overdispersion and zero-inflation. Both of these tests indicate that a) this model is not overdispersed, and b) there seems to be no zero-inflation (see [here](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html) for more examples)
+
+::: columns
+
+:::: column
+
+```{r dispTest, warning=FALSE, message=FALSE,fig.width=5,fig.height=4}
+testDispersion(glmm2_res)
+```
+::::
+
+:::: column
+
+```{r ziTest, warning=FALSE, message=FALSE,fig.width=5,fig.height=4}
+testZeroInflation(glmm2_res)
+```
+
+::::
+
+:::
 
 ## Partial residual plots for `glmmTMB` models
 
@@ -911,6 +955,58 @@ glmm2_eff <- ggpredict(glmm2,terms='x')
 plot(glmm2_eff)
 ```
 
+## Third challenge
+
+- Remember that `canolaPlants.csv` data I gave you last week, which you all dutifully fit GLMs of? (See [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/04%20GLMs))
+- That `Field` column indicates which farmer's field the plants came from. You'll also notice that there are groupings at each `Distance`, indicating distinct `Plots` that each plant came from.
+- Fit a GLMM of pod success with distance, using Field and Plot as random effects.
+- Check the assumptions of your model with `DHARMa`.
+
+## Third challenge results
+
+::: columns
+
+:::: column
+
+```{r canolaMod}
+options(width = 60)
+canolaDat <- read.csv('../04 GLMs/canolaPlants.csv') %>%
+  filter(Missing>=0,Pods>0) %>% mutate(Field=factor(Field)) %>%
+  mutate(Plot=factor(paste(Year,Field,Distance,sep='_')))
+canMod <- glmmTMB(cbind(Pods,Missing)~Year+VegMass+Distance+(VegMass|Field/Plot),data=canolaDat,family = 'binomial')
+```
+
+::::
+
+:::: column
+
+```{r canolaModPlot,width=5,height=5,warning=FALSE,message=FALSE}
+plot(ggpredict(canMod,terms=c('VegMass')))+
+  labs(x='Plant size',y='Pod success',title='Big plants have proportionally more pods')
+```
+
+::::
+
+:::
+
+## Third challenge results (cont.)
+
+```{r canModRes, warning=FALSE, message=FALSE}
+canModRes <- simulateResiduals(canMod,n=1000)
+plot(canModRes)
+```
+
+## Third challenge results (cont.)
+
+```{r canModOutliers}
+testOutliers(canModRes,type='bootstrap',nBoot=100)
+```
+## Third challenge results (cont.)
+
+```{r canModDisp}
+testDispersion(canModRes)
+```
+
 # Part 3: Hypothesis testing and inference
 
 ## I fit a model... now what?
@@ -918,10 +1014,10 @@ plot(glmm2_eff)
 - Congratulations, your model ran and it met the assumptions of regression...
 - Time to see if your predictions are supported by your data!
 - For each of the terms in your model:
-  - Was the term "important" in your model?
+  - Was the term "important" for your model?
   - If so, what direction was the effect in?
 - How well did your model fit your data (overall)?
-- Some other bits of advice
+- Some other sage advice
 
 ## Step 1: was the term "important"?
 
@@ -982,25 +1078,41 @@ lmMod2 <- lm(mpg~gear+disp,data=mtcars)
 
 ## GLMs, LMMs, and GLMMs
 
+::: columns
+
+:::: column
+
 - `drop1` also works with GLMs, LMMs, and GLMMs, but we use a $\chi^2$ _likelihood ratio test_ rather than an F-test
 
-- Unfortunately, different numbers of data points change your likelihood, so this can wreck LRTs. _This happens a lot if you have NAs in your predictor columns_, so clean up your data before using it in models.
+- Unfortunately, different numbers of data points change your likelihood, so this can wreck LRTs. This happens a lot if you have NAs in your predictor columns, so _clean up your data before using it in models_.
 
-## ML vs REML
+::::
+
+:::: column
+
+```{r, echo=TRUE}
+drop1(m1,test='Chisq')
+```
+
+::::
+
+:::
+
+## ML vs REML - a mathematical aside
 
 - Maximum likelihood (ML) estimates of variance (e.g. SD) are always smaller than the actual variance (biased)
 - Restricted maximum likelihood (REML) uses a mathematical trick to get around this, but...
-- This means that models with different numbers of terms don't have the same REML estimates
+- This means that models with _different numbers of fixed effects_ don't have the same REML estimates
 - Likelihood between these models technically can't be compared!
 
 Solution:
 
   1. Use ML if comparing between models with different fixed effects, then...
   2. Re-fit with REML once you've decided on a model
-  
-## Hypothesis testing (cont.)
 
-How do I know this effect is different from _x_?
+## Step 2: what was the direction of the effect?
+
+How do I know this effect is different from _x_? (Usually zero)
 - Use Wald Z-test (2-sided p-value from Z-test)
 
 ```{r}
@@ -1012,16 +1124,47 @@ seEst <- sqrt(vcov(mm1)[2,2]) #Get standard error
 
 - `glht` from `library(multcomp)` works with `lmer` models if you are comparing between coefficients (e.g. "Is treatment A different from B and C?")
 
-## Model selection
+## Step 3: How well did your model fit your data?
 
-How many terms should be in my model?
+In a simple linear model, a common measure of model fit is _adjusted_ $R^2$, which can be found in the `summary()` statement
 
-- Same principle as in regular linear models: __what do you think the process is?__
-  - Just because a term is "not significant" doesn't mean it should be dropped out!
-  - Just because a term is "significant" doesn't mean it should be left in!
-  - Avoid selecting models based on $R^2$ or AIC alone. Avoid stargazing\footnotemark (hunting around for "better" p-values or AIC scores)
-- To test whether terms are important in predicting your data (similar to), use _likelihood-ratio tests_
-  - `drop1(model,test='Chisq')`
-  - AIC tests usually say the same thing as LR tests
+```{r}
+summary(m0)
+```
+## How well did your model fit your data? (cont.)
 
-\footnotetext{"My God, it's full of stars!" -2001, A Space Odyssey}
+- For GLMs, LMMs, and GLMMs, there isn't really one standard way to get "$R^2$". See [here](https://doi.org/10.1111/j.2041-210x.2012.00261.x) for a widely-read paper on the topic
+- Likelihood Ratio Tests or AIC (_Akaike's Information Criterion_) can be used to compare between different models _of the same dataset_, but likelihood and AIC don't mean anything on their own
+- Both `MuMIn` and `r2glmm` implement versions of the Nakagawa $R^2$ for mixed effects models. _Caveat emptor_:
+
+::: columns
+
+:::: column
+
+```{r}
+library(MuMIn)
+r.squaredGLMM(m1)
+```
+::::
+
+:::: column
+
+```{r}
+library(r2glmm)
+r2beta(m1, method = 'nsj',partial=FALSE)
+```
+::::
+
+:::
+
+\centering Above all: avoid selecting models based on $R^2$ or AIC alone
+
+## Some final advice
+
+- LMMs and GLMMs are _hard_ to both understand and fit. They are not as forgiving as LMs and GLMs, and will often fail to fit, take a very long time, or give you very strange answers without any explanation.
+  - Check the model output and make sure the coefficients and SEs aren't weirdly large or small
+  - Andrew Gelman's Modeling Rule-of-Thumb: "It's not me, it's you!"
+- My advice: Once you have a model you'd like to fit, start off with simpler "incorrect" version of it, and add terms until you have the final "correct" model
+- In the canola model, I started off with a Field-level intercept, then added a Plot-level intercept, and finally a random slope term
+- One of my interim models had a random `Distance` slope term, which caused the model to fail (reason: only 1 distance per plot!)
+
