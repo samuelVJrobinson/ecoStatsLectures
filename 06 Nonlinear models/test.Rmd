@@ -1,26 +1,31 @@
 ---
-title: "Hello World"
-author: "Me"
-date: "February 17, 2015"
-output:
-  pdf_document: default
+title: "Nonlinear models"
+subtitle: "I don't think we're in Kansas anymore"
+author: "Samuel Robinson, Ph.D."
+date: "Oct 13, 2023"
+output: 
+  beamer_presentation:
+    incremental: false
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+    fig_caption: false
+urlcolor: blue
+df_print: kable
+classoption: aspectratio=169   
 header-includes: 
   - \usepackage{tikz}
   - \usepackage{pgfplots}
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+  - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  - \let\endoldShaded\endShaded
+  - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
+  - \let\oldverbatim\verbatim %Change fontsize of code chunk output
+  - \let\endoldverbatim\endverbatim
+  - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
 ---
 
-## TikZ picture
-- Here is a TikZ picture
+# Part 1: Mechanistic nonlinear models
 
-\begin{tikzpicture}
-\draw (0,0) circle (2cm);
-\end{tikzpicture}
-
-- Here is another TikZ picutre
-
-\begin{tikzpicture}
-\begin{axis}[xmax=9,ymax=9, samples=50]
-  \addplot[blue, ultra thick] (x,x*x);
-  \addplot[red,  ultra thick] (x*x,x);
-\end{axis}
-\end{tikzpicture}
+# Part 2: Empirical nonlinear models
