@@ -1,0 +1,322 @@
+---
+title: "Nonlinear models"
+subtitle: "I don't think we're in Kansas anymore"
+author: "Samuel Robinson, Ph.D."
+date: "Oct 13, 2023"
+output: 
+  beamer_presentation:
+    incremental: false
+    theme: "default"
+    colortheme: "lily"
+    highlight: "tango"
+    fig_caption: false
+urlcolor: blue
+df_print: kable
+classoption: aspectratio=169   
+header-includes: 
+  - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
+  - \useinnertheme{circles}
+  - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  - \let\endoldShaded\endShaded
+  - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
+  - \let\oldverbatim\verbatim %Change fontsize of code chunk output
+  - \let\endoldverbatim\endverbatim
+  - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
+---
+
+```{r setup, include=FALSE}
+#Trick to get smaller R code size with out resorting to LaTeX text sizes
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
+                      warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
+library(tidyverse)
+theme_set(theme_classic())
+
+```
+
+## Outline
+
+- What are nonlinear models?
+- Mechanistic models
+  - Some common models
+  - Strategies for fitting
+- Empirical models
+  - Some common models
+  - GAMs
+
+## What are nonlinear models?
+
+- All linear models take the form:
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} = \textcolor{blue}{b_0}\textcolor{darkturquoise}{1} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+- However, _nonlinear models_ can't be reduced to this linear (matrix) form:
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y_{t}}} & = \textcolor{orange}{\hat{y_{t-1}}} (1 + \textcolor{blue}{r}(1-\frac{\textcolor{orange}{\hat{y_{t-1}}}}{\textcolor{blue}{k}}))\\
+y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{split}
+\end{equation*}
+
+## Two common situations 
+
+1. "I have governing equations for this system, and I want to fit them to my data"
+  - e.g. Logistic growth equation, Michaelis-Menten kinematrics, Ricker model
+
+2. "I don't know what equations represent my system, but I need some kind of _smooth_ process that describes them"
+  - e.g. Changes in organism population over growing season, changes in stock prices over time
+
+# Part 1: Mechanistic models
+
+## Governing equations
+
+Some systems can be described by a set of governing equations, either in _discrete_ or _continuous_ time
+
+::: columns
+
+:::: {.column width='40%'}
+
+- Exponential growth: _Discrete time_
+
+\begin{equation*}
+  n_t = n_{t-1}r
+\end{equation*}
+
+::::
+
+:::: {.column width='60%'}
+
+- Exponential growth: _Continuous time_
+
+\begin{equation*}
+  \frac{dn}{dt} = nr
+\end{equation*}
+
+::::
+
+:::
+
+\vspace{0.5cm}
+
+::: columns
+
+::::{.column width='40%'}
+
+- Predator prey cycles: _Discrete time_
+
+\begin{equation*}
+\begin{split}
+\text{prey}_t =& \text{prey}_{t-1}(r_1 - a_1\text{pred}_{t-1})\\
+\text{pred}_t =& \text{pred}_{t-1}(a_2\text{prey}_{t-1}-d)
+\end{split}
+\end{equation*}
+
+::::
+
+::::{.column width='60%'}
+
+- Predator prey cycles: _Continuous time_
+
+\begin{equation*}
+\begin{split}
+\frac{d\text{prey}}{dt} =& r-a_1\text{pred}\\
+\frac{d\text{pred}}{dt} =& a_2\text{prey}-d
+\end{split}
+\end{equation*}
+
+::::
+
+:::
+
+## Where do these equations come from?
+
+::: columns
+
+:::: column
+
+- Mostly from literature, or sometimes from your own derivations
+
+- Can be derived from causal models, flow diagrams, organismal life cycles
+
+- Math-heavy topic for another class! If you're interested, I might start with this book:
+
+::::
+
+:::: column
+
+![](otto2007.jpg){width=80%}
+
+::::
+
+:::
+
+## Fitting mechanistic models
+
+::: columns
+
+:::: column
+
+- We have a _pretty good idea_ what rules the system is following, and we want to figure out the parameters that it uses
+
+- Let's start with a simple linear model, where we have _2 parameters_ $\textcolor{blue}{b_0}$ and $\textcolor{blue}{b_1}$ that we're looking for
+
+\begin{equation*} 
+\begin{split}
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} 
+\end{split}
+\end{equation*}
+
+- We're trying to find the parameters of a line that _most closely_ fits our data: 
+
+::::
+
+:::: column
+
+```{r lmExamp}
+set.seed(1)
+N <- 100
+B <- c(1,2)
+x1 <- runif(N,-2,2)
+X <- cbind(Int=1,x1)
+yhat <- as.vector(X %*% B)
+y <- yhat + rnorm(N)
+dat <- data.frame(yhat,y,x1)
+p1 <- ggplot(dat)+geom_point(aes(x1,y))
+p1  
+
+```
+
+::::
+
+:::
+
+## Fitting mechanistic models (cont.)
+
+::: columns
+
+:::: column
+
+- How might we define "closest fit" in a mathematical sense?
+
+- One common measure is _sum of squared distances_. This is just the difference between the data and the \textcolor{orange}{line}:
+\begin{equation*}
+S = \sum_{i=1}^N(y_i - (\textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_i}))^2
+\end{equation*}
+
+- Here are three "guesses" at the slope and intercept, along with their SS scores. Which one looks to be the best?
+
+<!-- - In this case, there is a _definite_ solution: $\hat\beta = (\textcolor{darkturquoise}{X^T}\textcolor{darkturquoise}{X})^{-1}X^Ty$ -->
+
+::::
+
+:::: column
+
+```{r lmExamp2}
+
+#Function to calculate SS from b0, b1, and data (x & y)
+ssFun <- function(B,xdat=dat$x1,ydat=dat$y) sum((ydat - (B[1] + B[2]*xdat))^2)
+
+ss1 <- paste('b0 = 1, b1 = 2, SS = ', round(with(dat,ssFun(c(1,2),),1)))
+ss2 <- paste('b0 = 2, b1 = 3, SS = ', round(with(dat,ssFun(c(2,3)),1)))
+ss3 <- paste('b0 = -2, b1 = 1, SS = ', round(with(dat,ssFun(c(-2,1)),1)))
+
+
+p1 +
+  geom_abline(intercept=B[1],slope=B[2],linetype='dashed')+
+  geom_abline(intercept=B[1]+1,slope=B[2]+1,linetype='dashed',col='red')+
+  geom_abline(intercept=B[1]-3,slope=B[2]-1,linetype='dashed',col='blue') +
+  annotate(geom='text',x=-1,y=6,label=ss1)+
+  annotate(geom='text',x=-1,y=5,col='red',label=ss2)+
+  annotate(geom='text',x=-1,y=4,col='blue',label=ss3)
+
+```
+
+::::
+
+:::
+
+## Map of fitting surface
+
+We can try this for a whole bunch of intercepts and slopes:
+
+```{r lmExamp3, fig.width=8, fig.height=4}
+
+expand.grid(B0=seq(-10,10,by=0.5),B1=seq(-10,10,by=0.5)) %>% 
+  rowwise() %>% mutate(SS=sqrt(with(dat,ssFun(c(B0,B1),x1,y)))) %>% 
+  ggplot(aes(x=B0,y=B1,fill=SS))+geom_raster()+
+  # scale_fill_distiller(direction = 1,palette = 'YlOrRd')
+  annotate(geom = 'point',x=1,y=2,col='black',pch=3)+
+  annotate(geom = 'point',x=2,y=3,col='red',pch=3)+
+  annotate(geom = 'point',x=-2,y=1,col='blue',pch=3)+
+  scale_fill_viridis_c(direction=-1)+
+  theme(legend.position = 'none')+labs(x='Intercept',y='Slope')
+
+```
+
+## Getting R to do this
+
+::: columns
+
+:::: column
+
+- It's pretty clear where the best intercept and slope is, but how do we get R to do this?
+
+- First, we need a function that returns SS given a set of parameters:
+  ```{r, echo=TRUE, eval=FALSE}
+  #Function to calculate SS
+  ssFun <- function(B,xdat,ydat){
+    sum((ydat - (B[1] + B[2]*xdat))^2)
+  } 
+  ```
+
+- Next, we use the `optim` function to find the intercept and slope values that return the minimum value of SS. How did it do? (Actual values: $b_0$:1, $b_1$:2)
+
+::::
+
+:::: column
+
+```{r optimExamp, echo=TRUE}
+  #Starts at 0,0 and "looks around" from there
+  optim(par = c(0,0) , fn = ssFun) 
+```
+
+```{r , fig.height=2,fig.width=5}
+p1 + geom_abline(intercept=0.9769795,slope=2.0779779)
+```
+
+::::
+
+:::
+
+## First challenge
+
+- Try doing this for an exponential growth model!
+
+
+ 
+
+# Part 2: Empirical models
+
+## Empirical smoothing
+
+## 2-column slide
+
+::: columns
+
+:::: column
+
+a
+
+::::
+
+:::: column
+
+b
+
+::::
+
+:::
+

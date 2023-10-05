@@ -26,7 +26,8 @@ header-includes:
 
 ```{r setup, include=FALSE}
 #Trick to get smaller R code size with out resorting to LaTeX text sizes
-knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, cache=TRUE)
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
+                      warning=TRUE, cache=TRUE)
 library(tidyverse)
 theme_set(theme_classic())
 library(lme4)

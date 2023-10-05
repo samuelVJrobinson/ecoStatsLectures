@@ -1,8 +1,8 @@
 ---
-title: "Nonlinear models"
-subtitle: "I don't think we're in Kansas anymore"
+title: "Multivariate models"
+subtitle: "More than one way of seeing things"
 author: "Samuel Robinson, Ph.D."
-date: "Oct 13, 2023"
+date: "Oct 20, 2023"
 output: 
   beamer_presentation:
     incremental: false
@@ -26,6 +26,7 @@ header-includes:
   - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
 ---
 
-# Part 1: Mechanistic nonlinear models
+## Weird geometry
 
-# Part 2: Empirical nonlinear models
+"He had said that the geometry of the dream-place he saw was abnormal, non-Euclidean, and loathsomely redolent of spheres and dimensions apart from ours" 
+- _Call of Chthulu, H.P. Lovecraft_
