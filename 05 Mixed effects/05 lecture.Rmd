@@ -93,27 +93,6 @@ dat <- data.frame(y,x,site=g) #Assemble into data frame
 y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
 dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 
-# #Generate spatially correlated random intercepts
-# 
-# #Squared-exponential distance function
-# covFun <- function(sigma,rho,d) (sigma^2)*exp((-rho^2)*(d^2))
-# 
-# lat <- runif(ngroups,-10,10) #"Latitude"
-# lon <- runif(ngroups,-10,10) #"Longitude"
-# distMat <- as.matrix(dist(cbind(lat,lon),diag=TRUE,upper=TRUE)) #Matrix of distances
-# covMat <- covFun(sigmaG,0.1,distMat) #Covariance matrix
-# corMat <- cov2cor(covMat) #Correlation matrix
-# cholCorMat <- chol(corMat) #Choleski matrix
-# raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
-# raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
-# yhat <- intercept + slopeX*x + raneff_int  #Expected value
-# y <- rnorm(n,yhat,sigmaR) #Data (normal)
-# y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
-# lat <- model.matrix(~g-1) %*% lat
-# lon <- model.matrix(~g-1) %*% lon
-# dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
-
-
 ```
 
 ## Outline
@@ -132,7 +111,7 @@ dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 - Hypothesis testing and inference
   - Slopes and intercepts
   - Entire terms
-  - AIC, $R^2$, and Star-Gazing
+  - AIC and $R^2$
 
 ::::
 
@@ -151,8 +130,9 @@ dat2 <- data.frame(y=y2,x,site=g) #2nd data frame with NB data
 - Sometimes we have to sample within groups: different field sites, individual organisms, etcetera
 - However, often we're not really interested in each group _per se_, but in the __average group__
 - e.g. "What is the effect of __x__ if you remove group-to-group variation?"
-- If you have a small number of groups, you can just include it in your model: `lm(y ~ x + group)`
-  - If you have few samples for each group, this can create problems
+- If you have a small number of groups, you can just include it in your model: 
+  - `lm(y ~ x + group)`
+  - However, if you have few samples for each group, this can create problems
 - Another solution is to use __mixed effects models__
 
 ## What are mixed effects models?
@@ -274,7 +254,7 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
   
 ## Fixed effects vs. Random effects
 
-Say that $\textcolor{darkturquoise}{X}$ is a model matrix coding for 10 sites\footnotemark, and _y_ is something we're interested in predicting
+Say that $\textcolor{darkturquoise}{X}$ is a model matrix coding for a bunch of sites\footnotemark, and _y_ is something we're interested in predicting
 
 ::: columns
 
@@ -344,8 +324,6 @@ Let's go back to our earlier example:
 
 ```{r lmerExample, echo=TRUE, message=FALSE, warning=FALSE, size='tiny'}
 head(dat)
-library(lme4) #Mixed effects library 
-mm1 <- lmer(y ~ x + (1|site),data=dat) #site is fit as "random intercepts"
 ```
 
 ## Mixed effect model example
@@ -355,6 +333,9 @@ mm1 <- lmer(y ~ x + (1|site),data=dat) #site is fit as "random intercepts"
 :::: column
 
 ```{r, echo=TRUE, size='tiny'}
+library(lme4) #Mixed effects library 
+#site is fit as a random intercept
+mm1 <- lmer(y ~ x + (1|site),data=dat) 
 summary(mm1)
 ```
 
@@ -478,14 +459,17 @@ summary(m2)
 
 :::: column
 
+`lm(mass~forest*species)`
+
 ```{r echo=FALSE, warning=FALSE,warning=FALSE,message=FALSE,fig.width=4,fig.height=4}
 ggpredict(m1,terms=c('forest','species')) %>% data.frame() %>% 
+  mutate(group=factor(group,levels=c('Spp1','Spp2','Spp3'))) %>% 
   ggplot(aes(x=x))+
   geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=group),alpha=0.3)+
   geom_line(aes(y=predicted,col=group))+
   scale_colour_brewer(type = 'qual',aesthetics = c('colour','fill'))+
   labs(x='Forest cover (%)', y='Mass',col='Species',fill='Species',
-       title='Fixed effects model: lm(mass~forest*species)')
+       title='Fixed effects model')
   
 ```
 
@@ -493,16 +477,17 @@ ggpredict(m1,terms=c('forest','species')) %>% data.frame() %>%
 
 :::: column
 
-```{r echo=FALSE,warning=FALSE,message=FALSE,fig.width=4,fig.height=4}
+`lmer(mass~forest*species+(1|sites))`
 
-ggpredict(m2,terms=c('forest','species')) %>% data.frame() %>% 
+```{r echo=FALSE,warning=FALSE,message=FALSE,fig.width=4,fig.height=4}
+ggpredict(m2,terms=c('forest','species')) %>% data.frame() %>%
+  mutate(group=factor(group,levels=c('Spp1','Spp2','Spp3'))) %>% 
   ggplot(aes(x=x))+
   geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=group),alpha=0.3)+
   geom_line(aes(y=predicted,col=group))+
   scale_colour_brewer(type = 'qual',aesthetics = c('colour','fill'))+
   labs(x='Forest cover (%)', y='Mass',col='Species',fill='Species',
-       title='Mixed effects model: lmer(mass~forest*species+(1|sites))')
-
+       title='Mixed effects model')
 ```
 
 ::::
@@ -682,13 +667,32 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
   - You lose the _partial pooling_ that occurs in mixed effects models = Worse estimates of site effects!
   - You lose 1 d.f. for each site = Type II error $\uparrow$ = You may not find the fixed effect of interest, even if it's there!
   - Sites with low sample sizes may cause your models to break
-  - People\footnotemark who have read statistics books published after 1980 may ask questions
+  - People who have read statistics books published after 1980 may ask questions
 - However, if you have a low number of sites (1-10), fixed effects may work better
   - Hard to estimate $\sigma_{site}$ if number of sites is low
   - If stakes are high, it may be better to be more conservative about site intercepts
   - Easier to interpret (p-values, ANOVA, etc.)
   
-\footnotetext{e.g. me}
+## Example of partial pooling effect (shrinkage)
+
+```{r partPool, fig.fullwidth=7,fig.height=4}
+m1b <- lm(y~x+site-1,data=dat)
+
+a1 <- data.frame(ggpredict(m1b,terms='site')) %>% 
+  mutate(x=as.character(x)) %>% arrange(x) %>% 
+  select(x,predicted)
+a2 <- data.frame(ggpredict(mm1,terms='site',type='random')) %>% 
+  select(-group)
+bind_rows(a1,a2,.id='mod') %>% mutate(mod=factor(mod,labels=c('fixed','random'))) %>% 
+  ggplot(aes(x=x,y=predicted,col=mod))+geom_point()+
+  geom_hline(yintercept = 0,linetype='dashed')+
+  scale_colour_manual(values=c('blue','red'))+
+  labs(x='Site',y='Predicted',col='Model')
+```
+
+\pause
+
+Random intercept "pulls in" sites with extreme values towards zero   
 
 ## Second challenge
 
@@ -754,7 +758,6 @@ lapply(modList,getCoefs) %>% do.call('rbind',.) %>%
 ## Second challenge results (cont.):
 
 ```{r secondChallenge2, fig.fullwidth=TRUE,fig.height=5.5}
-
 #Get dataframe of predictions from models
 getPreds <- function(mod,t=c('forest','species')){ 
   ggpredict(mod,terms=t) %>% data.frame(.)
@@ -779,6 +782,7 @@ ggplot(modPreds,aes(x=x,y=predicted))+geom_ribbon(aes(ymax=conf.high,ymin=conf.l
   scale_fill_manual(values=colValues)+
   scale_colour_manual(values=colValues)
 ```
+
 
 # Part 2: GLMMs
 
@@ -931,7 +935,7 @@ plot(glmm2_res) #No residual problems here
 
 :::: column
 
-```{r dispTest, warning=FALSE, message=FALSE,fig.width=5,fig.height=4}
+```{r dispTest, warning=FALSE, message=FALSE, fig.width=5,fig.height=4}
 testDispersion(glmm2_res)
 ```
 ::::
@@ -950,7 +954,7 @@ testZeroInflation(glmm2_res)
 
 - `ggpredict()` from `library(ggeffects)` works with `glmmTMB` models
 
-```{r glmmPredict, fig.width=7,fig.height=4}
+```{r glmmPredict, fig.width=7,fig.height=3.5}
 library(ggeffects)
 glmm2_eff <- ggpredict(glmm2,terms='x')
 plot(glmm2_eff)
@@ -975,15 +979,17 @@ canolaDat <- read.csv('../04 GLMs/canolaPlants.csv') %>%
   filter(Missing>=0,Pods>0) %>% mutate(Field=factor(Field)) %>%
   mutate(Plot=factor(paste(Year,Field,Distance,sep='_')))
 canMod <- glmmTMB(cbind(Pods,Missing)~Year+VegMass+Distance+(VegMass|Field/Plot),data=canolaDat,family = 'binomial')
+summary(canMod)
 ```
 
 ::::
 
 :::: column
 
-```{r canolaModPlot,width=5,height=5,warning=FALSE,message=FALSE}
+```{r canolaModPlot,width=4,height=6,warning=FALSE,message=FALSE}
 plot(ggpredict(canMod,terms=c('VegMass')))+
-  labs(x='Plant size',y='Pod success',title='Big plants have proportionally more pods')
+  labs(x='Plant size',y='Pod success',
+       title='Big plants have proportionally more pods')
 ```
 
 ::::
@@ -992,19 +998,20 @@ plot(ggpredict(canMod,terms=c('VegMass')))+
 
 ## Third challenge results (cont.)
 
-```{r canModRes, warning=FALSE, message=FALSE}
+```{r canModRes, warning=FALSE, message=FALSE,fig.fullwidth=TRUE,fig.height=5}
 canModRes <- simulateResiduals(canMod,n=1000)
 plot(canModRes)
 ```
 
 ## Third challenge results (cont.)
 
-```{r canModOutliers}
+```{r canModOutliers,fig.fullwidth=TRUE,fig.height=5}
 testOutliers(canModRes,type='bootstrap',nBoot=100)
 ```
+
 ## Third challenge results (cont.)
 
-```{r canModDisp}
+```{r canModDisp,fig.fullwidth=TRUE,fig.height=5}
 testDispersion(canModRes)
 ```
 
@@ -1116,7 +1123,7 @@ Solution:
 How do I know this effect is different from _x_? (Usually zero)
 - Use Wald Z-test (2-sided p-value from Z-test)
 
-```{r}
+```{r, echo=TRUE}
 mm1 <- update(mm1,REML=TRUE) #Reset to REML
 meanEst <- fixef(mm1)[2] #Get mean
 seEst <- sqrt(vcov(mm1)[2,2]) #Get standard error
@@ -1132,6 +1139,7 @@ In a simple linear model, a common measure of model fit is _adjusted_ $R^2$, whi
 ```{r}
 summary(m0)
 ```
+
 ## How well did your model fit your data? (cont.)
 
 - For GLMs, LMMs, and GLMMs, there isn't really one standard way to get "$R^2$". See [here](https://doi.org/10.1111/j.2041-210x.2012.00261.x) for a widely-read paper on the topic
@@ -1142,7 +1150,7 @@ summary(m0)
 
 :::: column
 
-```{r}
+```{r, warning=FALSE}
 library(MuMIn)
 r.squaredGLMM(m1)
 ```
@@ -1150,7 +1158,7 @@ r.squaredGLMM(m1)
 
 :::: column
 
-```{r}
+```{r, warning=FALSE}
 library(r2glmm)
 r2beta(m1, method = 'nsj',partial=FALSE)
 ```
@@ -1158,7 +1166,7 @@ r2beta(m1, method = 'nsj',partial=FALSE)
 
 :::
 
-\centering Above all: avoid selecting models based on $R^2$ or AIC alone
+- Size of the random effects (variance components) can give you an idea of how large the between-group variance was compared to residual variance. Useful for planning future field work or experiments!
 
 ## Some final advice
 
@@ -1168,4 +1176,6 @@ r2beta(m1, method = 'nsj',partial=FALSE)
 - My advice: Once you have a model you'd like to fit, start off with simpler "incorrect" version of it, and add terms until you have the final "correct" model
 - In the canola model, I started off with a Field-level intercept, then added a Plot-level intercept, and finally a random slope term
 - One of my interim models had a random `Distance` slope term, which caused the model to fail (reason: only 1 distance per plot!)
+
+\centering __Avoid selecting models based on $R^2$ or AIC alone. Think about how the system works!__
 
