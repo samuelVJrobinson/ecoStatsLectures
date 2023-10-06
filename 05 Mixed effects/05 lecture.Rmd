@@ -28,13 +28,14 @@ header-includes:
 #Trick to get smaller R code size with out resorting to LaTeX text sizes
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
                       warning=TRUE, cache=TRUE)
-library(tidyverse)
-theme_set(theme_classic())
 library(lme4)
-library(ggeffects)
-library(ggpubr)
 library(glmmTMB)
 library(DHARMa)
+library(multcomp)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggeffects)
+library(ggpubr)
 
 set.seed(123)
 
@@ -147,6 +148,8 @@ Many different names:
 6. Split-plot models
 7. Variance partitioning
 
+<!-- \pause --> 
+
 I usually use the term _heirarchical models_, as this is the closest to what I will teach you
 
 ## Scary math
@@ -165,9 +168,7 @@ $$
 \end{bmatrix}
 $$
   
-- Multiplying them looks like this:
-
-$$ A \times b = Ab = 1 \times \begin{bmatrix}
+- Multiplying them looks like this: $$ A \times b = Ab = 1 \times \begin{bmatrix}
 1  \\
 2 \\
 3 
@@ -269,6 +270,8 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 
 \hfill\newline
 
+<!-- \pause -->
+
 - Site coefficients ($\textcolor{blue}{\beta}$) are unrelated to each other
 - $\textcolor{red}{\sigma}$ is the SD of _residuals_
 - Site is a __fixed effect__
@@ -277,6 +280,8 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 
 :::: column
 
+<!-- \pause -->
+
 \begin{equation*}
 \begin{split}
 \textcolor{orange}{\hat{y}} & = \textcolor{blue}{b_0} + \textcolor{darkturquoise}{X}\textcolor{purple}{\zeta} \\
@@ -284,6 +289,8 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 \textcolor{purple}{\zeta} & \sim Normal(0,\textcolor{red}{\sigma_{site}})
 \end{split}
 \end{equation*}
+
+<!-- \pause -->
 
 - Site coefficients ($\textcolor{purple}{\zeta}$) are related to each other via a _Normal_ distribution
 - $\textcolor{red}{\sigma}$ is the SD of _residuals_, $\textcolor{red}{\sigma_{site}}$ is the SD of _sites_
@@ -299,6 +306,8 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 ## Mixed effects = fixed + random effects
 
 A mixed effects model has both __fixed__ and __random__ effects
+
+<!-- \pause -->
 
 \begin{equation*}
 \begin{split}
@@ -321,6 +330,8 @@ Let's go back to our earlier example:
 - We're interested in predicting _y_ using _x_ (fixed effects)
 - Data was collected at a number of _sites_, which may affect _y_ "somehow"
 - Effect of each site is normally distributed
+
+<!-- \pause -->
 
 ```{r lmerExample, echo=TRUE, message=FALSE, warning=FALSE, size='tiny'}
 head(dat)
@@ -349,14 +360,12 @@ Results from `lmer` model:
   - _residual_ and _site_ variance ($\textcolor{red}{\sigma}$, $\textcolor{red}{\sigma_{site}}$)
 - Fixed effects: 
   - Intercept and slope estimates ($\textcolor{blue}{\beta}$)
-  - No d.f. and p-value \footnotemark
+  - No d.f. and p-value*
   - If you need p-values for parameters, you can use the [_lmerTest_](https://rdocumentation.org/packages/lmerTest/versions/3.1-3/topics/lmerTest-package) package (or just calculate them yourself using means/SEs)
 
 ::::
 
 :::
-
-\footnotetext{`lme4` author doesn't think they can be calculated. I somewhat agree}
 
 ## Mixed effect model results
 
@@ -387,7 +396,9 @@ p1 + geom_line(aes(y=pred),show.legend = FALSE)+guides(col=guide_legend(ncol=2))
 ## Mixed effect model results (cont.)
 
 - For plotting, we want a partial effects plot that marginalizes across sites (i.e. "What does the trend look like at the average site?")
-- `ggpredict` works well for this. If you want partial residuals, you'll have to add them in yourself using `predict` and `residual`
+- `ggpredict` works well for this. If you want partial residuals, you can add them in using `predict` and `residual`
+
+<!-- \pause -->
 
 ```{r, fig.height=2, fig.width=5.5,warning=FALSE}
 p2 <- ggpredict(mm1,terms='x') %>% data.frame() %>% #Gets predictions from mm1
@@ -416,7 +427,8 @@ How does forest cover influence fish size? Maybe some of the species do better i
 :::: column
 
 ```{r message=FALSE, warning=FALSE,fig.width=5,fig.height=5}
-fishDat <- read.csv('./fishMass.csv')
+fishDat <- read.csv('./fishMass.csv') %>% 
+  mutate(across(c(species,sites),factor))
 
 ggplot(fishDat,aes(x=forest,y=mass,col=species))+
   geom_point()+
@@ -545,6 +557,8 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma}) \\
 \end{split}
 \end{equation*}
 
+<!-- \pause -->
+
 - $\textcolor{darkturquoise}{X}$ = fixed effects matrix (e.g. intercept, temperature)
 - $\textcolor{blue}{\beta}$ = fixed effects coefficients
 - $\textcolor{gray}{U}$ = random intercept matrix (e.g. sites)
@@ -579,6 +593,10 @@ Results from `lmer` model:
     - Sites with higher intercept _also_ have a higher slope
 - Fixed effects: 
   - Intercept and slope estimates
+- Correlation of fixed effects:
+  - Refers to correlation in _estimates_, not in _data_
+  - Might be good to center the `x` variable in this case
+  - Also occurs for interactions, but doesn't really matter
   
 ::::
 
@@ -624,7 +642,7 @@ head(round(model.matrix(~site-1,data=dat) * dat$x,2))
 - Slope of regression line can be more or less steep for each site (random slopes)
 - Changes in intercepts and slopes are _normally distributed_, and in this example are _correlated_ with each other 
 
-```{r lmerPlot2, fig.height=2.5, fig.width=6}
+```{r lmerPlot2, fig.height=3.5, fig.fullwidth=TRUE}
 dat %>% mutate(pred=predict(mm2),gpred=predict(mm2,re.form=~0)) %>% 
   ggplot(aes(x=x,y=y,col=site))+
   geom_point()+
@@ -632,32 +650,6 @@ dat %>% mutate(pred=predict(mm2),gpred=predict(mm2,re.form=~0)) %>%
   geom_line(aes(y=pred))+theme(legend.position = 'none')
 ```
 
-<!-- ## Mixed effect model validation -->
-
-<!-- - Similar to linear models, but we _also_ check whether the random intercepts are normally distributed -->
-<!-- <!-- - If one site intercept is very different from the others, this is a clue for investigation! --> -->
-
-<!-- ```{r} -->
-<!-- par(mfrow=c(2,3)) -->
-<!-- plot(fitted(mm2),resid(mm2,type='working'),xlab='Fitted values',ylab='Working residuals'); abline(h=0) -->
-<!-- qqnorm(resid(mm2,type='working'),main='Residuals');qqline(resid(mm2,type='working')) -->
-<!-- qqnorm(ranef(mm2)$site[,1],main='Random Intercepts');qqline(ranef(mm2)$site[,1]) -->
-<!-- qqnorm(ranef(mm2)$site[,2],main='Random Slopes');qqline(ranef(mm2)$site[,2]) -->
-<!-- plot(ranef(mm2)$site,xlab='Random Intercept',ylab='Random Slope',main='Intercept-Slope Correlation') -->
-<!-- # par(mfrow=c(1,1)) -->
-<!-- ``` -->
-
-<!-- ## Hypothesis testing -->
-
-<!-- Is this fixed effect important? (e.g. ANOVA) -->
-
-<!-- - Use likelihood-based test via `drop1` (likelihood ratio test, AIC) -->
-<!-- - Be careful to fit model with `REML = FALSE`! -->
-
-<!-- ```{r, echo=TRUE, text='tiny'} -->
-<!-- mm1 <- update(mm1,REML=FALSE) #Refit model using ML rather than REML -->
-<!-- drop1(mm1,test='Chisq') #x has a very strong effect! -->
-<!-- ``` -->
 
 ## Why do we need to do any of this?
 
@@ -675,7 +667,7 @@ _"My supervisor told me to just use site as a fixed effect. Why can't I do that?
   
 ## Example of partial pooling effect (shrinkage)
 
-```{r partPool, fig.fullwidth=7,fig.height=4}
+```{r partPool, fig.fullwidth=TRUE,fig.height=5}
 m1b <- lm(y~x+site-1,data=dat)
 
 a1 <- data.frame(ggpredict(m1b,terms='site')) %>% 
@@ -684,13 +676,13 @@ a1 <- data.frame(ggpredict(m1b,terms='site')) %>%
 a2 <- data.frame(ggpredict(mm1,terms='site',type='random')) %>% 
   select(-group)
 bind_rows(a1,a2,.id='mod') %>% mutate(mod=factor(mod,labels=c('fixed','random'))) %>% 
-  ggplot(aes(x=x,y=predicted,col=mod))+geom_point()+
+  ggplot(aes(x=x,y=predicted,col=mod))+geom_point(size=3)+
   geom_hline(yintercept = 0,linetype='dashed')+
   scale_colour_manual(values=c('blue','red'))+
   labs(x='Site',y='Predicted',col='Model')
 ```
 
-\pause
+<!-- <!-- \pause --> -->
 
 Random intercept "pulls in" sites with extreme values towards zero   
 
@@ -780,7 +772,7 @@ ggplot(modPreds,aes(x=x,y=predicted))+geom_ribbon(aes(ymax=conf.high,ymin=conf.l
   facet_wrap(~mod)+
   labs(y='mass',x='forest',col='Species',fill='Species')+
   scale_fill_manual(values=colValues)+
-  scale_colour_manual(values=colValues)
+  scale_colour_manual(values=colValues)+theme(legend.position = c(0.8,0.25))
 ```
 
 
@@ -865,6 +857,8 @@ glmm1 <- glmer.nb(y~x+(x|site),data=dat2) #Negative binomial GLMM
 summary(glmm1) #glmer.nb takes a long time to run
 ```
 
+<!-- \pause -->
+
 - `glmmTMB()` from `glmmTMB` works for those above, _plus_ a bunch of others (Zero-inflation, Beta-binomial), and it's generally faster
 
 ```{r glmmTMBexample, echo=TRUE, eval=FALSE}
@@ -899,12 +893,16 @@ summary(glmm2) #Similar results, but quicker
 
 - Added complication: __we also need to check whether the random effects are normally distributed__
 
+<!-- \pause -->
+
 ```{r lmmResid, echo=TRUE, eval=FALSE}
 #Example with LMMs (fish model from before)
 devRes <- residuals(m2,type='deviance') #Get deviance residuals
-m2RE <- ranef(m2)$sites #Get random effects (intercept + slope)
+m2RE <- ranef(m2)$sites #Get matrix of random effects (intercept + slope)
 par(mfrow=c(2,2))
-plot(fitted(m2),devRes,xlab='Fitted',ylab='Deviance residual',main='Residuals'); abline(h=0,lty=2)
+#Plots deviance residuals + 0 line
+plot(fitted(m2),devRes,xlab='Fitted',ylab='Deviance residual',main='Residuals')
+abline(h=0,lty=2)
 qqnorm(devRes,main='Residual Q-Q'); qqline(devRes) #Deviance residual Q-Q
 qqnorm(m2RE[,1],main='Intercepts Q-Q'); qqline(m2RE[,1]) #Intercepts
 qqnorm(m2RE[,2],main='Slopes Q-Q'); qqline(m2RE[,2]) #Slopes Q-Q
@@ -921,6 +919,8 @@ par(mfrow=c(1,1))
 - Residual plots can be misleading, and can hide information from you. A better way is to compare a set of _simulated data_ from your model to the _actual data_
 - The `simulateResiduals` from `DHARMa` (see [here](https://cran.r-project.org/web/packages/glmmTMB/vignettes/model_evaluation.pdf)) works well for `glmmTMB` models, as well as LMs, GLMs, and more, so it's worth learning
 
+<!-- \pause -->
+
 ```{r dharmaPlot, message=FALSE, warning=FALSE, fig.height=4, fig.fullwidth=TRUE}
 library(DHARMa)
 glmm2_res <- simulateResiduals(glmm2)
@@ -930,6 +930,8 @@ plot(glmm2_res) #No residual problems here
 ## Simulation (cont.)
 
 - `DHARMa` also has useful functions for checking overdispersion and zero-inflation. Both of these tests indicate that a) this model is not overdispersed, and b) there seems to be no zero-inflation (see [here](https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html) for more examples)
+
+<!-- \pause -->
 
 ::: columns
 
@@ -952,7 +954,7 @@ testZeroInflation(glmm2_res)
 
 ## Partial residual plots for `glmmTMB` models
 
-- `ggpredict()` from `library(ggeffects)` works with `glmmTMB` models
+- `ggpredict()` from `library(ggeffects)` works with all `glmm` models
 
 ```{r glmmPredict, fig.width=7,fig.height=3.5}
 library(ggeffects)
@@ -986,7 +988,7 @@ summary(canMod)
 
 :::: column
 
-```{r canolaModPlot,width=4,height=6,warning=FALSE,message=FALSE}
+```{r canolaModPlot,fig.width=5,fig.height=6,warning=FALSE,message=FALSE}
 plot(ggpredict(canMod,terms=c('VegMass')))+
   labs(x='Plant size',y='Pod success',
        title='Big plants have proportionally more pods')
@@ -1019,8 +1021,8 @@ testDispersion(canModRes)
 
 ## I fit a model... now what?
 
-- Congratulations, your model ran and it met the assumptions of regression...
-- Time to see if your predictions are supported by your data!
+- Congratulations, your LM/GLM/LMM/GLMM ran and it met the assumptions of regression!
+- Time to see if your predictions are supported by your data...
 - For each of the terms in your model:
   - Was the term "important" for your model?
   - If so, what direction was the effect in?
@@ -1031,7 +1033,7 @@ testDispersion(canModRes)
 
 In linear models, this is done using an ANOVA F-test (also shown at the bottom of a `summary()` statement):
 
-```{r anovaLM}
+```{r anovaLM, echo=TRUE}
 lmMod1 <- lm(mpg~disp+gear,data=mtcars)
 anova(lmMod1)
 ```
@@ -1040,49 +1042,51 @@ anova(lmMod1)
 
 Unfortunately, if we have more than 1 term in the model, the order of terms can change your answer:
 
-```{r}
-#lmMod1 <- lm(mpg~disp+gear,data=mtcars)
+```{r, echo=TRUE}
+lmMod1 <- lm(mpg~disp+gear,data=mtcars)
 lmMod2 <- lm(mpg~gear+disp,data=mtcars)
 ```
 
--
-  ```{r }
-  anova(lmMod1)
-  ```
+```{r, echo=TRUE}
+anova(lmMod1)
+```
 
--
-  ```{r}
-  anova(lmMod2)
-  ```
+```{r, echo=TRUE}
+anova(lmMod2)
+```
 
 ## Solution: use a Type II ANOVA
 
 - We're usually interested in the importance of a term on its own, _not just after other terms are accounted for_ (Type I ANOVA).
 
-- For this, we use a Type II ANOVA. This can be done using `drop1()` (or `Anova()` in the `car` package)
+- For this, we use a Type II ANOVA using `drop1()` or `car::Anova()`
 
--
-  ```{r}
-  drop1(lmMod1,test='F')
-  ```
+<!-- \pause -->
 
--
-  ```{r}
-  drop1(lmMod2,test='F') #Same as above
-  ```
+```{r, echo=TRUE}
+drop1(lmMod1,test='F')
+```
+
+```{r, echo=TRUE}
+drop1(lmMod2,test='F') #Same as above
+```
 
 ## Interactions make ANOVA testing a bit strange
 
 - If interactions are present, it doesn't really make sense to test the main terms __because they depend on the interactions__
-- For example:
-  ```{r}
-  lmMod3 <- lm(mpg ~ gear*disp,data=mtcars)
-  drop1(lmMod3,test='F')
-  ```
+
+<!-- \pause -->
+
+```{r}
+lmMod3 <- lm(mpg ~ gear*disp,data=mtcars)
+drop1(lmMod3,test='F')
+```
+
 - `Anova` from the `car` package tests other terms _after_ interactions, but the meaning isn't the same. I prefer to keep things simple and just use `drop1()`
-  ```{r}
-  car::Anova(lmMod3,type='II')
-  ```
+
+```{r}
+car::Anova(lmMod3,type='II')
+```
 
 ## GLMs, LMMs, and GLMMs
 
@@ -1113,24 +1117,52 @@ drop1(m1,test='Chisq')
 - This means that models with _different numbers of fixed effects_ don't have the same REML estimates
 - Likelihood between these models technically can't be compared!
 
-Solution:
-
+- Solution:
   1. Use ML if comparing between models with different fixed effects, then...
   2. Re-fit with REML once you've decided on a model
 
 ## Step 2: what was the direction of the effect?
 
-How do I know this effect is different from _x_? (Usually zero)
+::: columns
+
+:::: column
+
+- How do I know this effect is different from _x_?
+
 - Use Wald Z-test (2-sided p-value from Z-test)
 
+<!-- \pause -->
+
 ```{r, echo=TRUE}
-mm1 <- update(mm1,REML=TRUE) #Reset to REML
-meanEst <- fixef(mm1)[2] #Get mean
-seEst <- sqrt(vcov(mm1)[2,2]) #Get standard error
-(1-pnorm(meanEst/seEst,0,1))*2 #p-value from 2-sided Z-test
+#Get mean
+meanEst <- fixef(mm1)[2] 
+#Get standard error
+seEst <- sqrt(vcov(mm1)[2,2])
+zEst <- meanEst/seEst #Z-score
+#p-value from 2-sided Z-test
+(1-pnorm(zEst,0,1))*2 #Large difference from zero
 ```
 
-- `glht` from `library(multcomp)` works with `lmer` models if you are comparing between coefficients (e.g. "Is treatment A different from B and C?")
+::::
+
+:::: column
+
+- If you're testing multiple things at the same time, you need to account for _multiple comparisons_
+- `glht` from `library(multcomp)` works with most linear models for comparing between coefficients 
+  - e.g. "Is treatment A different from B and C?"
+
+<!-- \pause -->
+
+```{r, echo=TRUE, warning=FALSE,message=FALSE}
+library(multcomp)
+mod <- lm(mass~species,data=fishDat)
+sppComp <- glht(mod,linfct=mcp(species= "Tukey"))
+cld(sppComp) #Letter display
+```
+
+::::
+
+:::
 
 ## Step 3: How well did your model fit your data?
 
@@ -1146,11 +1178,13 @@ summary(m0)
 - Likelihood Ratio Tests or AIC (_Akaike's Information Criterion_) can be used to compare between different models _of the same dataset_, but likelihood and AIC don't mean anything on their own
 - Both `MuMIn` and `r2glmm` implement versions of the Nakagawa $R^2$ for mixed effects models. _Caveat emptor_:
 
+<!-- \pause -->
+
 ::: columns
 
 :::: column
 
-```{r, warning=FALSE}
+```{r, echo=TRUE, warning=FALSE}
 library(MuMIn)
 r.squaredGLMM(m1)
 ```
@@ -1158,7 +1192,7 @@ r.squaredGLMM(m1)
 
 :::: column
 
-```{r, warning=FALSE}
+```{r, echo=TRUE, warning=FALSE}
 library(r2glmm)
 r2beta(m1, method = 'nsj',partial=FALSE)
 ```
@@ -1170,12 +1204,19 @@ r2beta(m1, method = 'nsj',partial=FALSE)
 
 ## Some final advice
 
-- LMMs and GLMMs are _hard_ to both understand and fit. They are not as forgiving as LMs and GLMs, and will often fail to fit, take a very long time, or give you very strange answers without any explanation.
+- LMMs and GLMMs are _hard_ to both understand and fit. They are not as forgiving as LMs and GLMs, and will sometimes fail to fit, take a very long time, or give you weird answers without any explanation.
   - Check the model output and make sure the coefficients and SEs aren't weirdly large or small
   - Andrew Gelman's Modeling Rule-of-Thumb: "It's not me, it's you!"
 - My advice: Once you have a model you'd like to fit, start off with simpler "incorrect" version of it, and add terms until you have the final "correct" model
-- In the canola model, I started off with a Field-level intercept, then added a Plot-level intercept, and finally a random slope term
-- One of my interim models had a random `Distance` slope term, which caused the model to fail (reason: only 1 distance per plot!)
+  - In the canola model, I started off with a Field-level intercept, then added a Plot-level intercept, and finally a random slope term
+  - One of my interim models had a random `Distance` slope term, which caused the model to fail (reason: only 1 distance per plot)
+- __Avoid selecting models based on $R^2$ or AIC alone. Think about how the system works!__
 
-\centering __Avoid selecting models based on $R^2$ or AIC alone. Think about how the system works!__
+## To do this week: update your models!
 
+- Some of you have mixed effects... time to update those models!
+- For those who don't need to run LMMs or GLMMS, try this:
+- I have a dataset of honey bee visitation in canola crops (found [here](https://doi.org/10.5061/dryad.vhhmgqnvj)) that I collected during my PhD. I was interested in whether distance from the edge of the field (`Distance`) and number of honey bee hives affected the visitation rate of honey bees.
+- Fit a GLMM that answers my question, check the assumptions using `DHARMa` and make some plots of your results. Bonus if you calculate an $R^2$-like number!
+  - I used different lengths of observation time, so you'll have to use `log(time)` as an offset. You also may need to use a zero-inflated distribution (see `glmmTMB` help file for details)
+  - How does the size of the variance components look? Should I have a) taken more samples at each field, or b) used more fields?
