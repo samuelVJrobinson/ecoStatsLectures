@@ -73,7 +73,7 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 
 ## Governing equations
 
-Some systems can be described by a set of governing equations, either in _discrete_ or _continuous_ time
+Dynamics of some systems can be described by a set of equations, either in _discrete_ or _continuous_ time
 
 ::: columns
 
@@ -131,13 +131,71 @@ Some systems can be described by a set of governing equations, either in _discre
 
 :::
 
+## Some other common dynamic models
+
+::: columns
+
+:::: column
+
+- Logistic growth
+
+\begin{equation*}
+  n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))
+\end{equation*}
+
+::::
+
+:::: column
+
+- Michaelis-Menten
+
+\begin{equation*}
+  \frac{dp}{dt} = \frac{Va}{K_m+a}
+\end{equation*}
+
+::::
+
+:::
+
+\vspace{0.5cm}
+
+::: columns
+
+:::: column
+
+- Beverton-Holt model
+
+\begin{equation*}
+\begin{split}
+\text{N}_t =& \frac{R_0 N_{t-1}}{1+N_{t-1}/M}
+\end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+- Susceptible-Infected-Recovered (SIR) model
+
+\begin{equation*}
+\begin{split}
+\frac{dS}{dt} =& -\frac{\beta I S}{N}\\
+\frac{dI}{dt} =& \frac{\beta I S}{N} - \gamma I \\
+\frac{dR}{dt} =& \gamma I
+\end{split}
+\end{equation*}
+
+::::
+
+:::
+
 ## Where do these equations come from?
 
 ::: columns
 
 :::: column
 
-- Mostly from literature, or sometimes from your own derivations
+- Mostly from literature, sometimes from your own derivations
 
 - Can be derived from causal models, flow diagrams, organismal life cycles
 
@@ -161,7 +219,7 @@ Some systems can be described by a set of governing equations, either in _discre
 
 - We have a _pretty good idea_ what rules the system is following, and we want to figure out the parameters that it uses
 
-- Let's start with a simple linear model, where we have _2 parameters_ $\textcolor{blue}{b_0}$ and $\textcolor{blue}{b_1}$ that we're looking for
+- Simple example: let's start with a simple linear model, where we have _2 parameters_ $\textcolor{blue}{b_0}$ and $\textcolor{blue}{b_1}$ that we're looking for
 
 \begin{equation*} 
 \begin{split}
@@ -291,16 +349,54 @@ p1 + geom_abline(intercept=0.9769795,slope=2.0779779)
 
 :::
 
+## General framework
+
+Here are some simple rules for fitting models:
+
+1. Think about how your system works. What rules do you think your system follows?
+
+2. Write down these rules as equations, with __parameters__ that control the system at time `t`
+  - Some differential ($\frac{dx}{dt}$) equations can sometimes be solved by hand
+  - Otherwise you need to use an ODE solver (`fme` in R)
+  
+3. Come up with an _objective function_ that describes the differences between predictions and actual data
+
+4. Get R to find parameters that _minimize_ the objective function
+
+5. See how well your model predicted your data: 
+  - Are all of your parameters _identifiable_ from your data?
+  - Do you need to go back to step 1? 
+
 ## First challenge
 
-- Try doing this for an exponential growth model!
+- Try doing this for a Michaelis-Menten model
 
+## First challenge results
 
+## How do you get SEs on parameters?
+
+- Easy way: bootstrapping
+
+- Hard way: math (calculate the Hessian of the objective function with respect to parameters) 
+
+## "There's got to be a better way!"
+
+- Good news: someone already did the math for you!
+
+- e.g. `SSasymp`, `SSlogis`, `SSmicmen`
  
+- See other functions
+
+## Second challenge
+
+- Write the logistic
 
 # Part 2: Empirical models
 
 ## Empirical smoothing
+
+- Sometimes we don't know the specific rules that govern your system
+  - e.g. population changes across time, but we don't really know how
 
 ## 2-column slide
 
