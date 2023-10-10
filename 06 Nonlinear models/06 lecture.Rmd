@@ -16,9 +16,9 @@ classoption: aspectratio=169
 header-includes: 
   - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
   - \useinnertheme{circles}
-  - \let\oldShaded\Shaded %Change fontsize of R code chunks
-  - \let\endoldShaded\endShaded
-  - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
+  # - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  # - \let\endoldShaded\endShaded
+  # - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
   - \let\oldverbatim\verbatim %Change fontsize of code chunk output
   - \let\endoldverbatim\endverbatim
   - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
@@ -30,10 +30,17 @@ knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE,
                       warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
 library(tidyverse)
 theme_set(theme_classic())
+library(ggpubr)
+library(mgcv)
+library(latex2exp)
 
 ```
 
 ## Outline
+
+::: columns
+
+:::: column
 
 - What are nonlinear models?
 - Mechanistic models
@@ -43,9 +50,21 @@ theme_set(theme_classic())
   - Some common models
   - GAMs
 
+::::
+
+:::: column
+
+![](lorenzAttractor.png){width=100%}
+[The Lorenz System](https://paulbourke.net/fractals/lorenz/): a classical 3D nonlinear system
+
+::::
+
+:::
+
+
 ## What are nonlinear models?
 
-- All linear models take the form:
+- __Linear models__ take the form:
 \begin{equation*} 
 \begin{split}
 \textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} = \textcolor{blue}{b_0}\textcolor{darkturquoise}{1} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} ... + \textcolor{blue}{b_i}\textcolor{darkturquoise}{x_i} \\
@@ -53,10 +72,10 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
 
-- However, _nonlinear models_ can't be reduced to this linear (matrix) form:
+- __Nonlinear models__ are any kind of model that can't be reduced to this linear (matrix) form:
 \begin{equation*} 
 \begin{split}
-\textcolor{orange}{\hat{y_{t}}} & = \textcolor{orange}{\hat{y_{t-1}}} (1 + \textcolor{blue}{r}(1-\frac{\textcolor{orange}{\hat{y_{t-1}}}}{\textcolor{blue}{k}}))\\
+\textcolor{orange}{\hat{y_{t}}} & = \textcolor{orange}{\hat{y_{t-1}}} \textcolor{blue}{r}(1-\frac{\textcolor{orange}{\hat{y_{t-1}}}}{\textcolor{blue}{k}})\\
 y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
@@ -150,7 +169,7 @@ Dynamics of some systems can be described by a set of equations, either in _disc
 - Michaelis-Menten
 
 \begin{equation*}
-  \frac{dp}{dt} = \frac{Va}{K_m+a}
+  \frac{dp}{dt} = \frac{V_{max}a}{K_m+a}
 \end{equation*}
 
 ::::
@@ -211,7 +230,39 @@ Dynamics of some systems can be described by a set of equations, either in _disc
 
 :::
 
-## Fitting mechanistic models
+## Fitting nonlinear models: transformations
+
+::: columns
+
+:::: column
+
+- Sometimes you can transform your data to approximate nonlinear models
+- e.g. $y = b_0e^{xb1}$ (Exponential growth)
+  - Transformation: $ln(y)=ln(b_0e^{xb1})=ln(b_0)+ln(e^{xb1})=ln(b_0)+xb_1$
+  - Linear model in R: `lm(log(y)~x)`
+<!-- - e.g. $\frac{dp}{dt} = \frac{V_{max}a}{K_m+a}$ (Michaelis-Menten) -->
+<!--   - Transformation: $\frac{dt}{dp} = \frac{K_m+a}{V_{max}a}=\frac{K_m}{V_{max}a}+\frac{a}{V_{max}a}=\frac{K_m}{V_{max}a}+\frac{1}{V_max}$ -->
+<!-- - Linear model in R: `lm((1/v)~(1/a))` -->
+- This can cause problems because _distances_ don't mean the same thing at all ranges of x-values; in general, it's better to use a NLM if you're able to
+
+::::
+
+:::: column
+
+```{r}
+expDat <- data.frame(x=1:10) %>% mutate(yhat=0.4*exp(x*0.5),y=yhat*rnorm(10,1,0.2)) #Multiplicative error
+
+p1 <- ggplot(data=expDat,aes(x,y))+geom_point()+geom_line(aes(y=yhat),col='orange')
+p2 <- ggplot(data=expDat,aes(x,log(y)))+geom_point()+geom_line(aes(y=log(yhat)),col='orange')
+ggarrange(p1,p2,ncol=1,nrow=2)
+
+```
+
+::::
+
+:::
+
+## Fitting nonlinear models: simple example
 
 ::: columns
 
@@ -221,13 +272,13 @@ Dynamics of some systems can be described by a set of equations, either in _disc
 
 - Simple example: let's start with a simple linear model, where we have _2 parameters_ $\textcolor{blue}{b_0}$ and $\textcolor{blue}{b_1}$ that we're looking for
 
-\begin{equation*} 
+\begin{equation*}
 \begin{split}
-\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1} 
+\textcolor{orange}{\hat{y}} & = \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} = \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x_1}
 \end{split}
 \end{equation*}
 
-- We're trying to find the parameters of a line that _most closely_ fits our data: 
+- We're trying to find the parameters of a line that _most closely_ fits our data:
 
 ::::
 
@@ -243,7 +294,7 @@ yhat <- as.vector(X %*% B)
 y <- yhat + rnorm(N)
 dat <- data.frame(yhat,y,x1)
 p1 <- ggplot(dat)+geom_point(aes(x1,y))
-p1  
+p1
 
 ```
 
@@ -302,8 +353,8 @@ We can try this for a whole bunch of intercepts and slopes:
 
 ```{r lmExamp3, fig.width=8, fig.height=4}
 
-expand.grid(B0=seq(-10,10,by=0.5),B1=seq(-10,10,by=0.5)) %>% 
-  rowwise() %>% mutate(SS=sqrt(with(dat,ssFun(c(B0,B1),x1,y)))) %>% 
+expand.grid(B0=seq(-10,10,length.out=60),B1=seq(-10,10,length.out=40)) %>%
+  rowwise() %>% mutate(SS=sqrt(with(dat,ssFun(c(B0,B1),x1,y)))) %>%
   ggplot(aes(x=B0,y=B1,fill=SS))+geom_raster()+
   # scale_fill_distiller(direction = 1,palette = 'YlOrRd')
   annotate(geom = 'point',x=1,y=2,col='black',pch=3)+
@@ -327,7 +378,7 @@ expand.grid(B0=seq(-10,10,by=0.5),B1=seq(-10,10,by=0.5)) %>%
   #Function to calculate SS
   ssFun <- function(B,xdat,ydat){
     sum((ydat - (B[1] + B[2]*xdat))^2)
-  } 
+  }
   ```
 
 - Next, we use the `optim` function to find the intercept and slope values that return the minimum value of SS. How did it do? (Actual values: $b_0$:1, $b_1$:2)
@@ -338,7 +389,7 @@ expand.grid(B0=seq(-10,10,by=0.5),B1=seq(-10,10,by=0.5)) %>%
 
 ```{r optimExamp, echo=TRUE}
   #Starts at 0,0 and "looks around" from there
-  optim(par = c(0,0) , fn = ssFun) 
+  optim(par = c(0,0) , fn = ssFun)
 ```
 
 ```{r , fig.height=2,fig.width=5}
@@ -349,6 +400,107 @@ p1 + geom_abline(intercept=0.9769795,slope=2.0779779)
 
 :::
 
+## Fitting mechanistic models: nonlinear example
+
+::: columns
+
+:::: column
+
+- Let's move on to a nonlinear model (Michaelis-Menten), where we also have _2 parameters_ $\textcolor{blue}{b_0}$ and $\textcolor{blue}{b_1}$ that we're looking for
+
+\begin{equation*}
+\textcolor{orange}{\hat{y}} = \frac{\textcolor{blue}{b_0}\textcolor{darkturquoise}{x_1}}{\textcolor{blue}{b_1}+\textcolor{darkturquoise}{x_1}}
+\end{equation*}
+
+- Again, we're trying to find the parameters of a nonlinear curve that _most closely_ fits our data:
+
+::::
+
+:::: column
+
+```{r micMenExample}
+set.seed(1)
+purTrt <- Puromycin %>% filter(state=='treated') %>% select(-state)
+# B <- coef(nls(rate ~ SSmicmen(conc, Vm, K), data = purTrt)) #"Actual" coefs
+
+#Michaelis-Menten
+MMfun <- function(b,x) (b[1]*x)/(b[2]+x)
+
+#Function to calculate SS from b0, b1, and data (x & y)
+ssFunMM <- function(B,xdat=purTrt$conc,ydat=purTrt$rate){
+  sum((ydat - (MMfun(B,xdat)))^2)
+}
+
+ss1 <- paste('b0 = 212, b1 = 0.06, SS = ', round(with(dat,ssFunMM(c(212,0.06)),1)))
+ss2 <- paste('b0 = 100, b1 = 0.1, SS = ', round(with(dat,ssFunMM(c(200,0.1)),1)))
+ss3 <- paste('b0 = 250, b1 = 0.01, SS = ', round(with(dat,ssFunMM(c(250,0.01)),1)))
+
+p1 <- ggplot(purTrt) + geom_point(aes(x=conc,y=rate))
+
+p1 +
+  annotate(geom='line',x=seq(0.02,1.1,0.02),y=MMfun(c(212,0.06),seq(0.02,1.1,0.02)))+
+  annotate(geom='line',x=seq(0.02,1.1,0.02),y=MMfun(c(200,0.1),seq(0.02,1.1,0.02)),col='red')+
+  annotate(geom='line',x=seq(0.02,1.1,0.02),y=MMfun(c(250,0.01),seq(0.02,1.1,0.02)),col='blue')+
+  annotate(geom='text',x=0.6,y=220,label=ss1)+
+  annotate(geom='text',x=0.6,y=150,col='red',label=ss2)+
+  annotate(geom='text',x=0.6,y=270,col='blue',label=ss3)
+
+```
+
+
+::::
+
+:::
+
+## Nonlinear example (cont.)
+
+```{r micMenExample2, fig.width=8, fig.height=4}
+expand.grid(B0=seq(100,300,length.out=60),B1=seq(0.01,0.50,length.out=40)) %>%
+  rowwise() %>% mutate(SS=with(dat,sqrt(ssFunMM(c(B0,B1))))) %>%
+  ggplot(aes(x=B0,y=B1,fill=SS))+geom_raster()+
+  annotate(geom = 'point',x=212,y=0.06,col='black',pch=3)+
+  annotate(geom = 'point',x=200,y=0.1,col='red',pch=3)+
+  annotate(geom = 'point',x=250,y=0.01,col='blue',pch=3)+
+  scale_fill_viridis_c(direction=-1)+
+  theme(legend.position = 'none')
+```
+## Get R to do it
+
+::: columns
+
+:::: column
+
+Mind your starting parameters!
+
+```{r}
+(op1 <- optim(par = c(0,0) , fn = ssFunMM))
+```
+
+```{r}
+ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
+  annotate('line',x=seq(0.02,1.1,by=0.02),y=MMfun(op1$par,seq(0.02,1.1,by=0.02)))
+```
+
+::::
+
+:::: column
+
+Better to start with more "realistic" values
+
+```{r}
+(op2 <- optim(par = c(200,0.01) , fn = ssFunMM))
+```
+
+```{r}
+ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
+  annotate('line',x=seq(0.02,1.1,by=0.02),y=MMfun(op2$par,seq(0.02,1.1,by=0.02)))
+```
+
+::::
+
+:::
+
+
 ## General framework
 
 Here are some simple rules for fitting models:
@@ -358,45 +510,316 @@ Here are some simple rules for fitting models:
 2. Write down these rules as equations, with __parameters__ that control the system at time `t`
   - Some differential ($\frac{dx}{dt}$) equations can sometimes be solved by hand
   - Otherwise you need to use an ODE solver (`fme` in R)
-  
+
 3. Come up with an _objective function_ that describes the differences between predictions and actual data
 
 4. Get R to find parameters that _minimize_ the objective function
 
-5. See how well your model predicted your data: 
+5. See how well your model predicted your data:
   - Are all of your parameters _identifiable_ from your data?
-  - Do you need to go back to step 1? 
+  - Do you need to go back to step 1?
 
 ## First challenge
 
-- Try doing this for a Michaelis-Menten model
+- Broken stick model
 
 ## First challenge results
+
+- Broken stick model
 
 ## How do you get SEs on parameters?
 
 - Easy way: bootstrapping
 
-- Hard way: math (calculate the Hessian of the objective function with respect to parameters) 
+- Medium way: MCMC sampling (Bayesian estimation)
+
+- Hard way: calculate Hessian of the objective function (serious math)
 
 ## "There's got to be a better way!"
 
-- Good news: someone already did the math for you!
+Good news: someone already did the scary math for you!
 
-- e.g. `SSasymp`, `SSlogis`, `SSmicmen`
- 
-- See other functions
+```{r ssExamples, fig.width=8, fig.height=4}
+# SSasymp: Asymptotic Regression
+#   - SSasympOff, SSasympOrig are reparameterizations
+#   - SSweibull is similar but has extra pwr parameter
+p1 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
+  stat_function(fun=function(x) SSasymp(x,10,0,0.1))+
+  stat_function(fun=function(x) SSasymp(x,5,0,0.1),col='red')+
+  stat_function(fun=function(x) SSasymp(x,10,2,1),col='blue')+
+  annotate(geom='text',x=5,y=9,label='Asym: 10, R0: 0, lrc: 0.1')+
+  annotate(geom='text',x=5,y=6,col='red',label='Asym: 5, R0: 0, lrc: 0.1')+
+  annotate(geom='text',x=5,y=11,col='blue',label='Asym: 10, R0: 2, lrc: 1')+
+  labs(title=TeX('\\textbf{SSasymp}: $Asym+(R0-Asym)e^{-e^{lrc}x}$'))
+
+#SSbiexp: Biexponential
+p2 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
+  stat_function(fun=function(x) SSbiexp(x,3,0.1,0,0))+
+  stat_function(fun=function(x) SSbiexp(x,1,1,-1.6,-1.4),col='red')+
+  stat_function(fun=function(x) SSbiexp(x,-3,-1,1,-1.3),col='blue')+
+  annotate(geom='text',x=5,y=2,label='A1: 3, lrc1: 0.1, A2: 0, lrc2: 0')+
+  annotate(geom='text',x=5,y=-1,col='red',label='A1: 1, lrc1: 1, A2: -1.6, lrc2: -1.4')+
+  annotate(geom='text',x=5,y=-2,col='blue',label='A1: -3, lrc1: -1, A2: -1, lrc2: -1.3')+
+  labs(title=TeX('\\textbf{SSbiexp}: $A_1e^{-e^{lrc1}x}+A_2e^{-e^{lrc2}x}$'))
+
+#SSfol - First-order compartmental model (drug absorption)
+p3 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
+  stat_function(fun=function(x) SSfol(4,x,-2.5,0.5,-3))+
+  stat_function(fun=function(x) SSfol(5,x,-1.5,0.95,-2),col='red')+
+  stat_function(fun=function(x) SSfol(1,x,-0.1,0.95,-2),col='blue')+
+  annotate(geom='text',x=7.5,y=5,label='Dose:4, lKe: -2.5, lKa: 0.5, lCl: -3')+
+  annotate(geom='text',x=7.5,y=3,col='red',label='Dose: 5, lKe: -1.5, lKa: 0.95, lCl: -2')+
+  annotate(geom='text',x=7.5,y=0.5,col='blue',label='Dose: 1, lKe: -0.1, lKa: 0.95, lCl: -2')+
+  labs(title=TeX('\\textbf{SSfol}: $Dose \\times e^{lKe+lKa-lCl}(e^{-e^{lKe}x} - e^{-e^{lKa}x})/(e^{lKa} - e^{lKe})$'))
+
+#SSlogis: Logistic model
+# - SSfpl is a reparameterization
+p4 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
+  stat_function(fun=function(x) SSlogis(x,10,5,1))+
+  stat_function(fun=function(x) SSlogis(x,10,2,1),col='red')+
+  stat_function(fun=function(x) SSlogis(x,8,5,2),col='blue')+
+  annotate(geom='text',x=8.5,y=8,label='Asym: 10, xmid: 5, scal: 1')+
+  annotate(geom='text',x=2,y=9,col='red',label='Asym: 10, xmid: 2, scal: 1')+
+  annotate(geom='text',x=8.5,y=5,col='blue',label='Asym: 10, xmid: 5, scal: 2')+
+  labs(title=TeX('\\textbf{SSlogis}: $Asym/(1+e^{\\frac{xmid-x}{scal}})$'))
+
+#SSgompertz: growth model
+p5 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
+  stat_function(fun=function(x) SSgompertz(x,10,1,0.5))+
+  stat_function(fun=function(x) SSgompertz(x,10,2,0.5),col='red')+
+  stat_function(fun=function(x) SSgompertz(x,5,1,0.1),col='blue')+
+  annotate(geom='text',x=7,y=9,label='Asym: 10, b2: 1, b3: 0.5')+
+  annotate(geom='text',x=7,y=8,col='red',label='Asym: 10, b2: 2, b3: 0.5')+
+  annotate(geom='text',x=7,y=4,col='blue',label='Asym: 5, b2: 1, b3: 0.1')+
+  labs(title=TeX('\\textbf{SSgompertz}: $(Asym)e^{-b_2b_3^x}$'))
+
+#SSmicmen: Michalis-Menten (enzyme reaction rate)
+p6 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
+  stat_function(fun=function(x) SSmicmen(x,10,1))+
+  stat_function(fun=function(x) SSmicmen(x,5,1),col='red')+
+  stat_function(fun=function(x) SSmicmen(x,10,0.1),col='blue')+
+  annotate(geom='text',x=7,y=8,label='Vmax: 10, K: 1')+
+  annotate(geom='text',x=7,y=3.5,col='red',label='Vmax: 5, K: 1')+
+  annotate(geom='text',x=7,y=11,col='blue',label='Vmax: 10, K: 0.1')+
+  labs(title=TeX('\\textbf{SSmicmen}: $V_{max}x/(K+x)$'))
+
+ggarrange(p1,p2,p3,p4,p5,p6,ncol=3,nrow=2)
+```
 
 ## Second challenge
 
-- Write the logistic
+- Try fitting Michaelis-Menten model using:
+  - Your own custom function
+  - `SSmicmen`
+
+## Second challenge results
+
+- Second challenge
 
 # Part 2: Empirical models
 
 ## Empirical smoothing
 
-- Sometimes we don't know the specific rules that govern your system
-  - e.g. population changes across time, but we don't really know how
+::: columns
+
+:::: column
+
+- Sometimes we don't know the specific rules that govern your system, but we want to know the _general shape_
+  - e.g. population changes across time or space, temperature across seasons
+- We want something that can give us _general predictions_ across the range of your data without actually dealing with the underlying process
+- Solution: "empirical" smoothing
+
+::::
+
+:::: column
+
+```{r mkVdat}
+set.seed(1)
+vdat <- data.frame(x=-30:30,y=volcano[30,])
+vdat$y <- with(vdat,(y-mean(y))/sd(y)+rnorm(length(y),0,0.4))
+plot(y~x,data=vdat)
+```
+
+::::
+
+:::
+
+
+
+## "Guess the family"
+
+::: columns
+
+:::: column
+
+```{r co2Plot,message=F,warning=F}
+co2mod <- CO2 %>%
+  filter(Type=='Quebec') %>%
+  #Code for nls begins here
+  nls(uptake~SSasymp(conc,A,B,C),
+      start=list(A=30,B=-15,C=-5),data=.)
+
+#Makes predictions along CO2 gradient
+data.frame(conc=seq(50,1000,20)) %>%
+  mutate(predUp=predict(co2mod,newdata=.)) %>%
+  #Code for ggplot begins here
+  ggplot(aes(conc,predUp))+
+  geom_line()+ #Data from prediction line
+  #CO2 data
+  geom_point(data=filter(CO2,Type=='Quebec'),
+             aes(conc,uptake))+
+  labs(x='CO2 Concentration',y='Uptake',title='uptake~SSasymp(conc,A,B,C)')
+```
+
+::::
+
+:::: column
+
+- Sometimes you can use a preset nonlinear family that looks "similar enough" to your data
+
+- e.g. `SSlogis`, `SSweibull`
+
+- See also: "Transformations" slide from first section
+
+::::
+
+:::
+
+
+## Polynomial smoothing
+
+If the pattern is "wiggly", you can use polynomials:
+
+::: columns
+
+:::: column
+
+```{r}
+filter(CO2,Type=='Quebec') %>%
+  ggplot(aes(conc,uptake))+
+  geom_point()+
+  geom_smooth(method='lm',formula=y~poly(x,2),col='black')+
+  labs(x='CO2 Concentration',y='Uptake')
+```
+
+::::
+
+:::: column
+
+```{r}
+
+ggplot(vdat,aes(x,y))+geom_point()+
+  geom_smooth(method='lm',col='black',formula=y~poly(x,6))
+
+```
+
+::::
+
+:::
+
+## Problems with polynomials
+
+- How many orders of polynomials do you use? Limited to discrete values
+- Polynomial models don't do well outside of the range of prediction, especially at the edges of your data
+
+```{r polyProblems, fig.fullwidth=TRUE}
+lapply(c(2,6,25),function(p){
+ggplot(vdat,aes(x,y))+geom_point()+
+  geom_smooth(method='lm',col='black',formula=y~poly(x,p)) +
+  labs(title=paste('p =',p))
+}) %>% c(.,ncol=3,nrow=1) %>% do.call(ggarrange,.) %>% print
+```
+
+
+## LOESS smoothers
+
+::: columns
+
+:::: column
+
+- LOESS (LOcal regrESSion) fits simple polynomial model at _each_ data point,  
+- Similar to a moving-average smoother ("window" of nearest N data points)
+
+Problems:
+- Computation-heavy: fits a model for every data point
+- Require a fair bit of data to get good predictions, sensitive to outliers
+- Similar to polynomials, doesn't do well outside the range of the data
+
+::::
+
+:::: column
+
+```{r loessExamp, warning=FALSE}
+
+lmod <- loess(y~x,data=vdat,model=TRUE,control = loess.control(surface = "direct"))
+
+vdat %>% mutate(lpred=predict(lmod)) %>% 
+  ggplot(aes(x,y))+geom_point()+
+  geom_line(aes(y=lpred))
+```
+
+::::
+
+:::
+
+## GAM: Generalized Additive Models
+
+- Additive models are a hybrid linear model that use _basis functions_ to approximate "wiggly" data
+- Uses random effects to penalize curves in order to avoid overfitting (i.e. "just wiggly enough")
+- The `mgcv` package can deal with a large range of additive models, from a large range of distributions (count data, presence/absence, survival, categorical, and more)
+- This package is useful for a wide variety of things, and it's definitely worth learning
+
+## How do GAMs work?
+
+::: columns
+
+:::: column
+
+GAMs take the form:
+
+\begin{equation*}
+  \begin{split}
+  \text{Prediction} = & \text{Fixed Effect} + \text{Random Effect} \\
+  \mu = & X\beta + Zu \\
+  \text{Yield} \sim & Normal (\mu, \sigma) \\
+  u \sim & Normal (0, \lambda S)
+  \end{split}
+\end{equation*}
+
+- Creates _basis functions_ across the range of data stored in columns of $Z$
+- Finds values $u$
+- $\lambda S$ penalty term: selects for optimal "wiggliness"
+
+::::
+
+:::: column
+
+![](crBasis.png){width=100%}
+
+::::
+
+:::
+
+## GAM example
+
+Let's see how this works on a dataset:
+
+```{r gamExample}
+
+gmod <- gam(y~s(x,bs='cr'),data=vdat)
+gmodBases <- cbind(x=vdat$x,model.matrix(gmod)[,-1]) %>% 
+  as.data.frame() %>% setNames(c('x',paste0('b',1:ncol(gmod$smooth[[1]]$S[[1]])))) %>% 
+  pivot_longer(-x)
+
+ggplot(gmodBases,aes(x=x,y=value,col=name))+geom_line()
+
+
+```
+
+## More GAM things
+
+- More tips and tricks about GAMs
+
 
 ## 2-column slide
 
