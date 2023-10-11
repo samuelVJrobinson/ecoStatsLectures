@@ -14,11 +14,12 @@ urlcolor: blue
 df_print: kable
 classoption: aspectratio=169   
 header-includes: 
+  - \usepackage{amsmath}
   - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
   - \useinnertheme{circles}
-  # - \let\oldShaded\Shaded %Change fontsize of R code chunks
-  # - \let\endoldShaded\endShaded
-  # - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
+  - \let\oldShaded\Shaded %Change fontsize of R code chunks
+  - \let\endoldShaded\endShaded
+  - \renewenvironment{Shaded}{\scriptsize\oldShaded}{\endoldShaded}
   - \let\oldverbatim\verbatim %Change fontsize of code chunk output
   - \let\endoldverbatim\endverbatim
   - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
@@ -400,6 +401,25 @@ p1 + geom_abline(intercept=0.9769795,slope=2.0779779)
 
 :::
 
+
+## General framework
+
+Here are some simple rules for fitting models:
+
+1. Think about how your system works. What rules do you think your system follows?
+
+2. Write down these rules as equations, with __parameters__ that control the system at time `t`
+  - Some differential ($\frac{dx}{dt}$) equations can sometimes be solved by hand
+  - Otherwise you need to use an ODE solver (`fme` in R)
+
+3. Come up with an _objective function_ that describes the differences between predictions and actual data
+
+4. Get R to find parameters that _minimize_ the objective function
+
+5. See how well your model predicted your data:
+  - Are all of your parameters _identifiable_ from your data?
+  - Do you need to go back to step 1?
+
 ## Fitting mechanistic models: nonlinear example
 
 ::: columns
@@ -464,6 +484,7 @@ expand.grid(B0=seq(100,300,length.out=60),B1=seq(0.01,0.50,length.out=40)) %>%
   scale_fill_viridis_c(direction=-1)+
   theme(legend.position = 'none')
 ```
+
 ## Get R to do it
 
 ::: columns
@@ -476,7 +497,7 @@ Mind your starting parameters!
 (op1 <- optim(par = c(0,0) , fn = ssFunMM))
 ```
 
-```{r}
+```{r, fig.height=3,fig.width=5}
 ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
   annotate('line',x=seq(0.02,1.1,by=0.02),y=MMfun(op1$par,seq(0.02,1.1,by=0.02)))
 ```
@@ -491,7 +512,7 @@ Better to start with more "realistic" values
 (op2 <- optim(par = c(200,0.01) , fn = ssFunMM))
 ```
 
-```{r}
+```{r, fig.height=3,fig.width=5}
 ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
   annotate('line',x=seq(0.02,1.1,by=0.02),y=MMfun(op2$par,seq(0.02,1.1,by=0.02)))
 ```
@@ -500,32 +521,38 @@ ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
 
 :::
 
+## First challenge: logistic growth
 
-## General framework
+::: columns
 
-Here are some simple rules for fitting models:
+:::: column
 
-1. Think about how your system works. What rules do you think your system follows?
+The logistic growth model $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$ is commonly used in ecology. It's definite solution over time is:
 
-2. Write down these rules as equations, with __parameters__ that control the system at time `t`
-  - Some differential ($\frac{dx}{dt}$) equations can sometimes be solved by hand
-  - Otherwise you need to use an ODE solver (`fme` in R)
+\begin{equation*}
+  n(t) = \frac{Kn_0e^{rt}}{K+n_0(e^{rt}-1)}
+\end{equation*}
 
-3. Come up with an _objective function_ that describes the differences between predictions and actual data
+- Write an _objective function_ for this equation. It should take a vector of parameters ($[n_0, K, r]$) as its first input, a vector of time steps $t$ as input for the equation, and a vector of $n$ values to compare against.
 
-4. Get R to find parameters that _minimize_ the objective function
+- There's a dataset of _budgie_ numbers on two different islands collected over several years located here. Get R to fit a logistic growth model for each island
 
-5. See how well your model predicted your data:
-  - Are all of your parameters _identifiable_ from your data?
-  - Do you need to go back to step 1?
+- Does it look like the K value (carrying capacity) differs much between islands?
 
-## First challenge
+::::
 
-- Broken stick model
+:::: column
 
-## First challenge results
+b
 
-- Broken stick model
+::::
+
+:::
+
+
+
+
+
 
 ## How do you get SEs on parameters?
 
@@ -539,7 +566,7 @@ Here are some simple rules for fitting models:
 
 Good news: someone already did the scary math for you!
 
-```{r ssExamples, fig.width=8, fig.height=4}
+```{r ssExamples, fig.width=14, fig.height=6}
 # SSasymp: Asymptotic Regression
 #   - SSasympOff, SSasympOrig are reparameterizations
 #   - SSweibull is similar but has extra pwr parameter
@@ -741,7 +768,8 @@ ggplot(vdat,aes(x,y))+geom_point()+
 - Similar to a moving-average smoother ("window" of nearest N data points)
 
 Problems:
-- Computation-heavy: fits a model for every data point
+
+- Computation-heavy: fits a weighted model for every data point
 - Require a fair bit of data to get good predictions, sensitive to outliers
 - Similar to polynomials, doesn't do well outside the range of the data
 
@@ -821,6 +849,55 @@ ggplot(gmodBases,aes(x=x,y=value,col=name))+geom_line()
 - More tips and tricks about GAMs
 
 
+
+## First challenge: segmented regression
+
+::: columns
+
+:::: column
+
+A classic nonlinear model is _segmented regression_. It's basically just two linear models smushed together:
+
+\begin{align*}
+\textcolor{orange}{\hat{y}} =&
+    \begin{cases}
+        \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x} & \text{if } \textcolor{darkturquoise}{x} \leq \textcolor{blue}{a}\\
+        \textcolor{blue}{b_2} + \textcolor{blue}{b_3}\textcolor{darkturquoise}{x} & \text{if } \textcolor{darkturquoise}{x} > \textcolor{blue}{a}
+    \end{cases} \\
+    \textcolor{blue}{b_0} +& \textcolor{blue}{b_1}\textcolor{blue}{a} = \textcolor{blue}{b_2} + \textcolor{blue}{b_3}\textcolor{blue}{a} \\
+    y \sim& Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{align*}
+
+This looks like a lot of $\textcolor{blue}{parameters}$! However, because of the equality $\textcolor{blue}{b_0} + \textcolor{blue}{b_1}a = \textcolor{blue}{b_2} + \textcolor{blue}{b_3}a$ you get 1 for free 
+
+1. Rewrite the model in terms of 4 parameters instead of 5
+2. Create a objective function to minimize across
+3. Get R to find the best parameters
+4. Plot your results
+
+::::
+
+:::: column
+
+```{r segRegExample, fig.width=5, fig.height=5}
+segRegDat <- read.csv('./segReg.csv')
+ggplot(segRegDat,aes(x,y))+geom_point()+
+  geom_segment(x = 0, xend = 3, y = 1, yend = 7,colour='orange')+
+  geom_segment(x = 3, xend = 10, y = 7, yend = 3.5 ,colour='orange')
+
+```
+
+::::
+
+:::
+
+
+
+## First challenge results
+
+- Broken stick model
+
+
 ## 2-column slide
 
 ::: columns
@@ -838,4 +915,3 @@ b
 ::::
 
 :::
-
