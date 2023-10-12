@@ -527,7 +527,7 @@ ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
 
 :::: column
 
-The logistic growth model $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$ is commonly used in ecology. It's definite solution over time is:
+The logistic growth model $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$ is commonly used in ecology. Its definite solution is:
 
 \begin{equation*}
   n(t) = \frac{Kn_0e^{rt}}{K+n_0(e^{rt}-1)}
@@ -543,22 +543,125 @@ The logistic growth model $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$ is commonly
 
 :::: column
 
-b
+```{r budgies}
+bDat <- read.csv('./budgies.csv') 
+bDat %>% pivot_longer(-year) %>% 
+  ggplot(aes(x=year,y=value,col=name))+geom_point()+
+  labs(x='Year',y='Budgies',col='Island')+
+  scale_colour_manual(values=c('blue','red'))+
+  coord_cartesian(ylim=c(NA,1000))+
+  theme(legend.position = c(0.8,0.85))
+```
 
 ::::
 
 :::
 
+## Logistic growth results
+
+::: columns
+
+:::: column
+
+First we create a function that calculates the logistic growth curve at time `t`
+
+```{r, echo=TRUE}
+lgFun <- function(t,K,r,n0){
+  (K*n0*exp(r*t))/(K+n0*(exp(r*t)-1))} 
+```
+
+Looks like it works! `curve` is handy for showing what a set of function output along `x` will look like:
+
+```{r, echo=TRUE,fig.width=5,fig.height=4}
+curve(lgFun(x,100,1,10),from=0,to=10) 
+```
+
+::::
+
+:::: column
+
+Next we make the objective function, which is the sum of squared differences between `ydat` and the logistic growth function. `B` is now a single vector that contains `K`, `r`, and `n0`:
+
+```{r, echo=TRUE}
+ssFunLG <- function(B,xdat=bDat$year,ydat){
+  sum((lgFun(xdat,B[1],B[2],B[3])-ydat)^2)}
+```
 
 
+Unfortunately, this gives weird answers (negative starting values). This is actually just a flat line:
 
+```{r, echo=TRUE}
+optim(c(100,1,1),fn = ssFunLG,ydat=bDat$islandA)$par
+```
 
+::::
+
+:::
+
+## Logistic growth results (cont.)
+
+Let's try writing the objective function again, but now we'll scale the `n0` parameter (`B[3]` below) to be on the _log_ scale. This prevents it from going below zero:
+
+```{r, echo=TRUE}
+ssFunLG2 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],exp(B[3]))-ydat)^2)
+```
+
+This runs, and starting values (`n0`) are now in log-units. This looks better, but since `n0` is so low, it might just be best to set it at a value close to zero:
+
+```{r, echo=TRUE}
+optim(c(100,1,1),fn = ssFunLG2,ydat=bDat$islandA)$par
+```
+
+One last re-write of the objective function! Now we set `n0` to `1e-4` ($1e-4$), which is close to zero, and put it in the place of `B[3]`:
+
+```{r, echo=TRUE}
+ssFunLG3 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],1e-4)-ydat)^2) 
+```
+
+## Logistic growth results (cont.)
+
+::: columns
+
+:::: column
+
+Now we fit a model for each island group. 
+```{r, echo=TRUE}
+o1 <- optim(c(100,1),fn = ssFunLG3,ydat=bDat$islandA)
+o2 <- optim(c(100,1),fn = ssFunLG3,ydat=bDat$islandB) 
+```
+
+Looks like reasonable values:
+
+```{r}
+o1$par
+o2$par
+```
+
+Now we can plot the results. This uses a bit of fancy `pivot_longer` code to get things into the correct columns. It also looks like Island A has a higher K value!
+
+::::
+
+:::: column
+
+```{r}
+bDat %>% mutate(predA=lgFun(t=year,K=o1$par[1],r=o1$par[2],n0=1e-4),
+                predB=lgFun(t=year,K=o2$par[1],r=o2$par[2],n0=1e-4)) %>% 
+  pivot_longer(-year,names_to=c('.value','set'),names_pattern = '(island|pred)(A|B)') %>% 
+  ggplot(aes(x=year,col=set))+
+  geom_point(aes(y=island))+
+  geom_line(aes(y=pred))+
+  scale_colour_manual(values=c('blue','red'))+
+  labs(x='Year',y='Budgies',col='Island')
+```
+::::
+
+:::
 
 ## How do you get SEs on parameters?
 
 - Easy way: bootstrapping
 
-- Medium way: MCMC sampling (Bayesian estimation)
+- Medium way: MCMC sampling (Bayesian estimation), or profile likelihood
 
 - Hard way: calculate Hessian of the objective function (serious math)
 
@@ -633,15 +736,32 @@ p6 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
 ggarrange(p1,p2,p3,p4,p5,p6,ncol=3,nrow=2)
 ```
 
+## Even better news, nls can profile likelihoods!
+
+
+
 ## Second challenge
 
-- Try fitting Michaelis-Menten model using:
-  - Your own custom function
-  - `SSmicmen`
+Try fitting the same `budgies` data using `nls` instead of `optim`, and test whether the difference in K values between islands is significant!
+
+Syntax for `nls`:
+
+```{r, echo=TRUE, eval=FALSE}
+a <- nls(y ~ (K*0.01*exp(r*x))/(K+0.01*(exp(r*x)-1)), data =dat, start = list(K=1,r=1)) #Define the function
+b <- nls(y ~ lgFun(x,K,r,0.01), data=dat,start=list(K=1,r=1)) #Uses a function
+
+```
 
 ## Second challenge results
 
-- Second challenge
+```{r}
+nmod1 <- nls(islandA ~ lgFun(year,Kval,rval,0.001), data=bDat,start=list(Kval=250,rval=6.5))
+nmod2 <- nls(islandB ~ lgFun(year,Kval,rval,0.001), data=bDat,start=list(Kval=250,rval=6.5))
+
+summary(nmod1)
+summary(nmod2)
+
+```
 
 # Part 2: Empirical models
 
