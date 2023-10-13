@@ -31,6 +31,7 @@ knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE,
                       warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
 library(tidyverse)
 theme_set(theme_classic())
+library(ggeffects)
 library(ggpubr)
 library(mgcv)
 library(latex2exp)
@@ -76,7 +77,8 @@ y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 - __Nonlinear models__ are any kind of model that can't be reduced to this linear (matrix) form:
 \begin{equation*} 
 \begin{split}
-\textcolor{orange}{\hat{y_{t}}} & = \textcolor{orange}{\hat{y_{t-1}}} \textcolor{blue}{r}(1-\frac{\textcolor{orange}{\hat{y_{t-1}}}}{\textcolor{blue}{k}})\\
+\textcolor{orange}{\hat{y}}_{\textcolor{darkturquoise}{t}} & = \textcolor{orange}{\hat{y}}_{\textcolor{darkturquoise}{t-1}} \textcolor{blue}{r}(1-\frac{\textcolor{orange}{\hat{y}}_{\textcolor{darkturquoise}{t-1}}}{\textcolor{blue}{k}})\\
+\textcolor{orange}{\hat{y}} & = \frac{\textcolor{blue}{k}\textcolor{blue}{n_0}e^{\textcolor{blue}{r}\textcolor{darkturquoise}{t}}}{\textcolor{blue}{k}+\textcolor{blue}{n_0}(e^{\textcolor{blue}{r}\textcolor{darkturquoise}{t}}-1)}\\
 y & \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 \end{split}
 \end{equation*}
@@ -526,7 +528,7 @@ ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
 
 :::: column
 
-The logistic growth model $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$ has the definite solution:
+The logistic growth model $n_t = n_{t-1}r(1-\frac{n_{t-1}}{k})$ has the definite solution:
 
 \begin{equation*}
   n(t) = \frac{Kn_0e^{rt}}{K+n_0(e^{rt}-1)}
@@ -605,9 +607,9 @@ bDat %>% pivot_longer(-year) %>%
   opt2$par
   ```
 
-- One last re-write of the objective function! Now we set `n0` to `1e-4` ($1e-4$), which is close to zero, and put it in the place of `B[3]`:
+- One last re-write of the objective function! Now we set `n0` to 0.01, which is close to zero, and put it in the place of `B[3]`:
   ```{r, echo=TRUE}
-  ssFunLG3 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],1e-4)-ydat)^2) 
+  ssFunLG3 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],0.01)-ydat)^2) 
   ```
 
 ## Logistic growth results (cont.)
@@ -637,8 +639,8 @@ bDat %>% pivot_longer(-year) %>%
 ```{r}
 
 #This uses a bit of fancy `pivot_longer` code to get things into the correct columns.
-bDat %>% mutate(predA=lgFun(t=year,K=opt3$par[1],r=opt3$par[2],n0=1e-4),
-                predB=lgFun(t=year,K=opt4$par[1],r=opt4$par[2],n0=1e-4)) %>% 
+bDat %>% mutate(predA=lgFun(t=year,K=opt3$par[1],r=opt3$par[2],n0=0.01),
+                predB=lgFun(t=year,K=opt4$par[1],r=opt4$par[2],n0=0.01)) %>% 
   #Divides
   pivot_longer(-year,names_to=c('.value','set'),names_pattern = '(island|pred)(A|B)') %>% 
   ggplot(aes(x=year,col=set))+
@@ -779,13 +781,29 @@ Note: unless you use one of the self-starting (`SS`) models, you have to provide
 
 ## Second challenge results
 
-```{r}
-nmod1 <- nls(islandA ~ lgFun(year,Kval,rval,0.001), data=bDat,start=list(Kval=250,rval=6.5))
-nmod2 <- nls(islandB ~ lgFun(year,Kval,rval,0.001), data=bDat,start=list(Kval=250,rval=6.5))
+::: columns
 
+:::: column
+
+```{r,echo=TRUE}
+nmod1 <- nls(islandA ~ lgFun(year,Kval,rval,0.001), 
+             data=bDat,start=list(Kval=250,rval=6.5))
+nmod2 <- nls(islandB ~ lgFun(year,Kval,rval,0.001),
+             data=bDat,start=list(Kval=250,rval=6.5))
+```
+
+::::
+
+:::: column
+
+```{r}
 summary(nmod1)
 summary(nmod2)
 ```
+
+::::
+
+:::
 
 # Part 2: Empirical models
 
@@ -808,7 +826,7 @@ summary(nmod2)
 set.seed(1)
 vdat <- data.frame(x=-30:30,y=volcano[30,])
 vdat$y <- with(vdat,(y-mean(y))/sd(y)+rnorm(length(y),0,0.4))
-plot(y~x,data=vdat)
+ggplot(vdat)+geom_point(aes(x=x,y=y))
 ```
 
 ::::
@@ -1058,9 +1076,9 @@ The additive model follows the _general_ shape of the data well!
   
 - Versions of `cr` and `tp` with extra penalization: `cs` and `ts`. This can remove terms _completely_ from the model
 
-- If your _x_ values are circular (e.g. days of the year), you can use _circular_ cubic splines (`cc`) 
+- If _x_ values are "circular" (e.g. days of the year), you can use _circular_ splines (`cc`) 
 
-# Third challenge
+## Third challenge
 
 ::: columns
 
@@ -1077,6 +1095,35 @@ The additive model follows the _general_ shape of the data well!
 ```{r}
 ggplot(ChickWeight,aes(x=Time,y=weight,col=Diet,group=Chick))+
   geom_line()
+```
+
+::::
+
+:::
+
+## Third challenge results
+
+::: columns
+
+:::: column
+
+```{r chkwtGAM, echo=TRUE}
+cmod <- gam(weight ~ s(Time,by=Diet)+
+              s(Chick,bs='re'),data=ChickWeight)
+summary(cmod)
+```
+
+::::
+
+:::: column
+
+```{r}
+ggpredict(cmod,terms=c('Time','Diet')) %>% 
+  data.frame() %>% 
+  ggplot(aes(x=x,y=predicted))+
+  geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=group),alpha=0.2)+
+  geom_line(aes(col=group))+
+  labs(x='Time',y='weight',col='Diet',fill='Diet')
 
 ```
 
@@ -1084,7 +1131,7 @@ ggplot(ChickWeight,aes(x=Time,y=weight,col=Diet,group=Chick))+
 
 :::
 
-## To do: final nonlinear modeling challeng
+## To do: final nonlinear modeling challenge
 
 - For those of you who have nonlinear or "GAMmy" data... time to update your models. If not...
 - Fit the latter `ChickWeight` data using a GAM and a nonlinear mixed effects model (`nlmer`). How does `Diet` change chick growth?
