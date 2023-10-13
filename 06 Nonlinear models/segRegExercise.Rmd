@@ -1,0 +1,32 @@
+## Another potential exercise
+
+- A classic nonlinear model is _segmented regression_. It's basically just two linear models smushed together:
+
+\begin{align*}
+\textcolor{orange}{\hat{y}} =&
+    \begin{cases}
+        \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x} & \text{if } \textcolor{darkturquoise}{x} \leq \textcolor{blue}{a}\\
+        \textcolor{blue}{b_2} + \textcolor{blue}{b_3}\textcolor{darkturquoise}{x} & \text{if } \textcolor{darkturquoise}{x} > \textcolor{blue}{a}
+    \end{cases} \\
+    \textcolor{blue}{b_0} +& \textcolor{blue}{b_1}\textcolor{blue}{a} = \textcolor{blue}{b_2} + \textcolor{blue}{b_3}\textcolor{blue}{a} \\
+    y \sim& Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
+\end{align*}
+
+- Fit a nonlinear model and a GAM of this data and compare them. Do they give you different results?
+
+::::
+
+:::: column
+
+```{r segRegExample, fig.width=5, fig.height=5}
+segRegDat <- read.csv('./segReg.csv')
+ggplot(segRegDat,aes(x,y))+geom_point()+
+  geom_segment(x = 0, xend = 3, y = 1, yend = 7,colour='orange')+
+  geom_segment(x = 3, xend = 10, y = 7, yend = 3.5 ,colour='orange')
+
+```
+
+::::
+
+:::
+

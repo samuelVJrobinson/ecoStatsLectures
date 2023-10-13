@@ -1043,6 +1043,8 @@ The additive model follows the _general_ shape of the data well!
 
 ## More GAM things
 
+- The ever-useful `ggpredict` can make partial effects plot for GAMs, and `DHARMa` is useful for checking assumptions (if you're using non-normal distributions)
+
 - Smoothing is automated in _mgcv_, but the number of basis functions (`k`) isn't. `gam.check()` can help you check whether you might need to increase `k`
 
 - If you have very few _x_ values, or the pattern isn't very wiggly, then you might need a _lower_ `k` value
@@ -1051,44 +1053,45 @@ The additive model follows the _general_ shape of the data well!
   ```{r, echo=TRUE,eval=FALSE}
   gmod3 <- gam(y ~ a + b + s(t) + s(site,bs='re')) 
   ```
+  
+- If you want "interactions" with smooths, you have to use the `by` argument: `s(t,by=myFactor)` 
+  
 - Versions of `cr` and `tp` with extra penalization: `cs` and `ts`. This can remove terms _completely_ from the model
 
 - If your _x_ values are circular (e.g. days of the year), you can use _circular_ cubic splines (`cc`) 
 
-
-## Final challenge: segmented regression
+# Third challenge
 
 ::: columns
 
 :::: column
 
-A classic nonlinear model is _segmented regression_. It's basically just two linear models smushed together:
+- Try fitting a GAM to the first individual Chick in the `ChickWeight` dataset (included with R)
+- Check whether the number of basis functions is appropriate. Does your answer change if you use more or less?
+- If you're feeling adventurous, try fitting multiple individual chicks using a _random intercept_, and see if the `Diet` parameter changes chick growth!
 
-\begin{align*}
-\textcolor{orange}{\hat{y}} =&
-    \begin{cases}
-        \textcolor{blue}{b_0} + \textcolor{blue}{b_1}\textcolor{darkturquoise}{x} & \text{if } \textcolor{darkturquoise}{x} \leq \textcolor{blue}{a}\\
-        \textcolor{blue}{b_2} + \textcolor{blue}{b_3}\textcolor{darkturquoise}{x} & \text{if } \textcolor{darkturquoise}{x} > \textcolor{blue}{a}
-    \end{cases} \\
-    \textcolor{blue}{b_0} +& \textcolor{blue}{b_1}\textcolor{blue}{a} = \textcolor{blue}{b_2} + \textcolor{blue}{b_3}\textcolor{blue}{a} \\
-    y \sim& Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
-\end{align*}
-
-Fit a nonlinear model
-
-::::
+:::: 
 
 :::: column
 
-```{r segRegExample, fig.width=5, fig.height=5}
-segRegDat <- read.csv('./segReg.csv')
-ggplot(segRegDat,aes(x,y))+geom_point()+
-  geom_segment(x = 0, xend = 3, y = 1, yend = 7,colour='orange')+
-  geom_segment(x = 3, xend = 10, y = 7, yend = 3.5 ,colour='orange')
+```{r}
+ggplot(ChickWeight,aes(x=Time,y=weight,col=Diet,group=Chick))+
+  geom_line()
 
 ```
 
 ::::
 
 :::
+
+## To do: final nonlinear modeling challeng
+
+- For those of you who have nonlinear or "GAMmy" data... time to update your models. If not...
+- Fit the latter `ChickWeight` data using a GAM and a nonlinear mixed effects model (`nlmer`). How does `Diet` change chick growth?
+  - For a family of nonlinear model that are commonly used for growth curves, try `SSlogis` or `SSgompertz` for starters
+  - `nlmer` is similar to `lme4` but can have intercepts OR nonlinear parameters as random variables, specified as a _three-part model_. 
+  - e.g. `nlmer(weight ~ SSgompertz(Time,Asym,b2,b3) ~ (Asym|Chick), startVec = c(50,1,1))` (You also need a vector of starting values)
+- How does this compare to a "standard" linear mixed effects model? Does an `lmer` model get the same answers, and does it meet the modelling assumptions?
+- __There are multiple ways to do this!__ Try a couple ways and see what works.
+  
 
