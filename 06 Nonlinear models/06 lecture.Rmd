@@ -441,7 +441,6 @@ Here are some simple rules for fitting models:
 ```{r micMenExample}
 set.seed(1)
 purTrt <- Puromycin %>% filter(state=='treated') %>% select(-state)
-# B <- coef(nls(rate ~ SSmicmen(conc, Vm, K), data = purTrt)) #"Actual" coefs
 
 #Michaelis-Menten
 MMfun <- function(b,x) (b[1]*x)/(b[2]+x)
@@ -527,17 +526,17 @@ ggplot(purTrt) + geom_point(aes(x=conc,y=rate))+
 
 :::: column
 
-The logistic growth model $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$ is commonly used in ecology. Its definite solution is:
+The logistic growth model $n_t = n_{t-1}(1+ r(1-\frac{n_{t-1}}{k}))$ has the definite solution:
 
 \begin{equation*}
   n(t) = \frac{Kn_0e^{rt}}{K+n_0(e^{rt}-1)}
 \end{equation*}
 
-- Write an _objective function_ for this equation. It should take a vector of parameters ($[n_0, K, r]$) as its first input, a vector of time steps $t$ as input for the equation, and a vector of $n$ values to compare against.
+- Write an _objective function_ that takes a vector of parameters ($[n_0, K, r]$) as its first input, plus time steps $t$ and a vector of $n$ values
 
-- There's a dataset of _budgie_ numbers on two different islands collected over several years located here. Get R to fit a logistic growth model for each island
+- Get R to fit a logistic growth model to a dataset of _budgie_ numbers (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/06%20Nonlinear%20models))
 
-- Does it look like the K value (carrying capacity) differs much between islands?
+- Does it look like the K value (carrying capacity) differs much between budgies on different islands?
 
 ::::
 
@@ -563,36 +562,31 @@ bDat %>% pivot_longer(-year) %>%
 
 :::: column
 
-First we create a function that calculates the logistic growth curve at time `t`
+- First we create a function that calculates the logistic growth curve at time `t`
+  ```{r, echo=TRUE}
+  lgFun <- function(t,K,r,n0){
+    (K*n0*exp(r*t))/(K+n0*(exp(r*t)-1))} 
+  ```
 
-```{r, echo=TRUE}
-lgFun <- function(t,K,r,n0){
-  (K*n0*exp(r*t))/(K+n0*(exp(r*t)-1))} 
-```
-
-Looks like it works! `curve` is handy for showing what a set of function output along `x` will look like:
-
-```{r, echo=TRUE,fig.width=5,fig.height=4}
-curve(lgFun(x,100,1,10),from=0,to=10) 
-```
+- `curve` is handy for showing what a set of function output along `x` will look like. Looks like it works!
+  ```{r, echo=TRUE,fig.width=5,fig.height=3.5}
+  curve(lgFun(x,100,1,10),from=0,to=10) 
+  ```
 
 ::::
 
 :::: column
 
-Next we make the objective function, which is the sum of squared differences between `ydat` and the logistic growth function. `B` is now a single vector that contains `K`, `r`, and `n0`:
-
-```{r, echo=TRUE}
-ssFunLG <- function(B,xdat=bDat$year,ydat){
-  sum((lgFun(xdat,B[1],B[2],B[3])-ydat)^2)}
-```
-
-
-Unfortunately, this gives weird answers (negative starting values). This is actually just a flat line:
-
-```{r, echo=TRUE}
-optim(c(100,1,1),fn = ssFunLG,ydat=bDat$islandA)$par
-```
+- Next we make the objective function, which is the sum of squared differences between `ydat` and the logistic growth function. `B` is now a single vector that contains `K`, `r`, and `n0`:
+  ```{r, echo=TRUE}
+  ssFunLG <- function(B,xdat=bDat$year,ydat){
+    sum((lgFun(xdat,B[1],B[2],B[3])-ydat)^2)}
+  ```
+- Unfortunately, this gives weird answers (negative starting values). This is actually just a flat line:
+  ```{r, echo=TRUE}
+  opt1 <- optim(c(100,1,1),ssFunLG,ydat=bDat$islandA)
+  opt1$par
+  ```
 
 ::::
 
@@ -600,23 +594,21 @@ optim(c(100,1,1),fn = ssFunLG,ydat=bDat$islandA)$par
 
 ## Logistic growth results (cont.)
 
-Let's try writing the objective function again, but now we'll scale the `n0` parameter (`B[3]` below) to be on the _log_ scale. This prevents it from going below zero:
+- Let's try writing the objective function again, but now we'll scale the `n0` parameter (`B[3]` below) to be on the _log_ scale. This prevents it from going below zero:
+  ```{r, echo=TRUE}
+  ssFunLG2 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],exp(B[3]))-ydat)^2)
+  ```
 
-```{r, echo=TRUE}
-ssFunLG2 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],exp(B[3]))-ydat)^2)
-```
+- This runs, and starting values (`n0`) are now in log-units. This looks better, but since `n0` is so low, it might just be best to set it at a value close to zero:
+  ```{r, echo=TRUE}
+  opt2 <- optim(c(100,1,1),ssFunLG2,ydat=bDat$islandA)
+  opt2$par
+  ```
 
-This runs, and starting values (`n0`) are now in log-units. This looks better, but since `n0` is so low, it might just be best to set it at a value close to zero:
-
-```{r, echo=TRUE}
-optim(c(100,1,1),fn = ssFunLG2,ydat=bDat$islandA)$par
-```
-
-One last re-write of the objective function! Now we set `n0` to `1e-4` ($1e-4$), which is close to zero, and put it in the place of `B[3]`:
-
-```{r, echo=TRUE}
-ssFunLG3 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],1e-4)-ydat)^2) 
-```
+- One last re-write of the objective function! Now we set `n0` to `1e-4` ($1e-4$), which is close to zero, and put it in the place of `B[3]`:
+  ```{r, echo=TRUE}
+  ssFunLG3 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],1e-4)-ydat)^2) 
+  ```
 
 ## Logistic growth results (cont.)
 
@@ -624,28 +616,30 @@ ssFunLG3 <- function(B,xdat=bDat$year,ydat) sum((lgFun(xdat,B[1],B[2],1e-4)-ydat
 
 :::: column
 
-Now we fit a model for each island group. 
-```{r, echo=TRUE}
-o1 <- optim(c(100,1),fn = ssFunLG3,ydat=bDat$islandA)
-o2 <- optim(c(100,1),fn = ssFunLG3,ydat=bDat$islandB) 
-```
+- Now we fit a model for each island group. 
+  ```{r, echo=TRUE}
+  opt3 <- optim(c(100,1),ssFunLG3,ydat=bDat$islandA)
+  opt4 <- optim(c(100,1),ssFunLG3,ydat=bDat$islandB) 
+  ```
 
-Looks like reasonable values:
+- Looks like reasonable values:
+  ```{r}
+  opt3$par
+  opt4$par
+  ```
 
-```{r}
-o1$par
-o2$par
-```
-
-Now we can plot the results. This uses a bit of fancy `pivot_longer` code to get things into the correct columns. It also looks like Island A has a higher K value!
+- Now we can plot the results: it looks like Island A has a higher K value!
 
 ::::
 
 :::: column
 
 ```{r}
-bDat %>% mutate(predA=lgFun(t=year,K=o1$par[1],r=o1$par[2],n0=1e-4),
-                predB=lgFun(t=year,K=o2$par[1],r=o2$par[2],n0=1e-4)) %>% 
+
+#This uses a bit of fancy `pivot_longer` code to get things into the correct columns.
+bDat %>% mutate(predA=lgFun(t=year,K=opt3$par[1],r=opt3$par[2],n0=1e-4),
+                predB=lgFun(t=year,K=opt4$par[1],r=opt4$par[2],n0=1e-4)) %>% 
+  #Divides
   pivot_longer(-year,names_to=c('.value','set'),names_pattern = '(island|pred)(A|B)') %>% 
   ggplot(aes(x=year,col=set))+
   geom_point(aes(y=island))+
@@ -660,14 +654,20 @@ bDat %>% mutate(predA=lgFun(t=year,K=o1$par[1],r=o1$par[2],n0=1e-4),
 ## How do you get SEs on parameters?
 
 - Easy way: bootstrapping
+  - Re-samples the data and re-fits the model a bunch of times
 
-- Medium way: MCMC sampling (Bayesian estimation), or profile likelihood
+- Medium way: Monte Carlo sampling or _likelihood profiling_
+  - Tests how the objective function changes around the final parameters, and uses this to calculate SEs and p-values for your parameters 
 
 - Hard way: calculate Hessian of the objective function (serious math)
 
-## "There's got to be a better way!"
+## I don't waaaaaant to!
 
-Good news: someone already did the scary math for you!
+![](infomercial.png){width=100%}
+
+## Good news: someone already did the scary math for you!
+
+A bunch of popular nonlinear models are already available in R:
 
 ```{r ssExamples, fig.width=14, fig.height=6}
 # SSasymp: Asymptotic Regression
@@ -736,9 +736,31 @@ p6 <- ggplot(data.frame(x=seq(0,10,by=0.1)),aes(x))+
 ggarrange(p1,p2,p3,p4,p5,p6,ncol=3,nrow=2)
 ```
 
-## Even better news, nls can profile likelihoods!
+## Even better news: nls can easily do likelihood profiles
 
+::: columns
 
+:::: column
+
+Here's the Michaelis-Menten model from before:
+
+```{r}
+mmMod <- nls(rate ~ SSmicmen(conc, Vm, K), data = purTrt)
+summary(mmMod)
+```
+::::
+
+:::: column
+
+Likelihood profile for `Vm`
+
+```{r micMenLP}
+plot(profile(mmMod, which='Vm'))
+```
+
+::::
+
+:::
 
 ## Second challenge
 
@@ -747,10 +769,13 @@ Try fitting the same `budgies` data using `nls` instead of `optim`, and test whe
 Syntax for `nls`:
 
 ```{r, echo=TRUE, eval=FALSE}
-a <- nls(y ~ (K*0.01*exp(r*x))/(K+0.01*(exp(r*x)-1)), data =dat, start = list(K=1,r=1)) #Define the function
-b <- nls(y ~ lgFun(x,K,r,0.01), data=dat,start=list(K=1,r=1)) #Uses a function
+#Define the function yourself
+nls(y ~ (K*0.01*exp(r*x))/(K+0.01*(exp(r*x)-1)), data =dat, start = list(K=1,r=1)) 
 
+#Use a preset function
+nls(y ~ lgFun(x,K,r,0.01), data=dat,start=list(K=1,r=1)) #Uses a function
 ```
+Note: unless you use one of the self-starting (`SS`) models, you have to provide reasonable _starting values_ for `nls`
 
 ## Second challenge results
 
@@ -760,7 +785,6 @@ nmod2 <- nls(islandB ~ lgFun(year,Kval,rval,0.001), data=bDat,start=list(Kval=25
 
 summary(nmod1)
 summary(nmod2)
-
 ```
 
 # Part 2: Empirical models
@@ -854,10 +878,8 @@ filter(CO2,Type=='Quebec') %>%
 :::: column
 
 ```{r}
-
 ggplot(vdat,aes(x,y))+geom_point()+
   geom_smooth(method='lm',col='black',formula=y~poly(x,6))
-
 ```
 
 ::::
@@ -869,7 +891,7 @@ ggplot(vdat,aes(x,y))+geom_point()+
 - How many orders of polynomials do you use? Limited to discrete values
 - Polynomial models don't do well outside of the range of prediction, especially at the edges of your data
 
-```{r polyProblems, fig.fullwidth=TRUE}
+```{r polyProblems, fig.width=8, fig.height=3.5}
 lapply(c(2,6,25),function(p){
 ggplot(vdat,aes(x,y))+geom_point()+
   geom_smooth(method='lm',col='black',formula=y~poly(x,p)) +
@@ -923,13 +945,13 @@ vdat %>% mutate(lpred=predict(lmod)) %>%
 
 :::: column
 
-GAMs take the form:
+Penalized GAMs are actually a _random effects model_, and take the form:
 
 \begin{equation*}
   \begin{split}
   \text{Prediction} = & \text{Fixed Effect} + \text{Random Effect} \\
-  \mu = & X\beta + Zu \\
-  \text{Yield} \sim & Normal (\mu, \sigma) \\
+  \textcolor{orange}{\hat{y}} = & \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{U}\textcolor{purple}{\zeta} \\
+  \text{Yield} \sim & Normal (\textcolor{orange}{\hat{y}}, \sigma) \\
   u \sim & Normal (0, \lambda S)
   \end{split}
 \end{equation*}
@@ -950,27 +972,91 @@ GAMs take the form:
 
 ## GAM example
 
+::: columns
+
+:::: column
+
 Let's see how this works on a dataset:
 
+```{r, echo=TRUE}
+#Fits a GAM using a cubic regression basis 
+gmod1 <- gam(y~s(x,bs='cr'),data=vdat)
+
+#Thin-plate spline basis (default)
+gmod2 <- gam(y~s(x,bs='tp'),data=vdat)
+```
+
+- There are a bunch of different basis functions available (see `?smooth.terms`) from `mgcv`, but `cr` and `tp` are common
+
+::::
+
+:::: column
+
 ```{r gamExample}
+gmodBases1 <- cbind(x=vdat$x,model.matrix(gmod1)[,-1]) %>% 
+  as.data.frame() %>% 
+  setNames(c('x',paste0('b',1:ncol(gmod1$smooth[[1]]$S[[1]])))) 
 
-gmod <- gam(y~s(x,bs='cr'),data=vdat)
-gmodBases <- cbind(x=vdat$x,model.matrix(gmod)[,-1]) %>% 
-  as.data.frame() %>% setNames(c('x',paste0('b',1:ncol(gmod$smooth[[1]]$S[[1]])))) %>% 
-  pivot_longer(-x)
+gmodBases2 <- cbind(x=vdat$x,model.matrix(gmod2)[,-1]) %>% 
+  as.data.frame() %>% 
+  setNames(c('x',paste0('b',1:ncol(gmod2$smooth[[1]]$S[[1]])))) 
+  
+list(`Cubic regression`=pivot_longer(gmodBases1,-x),
+     `Thin plate`=pivot_longer(gmodBases2,-x)) %>% 
+  bind_rows(.id='basis') %>% 
+  ggplot(aes(x=x,y=value,col=name))+
+  geom_line(show.legend = FALSE)+
+  facet_wrap(~basis,ncol=1)
+```
 
-ggplot(gmodBases,aes(x=x,y=value,col=name))+geom_line()
+::::
 
+:::
+
+## GAM example (cont.)
+
+When you multiply basis functions by the coefficients (u) and add them:
+
+```{r gamExample2, fig.width=8,fig.height=3.5}
+
+gmodBases1a <- cbind(1,outer(rep(1,nrow(vdat)),coef(gmod1)[2:10])) * gmodBases1
+gmodBases2a <- cbind(1,outer(rep(1,nrow(vdat)),coef(gmod2)[2:10])) * gmodBases2
+
+gmodPreds1 <- data.frame(x=vdat$x,pred=as.matrix(gmodBases1[,2:10]) %*% coef(gmod1)[2:10])
+gmodPreds2 <- data.frame(x=vdat$x,pred=as.matrix(gmodBases2[,2:10]) %*% coef(gmod2)[2:10])
+
+predList <- list(`Cubic regression`=gmodPreds1,`Thin plate`=gmodPreds2) %>% 
+  bind_rows(.id='basis')
+
+list(`Cubic regression`=pivot_longer(gmodBases1a,-x),
+     `Thin plate`=pivot_longer(gmodBases2a,-x)) %>% 
+  bind_rows(.id='basis') %>% 
+  ggplot(aes(x=x,y=value,col=name))+
+  geom_line(show.legend = FALSE,alpha=0.3)+
+  geom_line(data=predList,aes(y=pred),col='black',linewidth=1)+
+  geom_point(data=vdat,aes(x=x,y=y),col='black',size=1)+
+  facet_wrap(~basis,ncol=2) + coord_cartesian(ylim=c(-2,2))
 
 ```
 
+The additive model follows the _general_ shape of the data well!
+
 ## More GAM things
 
-- More tips and tricks about GAMs
+- Smoothing is automated in _mgcv_, but the number of basis functions (`k`) isn't. `gam.check()` can help you check whether you might need to increase `k`
+
+- If you have very few _x_ values, or the pattern isn't very wiggly, then you might need a _lower_ `k` value
+
+- You can also add non-smooth terms and random intercepts:
+  ```{r, echo=TRUE,eval=FALSE}
+  gmod3 <- gam(y ~ a + b + s(t) + s(site,bs='re')) 
+  ```
+- Versions of `cr` and `tp` with extra penalization: `cs` and `ts`. This can remove terms _completely_ from the model
+
+- If your _x_ values are circular (e.g. days of the year), you can use _circular_ cubic splines (`cc`) 
 
 
-
-## First challenge: segmented regression
+## Final challenge: segmented regression
 
 ::: columns
 
@@ -988,12 +1074,7 @@ A classic nonlinear model is _segmented regression_. It's basically just two lin
     y \sim& Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\sigma})
 \end{align*}
 
-This looks like a lot of $\textcolor{blue}{parameters}$! However, because of the equality $\textcolor{blue}{b_0} + \textcolor{blue}{b_1}a = \textcolor{blue}{b_2} + \textcolor{blue}{b_3}a$ you get 1 for free 
-
-1. Rewrite the model in terms of 4 parameters instead of 5
-2. Create a objective function to minimize across
-3. Get R to find the best parameters
-4. Plot your results
+Fit a nonlinear model
 
 ::::
 
@@ -1011,27 +1092,3 @@ ggplot(segRegDat,aes(x,y))+geom_point()+
 
 :::
 
-
-
-## First challenge results
-
-- Broken stick model
-
-
-## 2-column slide
-
-::: columns
-
-:::: column
-
-a
-
-::::
-
-:::: column
-
-b
-
-::::
-
-:::

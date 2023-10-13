@@ -1,0 +1,14 @@
+tidyverse
+ggplot2
+tibble
+tidyr
+readr
+purrr
+dplyr
+stringr
+forcats
+lubridate
+ggpubr
+nlme
+mgcv
+latex2exp
