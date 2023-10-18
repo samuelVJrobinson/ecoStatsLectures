@@ -74,60 +74,60 @@ image(volcano)
 
 :::
 
-## Covariance
+<!-- ## Covariance -->
 
-- Normal distributions\footnotemark don't just have a single $\sigma$, but a matrix of values
-- If our data _y_ are _independent_, then it looks like this:
+<!-- - Normal distributions\footnotemark don't just have a single $\sigma$, but a matrix of values -->
+<!-- - If our data _y_ are _independent_, then it looks like this: -->
 
-\begin{equation*}
-y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
-\end{equation*}
+<!-- \begin{equation*} -->
+<!-- y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma}) -->
+<!-- \end{equation*} -->
 
-\begin{equation*}
-\textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3]
-\end{equation*}
+<!-- \begin{equation*} -->
+<!-- \textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3] -->
+<!-- \end{equation*} -->
 
-\begin{equation*}
-\textcolor{red}{\Sigma} = \begin{bmatrix}
-\textcolor{red}{\sigma}^2 & 0 & 0 \\
-0 & \textcolor{red}{\sigma}^2 & 0 \\
-0 & 0 & \textcolor{red}{\sigma}^2
-\end{bmatrix}
-\end{equation*}
+<!-- \begin{equation*} -->
+<!-- \textcolor{red}{\Sigma} = \begin{bmatrix} -->
+<!-- \textcolor{red}{\sigma}^2 & 0 & 0 \\ -->
+<!-- 0 & \textcolor{red}{\sigma}^2 & 0 \\ -->
+<!-- 0 & 0 & \textcolor{red}{\sigma}^2 -->
+<!-- \end{bmatrix} -->
+<!-- \end{equation*} -->
 
-- Zeros mean "$\mu_1$, $\mu_2$, \& $\mu_3$ aren't related to each other"
-- Diagonal elements = _variance_, off-diagonal = _covariance_
+<!-- - Zeros mean "$\mu_1$, $\mu_2$, \& $\mu_3$ aren't related to each other" -->
+<!-- - Diagonal elements = _variance_, off-diagonal = _covariance_ -->
 
-\footnotetext{Multivariate Normal}
+<!-- \footnotetext{Multivariate Normal} -->
 
-## Covariance and Correlation
+<!-- ## Covariance and Correlation -->
 
-In real life, things may not be independent from each other. For example:
+<!-- In real life, things may not be independent from each other. For example: -->
 
-- $\textcolor{red}{\sigma}$ = 2 (variance = $\textcolor{red}{\sigma}^2$ = 4)
-- $\mu_1$ and $\mu_2$ are strongly correlated (r=0.7), but $\mu_3$ is not related to anything (r=0). Shown here as a _correlation matrix_ ($\textcolor{red}{R}$):
+<!-- - $\textcolor{red}{\sigma}$ = 2 (variance = $\textcolor{red}{\sigma}^2$ = 4) -->
+<!-- - $\mu_1$ and $\mu_2$ are strongly correlated (r=0.7), but $\mu_3$ is not related to anything (r=0). Shown here as a _correlation matrix_ ($\textcolor{red}{R}$): -->
 
-\begin{equation*}
-\textcolor{red}{R} = \begin{bmatrix}
-1 & 0.7 & 0 \\
-0.7 & 1 & 0 \\
-0 & 0 & 1
-\end{bmatrix}
-\end{equation*}
+<!-- \begin{equation*} -->
+<!-- \textcolor{red}{R} = \begin{bmatrix} -->
+<!-- 1 & 0.7 & 0 \\ -->
+<!-- 0.7 & 1 & 0 \\ -->
+<!-- 0 & 0 & 1 -->
+<!-- \end{bmatrix} -->
+<!-- \end{equation*} -->
 
-- When multiplied by the variance, this becomes the _covariance matrix_ ($\textcolor{red}{\Sigma}$)
+<!-- - When multiplied by the variance, this becomes the _covariance matrix_ ($\textcolor{red}{\Sigma}$) -->
 
-\begin{equation*}
-\textcolor{red}{\Sigma} = \begin{bmatrix}
-\textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times0 \\
-\textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0 \\
-\textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times1
-\end{bmatrix} = \begin{bmatrix}
-4 & 2.8 & 0 \\
-2.8 & 4 & 0 \\
-0 & 0 & 4
-\end{bmatrix}
-\end{equation*}
+<!-- \begin{equation*} -->
+<!-- \textcolor{red}{\Sigma} = \begin{bmatrix} -->
+<!-- \textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times0 \\ -->
+<!-- \textcolor{red}{\sigma}^2\times0.7 & \textcolor{red}{\sigma}^2\times1 & \textcolor{red}{\sigma}^2\times0 \\ -->
+<!-- \textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times0 & \textcolor{red}{\sigma}^2\times1 -->
+<!-- \end{bmatrix} = \begin{bmatrix} -->
+<!-- 4 & 2.8 & 0 \\ -->
+<!-- 2.8 & 4 & 0 \\ -->
+<!-- 0 & 0 & 4 -->
+<!-- \end{bmatrix} -->
+<!-- \end{equation*} -->
 
 
 

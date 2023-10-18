@@ -26,7 +26,427 @@ header-includes:
   - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
 ---
 
-## Weird geometry
+```{r setup, include=FALSE}
+#Trick to get smaller R code size with out resorting to LaTeX text sizes
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
+                      warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
+library(tidyverse)
+theme_set(theme_classic())
+library(ggeffects)
+library(GGally)
+library(ggpubr)
+library(vegan)
+library(ggfortify)
+```
 
-"He had said that the geometry of the dream-place he saw was abnormal, non-Euclidean, and loathsomely redolent of spheres and dimensions apart from ours" 
-- _Call of Chthulu, H.P. Lovecraft_
+## Outline
+
+::: columns
+
+:::: column
+
+- What are multivariate data?
+- Linear transformations
+  - Principle components
+  - Some common approaches
+- Nonlinear transformations
+  - Non-metric dimensional scaling
+
+::::
+
+:::: column
+
+![](escher_relativity.jpg){width=100%}
+
+<!-- "He had said that the geometry of the dream-place he saw was abnormal, non-Euclidean, and loathsomely redolent of spheres and dimensions apart from ours"  -->
+<!-- - _Call of Chthulu, H.P. Lovecraft_ -->
+
+::::
+
+:::
+
+## Some common problems
+
+- "I've got a zillion predictors that could matter in my model, but they're all collinear"
+
+- "I measured a zillion things for each site/critter, but I don't want to fit a zillion models"
+
+- "I measured a zillion things. Do certain things group up into clusters?"
+
+- "My supervisor told me to do a PCA or NMDS for my data, but I have no idea what they're talking about"
+
+If any of these sound like your situation, then you might need to do __multivariate modeling__!
+
+# Part 1: What are multivariate data?
+
+## Univariate data
+
+::: columns
+
+:::: column
+
+- Up until now, we've dealt mainly with __univariate__ data: one thing is changing, and is being affected by other things
+
+- These can be normal, binomial, Poisson, etc...
+
+- Single variance term ($\sigma$) that controls dispersion
+
+::::
+
+:::: column
+
+```{r}
+mtcars %>% mutate(am=factor(am,labels=c('automatic','manual'))) %>% 
+  ggplot(aes(x=am,y=mpg)) + geom_boxplot()
+```
+
+::::
+
+:::
+
+## Multivariate data
+
+::: columns
+
+:::: column
+
+- With __multivariate__ data, we have multiple things changing at once
+
+- _Many things_ are changing, with multiple things potentially causing other things
+
+- These are _mostly_ normal (non-normal can be tricky)
+
+::::
+
+:::: column
+
+```{r carsPairPlot, message=FALSE, echo=FALSE}
+mtcars %>% select(-vs:-carb) %>% 
+  ggpairs()
+```
+
+::::
+
+:::
+
+## Multivariate normal
+
+- Normal distributions\footnotemark don't just have a single $\sigma$, but actually a _matrix_ of values
+- If the columns of our data are _independent_, then it looks like this:
+
+\begin{equation*}
+Y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
+\end{equation*}
+
+\begin{equation*}
+\textcolor{orange}{M} = [\textcolor{orange}{\mu_1}, \textcolor{orange}{\mu_2}, \textcolor{orange}{\mu_3}]
+\end{equation*}
+
+\begin{equation*}
+\textcolor{red}{\Sigma} = \begin{bmatrix}
+\textcolor{red}{\sigma}^2 & 0 & 0 \\
+0 & \textcolor{red}{\sigma}^2 & 0 \\
+0 & 0 & \textcolor{red}{\sigma}^2
+\end{bmatrix}
+\end{equation*}
+
+- Zeros mean "$\mu_1$, $\mu_2$, \& $\mu_3$ aren't related to each other"
+- Diagonal elements = _variance_, off-diagonal = _covariance_
+
+\footnotetext{Multivariate Normal}
+
+## Covariance and Correlation
+
+Things may not be independent from each other. For example:
+
+- $\textcolor{red}{\sigma}$ = 2 (variance = $\textcolor{red}{\sigma}^2$ = 4)
+- $\mu_1$ and $\mu_2$ are strongly correlated (r=0.7), but $\mu_3$ is not related to anything (r=0). Shown here as a _correlation matrix_ ($\textcolor{red}{R}$):
+
+\begin{equation*}
+\textcolor{red}{R} = \begin{bmatrix}
+1 & 0.7 & 0 \\
+0.7 & 1 & 0 \\
+0 & 0 & 1
+\end{bmatrix}
+\end{equation*}
+
+- When multiplied by the variance, this becomes the _covariance matrix_ ($\textcolor{red}{\Sigma}$)
+
+\begin{equation*}
+\textcolor{red}{\Sigma} = \begin{bmatrix}
+\textcolor{red}{\sigma_a} & \textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_ac} \\
+\textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_b} & \textcolor{red}{\sigma_bc} \\
+\textcolor{red}{\sigma_ac} & \textcolor{red}{\sigma_bc} & \textcolor{red}{\sigma_c}
+\end{bmatrix} = \begin{bmatrix}
+4 & 2.8 & 0 \\
+2.8 & 4 & 0 \\
+0 & 0 & 4
+\end{bmatrix}
+\end{equation*}
+
+## Covariance vs Correlation
+
+These are similar concepts, but covariance matrix has _units_, while correlation is _dimensionless_
+
+::: columns
+
+:::: column
+
+Covariance = $\sum_{i=1}^{n} \frac{(x-\bar x)(y-\bar y)}{(n-1)}$
+
+Covariance matrix
+
+\begin{equation*}
+\begin{bmatrix}
+4 & 2.8 & 0 \\
+2.8 & 4 & 0 \\
+0 & 0 & 4
+\end{bmatrix}
+\end{equation*}
+
+::::
+
+:::: column
+
+Correlation = $\frac{cov(x,y)}{\sigma_x \sigma_y}$
+
+Correlation matrix
+
+\begin{equation*}
+\begin{bmatrix}
+1 & 0.7 & 0 \\
+0.7 & 1 & 0 \\
+0 & 0 & 1
+\end{bmatrix}
+\end{equation*}
+
+::::
+
+:::
+
+## How does this help with my data?
+
+::: columns
+
+:::: column
+
+- Say you've measured a bunch of things, and they're mostly from normal distributions...
+
+- You've gathered data from a _multivariate normal distribution_!
+
+- Now your task is to model this distribution!
+
+::::
+
+:::: column
+
+\begin{equation*}
+Y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
+\end{equation*}
+
+\begin{equation*}
+\textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3]
+\end{equation*}
+
+\begin{equation*}
+\textcolor{red}{\Sigma} = \begin{bmatrix}
+\textcolor{red}{\sigma_a} & \textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_ac} \\
+\textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_b} & \textcolor{red}{\sigma_bc} \\
+\textcolor{red}{\sigma_ac} & \textcolor{red}{\sigma_bc} & \textcolor{red}{\sigma_c}
+\end{bmatrix}
+\end{equation*}
+::::
+
+:::
+
+## Problem: this doesn't really help
+
+::: columns
+
+:::: column
+
+- We're _still_ stuck with fitting a zillion models
+
+- Also have estimate covariance - even worse!
+
+- We need a better way for dealing with these data
+
+::::
+
+:::: column
+
+\begin{equation*}
+\textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3]
+\end{equation*}
+
+\begin{equation*}
+\textcolor{red}{\Sigma} = \begin{bmatrix}
+\textcolor{red}{\sigma_a} & \textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_ac} \\
+\textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_b} & \textcolor{red}{\sigma_bc} \\
+\textcolor{red}{\sigma_ac} & \textcolor{red}{\sigma_bc} & \textcolor{red}{\sigma_c}
+\end{bmatrix}
+\end{equation*}
+
+::::
+
+:::
+
+## Another approach
+
+Say we have a multi-column dataset that looks like this:
+
+::: columns
+
+:::: column
+
+```{r vcPairPlot, message=FALSE}
+data(varechem)
+vc6 <- varechem %>% select(1:6) #First 6
+vc_2 <- varechem %>% select(P,S) #Only P and S
+ggpairs(vc6)
+```
+
+::::
+
+:::: column
+
+- What do you notice about this dataset?
+
+- Looks like most of these columns are pretty strongly related. If we're only interested in the total "information" (variation) from this dataset...
+
+- Perhaps we don't need all these columns? Which ones should we throw out? Let's look at the data
+
+::::
+
+:::
+
+## Back to covariance and correlation
+
+::: columns
+
+:::: column
+
+- Covariance matrices are a special type of matrix called a _triangular matrix_
+
+- Can be decomposed using a math trick called the _singular value decomposition_ that breaks the matrix into its component eigenvectors and eigenvalues
+
+- Linear transformation of the data into new coordinate space, where _most of the variation falls into a few columns_. These are its __principal components__
+
+::::
+
+:::: column
+
+Covariance matrix
+
+```{r}
+round(cov(vc6),1)
+```
+Decomposition:
+
+```{r}
+prcomp(vc6)
+```
+
+::::
+
+:::
+
+## A simpler example: 2 dimensions
+
+Principal components are hard to imagine, so let's break it down into 2 dimensions:
+
+::: columns
+
+:::: column
+
+```{r, echo=TRUE}
+prcomp(vc_2)
+```
+
+::::
+
+:::: column
+```{r pcaExamp, fig.height=8,fig.width=4.5}
+vc2_pca <- prcomp(vc_2)
+p1 <- ggplot(vc_2,aes(x=P,y=S))+
+  geom_point()+
+  with(vc2_pca,annotate('segment',x=center[1],y=center[2],
+                        xend=center[1]+sdev[1]*rotation[1,'PC1'],
+                        yend=center[2]+sdev[1]*rotation[2,'PC1'],
+                        arrow=arrow()))+
+  with(vc2_pca,annotate('segment',x=center[1],y=center[2],
+                        xend=center[1]+sdev[2]*rotation[1,'PC2'],
+                        yend=center[2]+sdev[2]*rotation[2,'PC2'],
+                        arrow=arrow(),col='red'))+
+  annotate('text',x=c(45,55),y=c(30,50),label=c('PC2\n(11.5%)','PC1\n(88.4%)'),col=c('red','black'))
+
+# p2 <- vc2_pca$x %>%
+#   data.frame() %>%
+#   ggplot(aes(x=PC1,PC2))+geom_point()
+
+p2 <- autoplot(vc2_pca,scale = 0,loadings=TRUE,loadings.label=TRUE,loadings.color='blue')
+
+ggarrange(p1,p2,ncol=1)
+
+```
+
+
+::::
+
+:::
+
+
+## Artistic approaches to this problem
+
+::: columns
+
+:::: column
+
+Picasso's _Demoiselle d'Avignon_
+
+![](picasso_lesDesmoiselles.jpg){width=100%}
+
+
+::::
+
+:::: column
+
+Kawasaki rose crease pattern
+
+![](kawasakiRose.jpg){width=100%}
+
+::::
+
+:::
+
+## Example: full dataset
+
+::: columns
+
+:::: column
+
+
+
+::::
+
+:::: column
+
+::::
+
+:::
+
+
+## 2-column
+
+::: columns
+
+:::: column
+
+::::
+
+:::: column
+
+::::
+
+:::
+

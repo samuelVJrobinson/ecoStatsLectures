@@ -968,15 +968,15 @@ Penalized GAMs are actually a _random effects model_, and take the form:
 \begin{equation*}
   \begin{split}
   \text{Prediction} = & \text{Fixed Effect} + \text{Random Effect} \\
-  \textcolor{orange}{\hat{y}} = & \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{U}\textcolor{purple}{\zeta} \\
-  \text{Yield} \sim & Normal (\textcolor{orange}{\hat{y}}, \sigma) \\
-  u \sim & Normal (0, \lambda S)
+  \textcolor{orange}{\hat{y}} = & \textcolor{darkturquoise}{X}\textcolor{blue}{\beta} + \textcolor{gray}{Z}\textcolor{purple}{u} \\
+  \text{y} \sim & Normal (\textcolor{orange}{\hat{y}}, \textcolor{red}{\sigma}) \\
+  \textcolor{purple}{u} \sim & Normal (0, \textcolor{red}{\lambda} S)
   \end{split}
 \end{equation*}
 
 - Creates _basis functions_ across the range of data stored in columns of $Z$
-- Finds values $u$
-- $\lambda S$ penalty term: selects for optimal "wiggliness"
+- Finds values $\textcolor{purple}{u}$
+- $\textcolor{red}{\lambda} S$ penalty term: selects for optimal "wiggliness"
 
 ::::
 
