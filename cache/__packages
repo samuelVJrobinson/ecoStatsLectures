@@ -12,3 +12,10 @@ ggpubr
 nlme
 mgcv
 latex2exp
+ggeffects
+GGally
+permute
+lattice
+vegan
+ggfortify
+cluster

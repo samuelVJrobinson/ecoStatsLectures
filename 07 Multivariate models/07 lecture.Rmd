@@ -37,6 +37,24 @@ library(GGally)
 library(ggpubr)
 library(vegan)
 library(ggfortify)
+
+varPlot <- function(pcmod){
+  vars <- pcmod$sdev^2 #Eigenvalues (variance per column)
+  data.frame(varPerc=100*vars/sum(vars),pc=1:length(vars)) %>% 
+    ggplot(aes(x=pc,y=varPerc))+geom_point()+geom_line()+
+    labs(x="PC",y="Percent variance")
+}
+
+data(dune)
+data(dune.env)
+data(varechem)
+data(varespec)
+
+birds <- read.csv('birds.csv')
+birdMat <- as.matrix(birds[,c(-1,-2)])
+birdPCA <- prcomp(birdMat)
+birdNMDS <- metaMDS(birdMat)
+
 ```
 
 ## Outline
@@ -188,16 +206,16 @@ Things may not be independent from each other. For example:
 
 These are similar concepts, but covariance matrix has _units_, while correlation is _dimensionless_
 
+\vspace{1cm}
+
 ::: columns
 
 :::: column
 
 Covariance = $\sum_{i=1}^{n} \frac{(x-\bar x)(y-\bar y)}{(n-1)}$
 
-Covariance matrix
-
 \begin{equation*}
-\begin{bmatrix}
+\text{Covariance matrix} = \begin{bmatrix}
 4 & 2.8 & 0 \\
 2.8 & 4 & 0 \\
 0 & 0 & 4
@@ -210,10 +228,8 @@ Covariance matrix
 
 Correlation = $\frac{cov(x,y)}{\sigma_x \sigma_y}$
 
-Correlation matrix
-
 \begin{equation*}
-\begin{bmatrix}
+\text{Correlation matrix} = \begin{bmatrix}
 1 & 0.7 & 0 \\
 0.7 & 1 & 0 \\
 0 & 0 & 1
@@ -249,51 +265,27 @@ Y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
 \end{equation*}
 
 \begin{equation*}
-\textcolor{red}{\Sigma} = \begin{bmatrix}
-\textcolor{red}{\sigma_a} & \textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_ac} \\
-\textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_b} & \textcolor{red}{\sigma_bc} \\
-\textcolor{red}{\sigma_ac} & \textcolor{red}{\sigma_bc} & \textcolor{red}{\sigma_c}
-\end{bmatrix}
+\begin{split}
+\textcolor{orange}{\mu_1} & =  b_{01} + b_{11}x_1 \\
+\textcolor{orange}{\mu_2} & =  b_{02} + b_{12}x_1 \\
+\textcolor{orange}{\mu_3} & =  b_{03} + b_{13}x_1 
+\end{split}
 \end{equation*}
+
 ::::
 
 :::
 
 ## Problem: this doesn't really help
 
-::: columns
+- We're _still_ stuck with fitting a zillion linear models!
 
-:::: column
+- We also have to estimate the covariance as well as the variance. This might be OK for a few columns, but gets much harder when you've got lots of columns
 
-- We're _still_ stuck with fitting a zillion models
+- We need a better way for dealing with these multivariate normal data...
 
-- Also have estimate covariance - even worse!
-
-- We need a better way for dealing with these data
-
-::::
-
-:::: column
-
-\begin{equation*}
-\textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3]
-\end{equation*}
-
-\begin{equation*}
-\textcolor{red}{\Sigma} = \begin{bmatrix}
-\textcolor{red}{\sigma_a} & \textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_ac} \\
-\textcolor{red}{\sigma_ab} & \textcolor{red}{\sigma_b} & \textcolor{red}{\sigma_bc} \\
-\textcolor{red}{\sigma_ac} & \textcolor{red}{\sigma_bc} & \textcolor{red}{\sigma_c}
-\end{bmatrix}
-\end{equation*}
-
-::::
-
-:::
 
 ## Another approach
-
-Say we have a multi-column dataset that looks like this:
 
 ::: columns
 
@@ -310,17 +302,21 @@ ggpairs(vc6)
 
 :::: column
 
+- Say we have a multi-column dataset that looks like this:
+
 - What do you notice about this dataset?
 
 - Looks like most of these columns are pretty strongly related. If we're only interested in the total "information" (variation) from this dataset...
 
-- Perhaps we don't need all these columns? Which ones should we throw out? Let's look at the data
+- Perhaps we don't need all these columns? Which ones should we throw out or combine?
 
 ::::
 
 :::
 
-## Back to covariance and correlation
+# Part 2: Principal components (linear decompositions)
+
+## Matrix Decomposition and Principal Component
 
 ::: columns
 
@@ -328,9 +324,9 @@ ggpairs(vc6)
 
 - Covariance matrices are a special type of matrix called a _triangular matrix_
 
-- Can be decomposed using a math trick called the _singular value decomposition_ that breaks the matrix into its component eigenvectors and eigenvalues
+- Can be decomposed using a math trick called the _singular value decomposition_ that breaks a matrix into its component eigenvectors and eigenvalues
 
-- Linear transformation of the data into new coordinate space, where _most of the variation falls into a few columns_. These are its __principal components__
+- Transforms data into new coordinate space, where _most variation falls into a few columns_ called __principal components__
 
 ::::
 
@@ -341,43 +337,60 @@ Covariance matrix
 ```{r}
 round(cov(vc6),1)
 ```
-Decomposition:
+Decomposition: $X = UDV'$
+
+Eigenvectors ($V$):
 
 ```{r}
-prcomp(vc6)
+round(prcomp(vc6)$rotation,2)
+```
+Eigenvalues ($D$):
+
+```{r}
+round(prcomp(vc6)$sdev,1)^2
 ```
 
 ::::
 
 :::
 
-## A simpler example: 2 dimensions
-
-Principal components are hard to imagine, so let's break it down into 2 dimensions:
+## Simple example: 2 dimensions
 
 ::: columns
 
-:::: column
+:::: {.column width='60%'}
 
-```{r, echo=TRUE}
-prcomp(vc_2)
-```
+\vspace{1cm}
+
+- Principal components are hard to imagine, so let's try it on only 2 dimensions:
+- Rotation Matrix ($V$):
+  - Columns = _Principal components_
+  - Rows = _Factor Loadings_
+  ```{r}
+  round(prcomp(vc_2)$rotation,2)
+  ```
+- SD of principal components ($\sqrt{D}$):
+  - Tells you _how strong_ the effect of each PC column is
+  ```{r, echo=TRUE}
+  round(prcomp(vc_2)$sdev,2)
+  ```
 
 ::::
 
-:::: column
-```{r pcaExamp, fig.height=8,fig.width=4.5}
+:::: {.column width='40%'}
+
+```{r pcaExamp, fig.height=6.5}
 vc2_pca <- prcomp(vc_2)
 p1 <- ggplot(vc_2,aes(x=P,y=S))+
   geom_point()+
   with(vc2_pca,annotate('segment',x=center[1],y=center[2],
                         xend=center[1]+sdev[1]*rotation[1,'PC1'],
                         yend=center[2]+sdev[1]*rotation[2,'PC1'],
-                        arrow=arrow()))+
+                        arrow=arrow(length=unit(0.1,'inches'))))+
   with(vc2_pca,annotate('segment',x=center[1],y=center[2],
                         xend=center[1]+sdev[2]*rotation[1,'PC2'],
                         yend=center[2]+sdev[2]*rotation[2,'PC2'],
-                        arrow=arrow(),col='red'))+
+                        arrow=arrow(length=unit(0.1,'inches')),col='red'))+
   annotate('text',x=c(45,55),y=c(30,50),label=c('PC2\n(11.5%)','PC1\n(88.4%)'),col=c('red','black'))
 
 # p2 <- vc2_pca$x %>%
@@ -386,23 +399,64 @@ p1 <- ggplot(vc_2,aes(x=P,y=S))+
 
 p2 <- autoplot(vc2_pca,scale = 0,loadings=TRUE,loadings.label=TRUE,loadings.color='blue')
 
-ggarrange(p1,p2,ncol=1)
+ggarrange(p1,p2,ncol=1,labels = c("Original data","Transformed data"),label.x = 0.05)
 
 ```
 
+::::
+
+:::
+
+## Bigger example: full dataset (14 columns)
+
+::: columns
+
+:::: {.column width='60%'}
+
+Use `prcomp` to decompose matrix of `varechem` data:
+
+```{r, echo=TRUE}
+pcVare <- prcomp(varechem)
+```
+
+Rotation matrix (PCs and factor loadings)
+
+```{r}
+round(pcVare$rotation[,1:11],2)
+```
+
+SDs of principal components:
+
+```{r}
+round(pcVare$sdev,1)
+```
+
+::::
+
+:::: {.column width='40%'}
+
+```{r pcaExamp2, fig.height=6.5}
+vc_pca <- prcomp(varechem)
+
+p1 <- varPlot(vc_pca)
+p2 <- autoplot(vc_pca,scale = 0,loadings=TRUE,loadings.label=TRUE,loadings.color='blue')
+ggarrange(p1,p2,ncol=1,labels = c("PC Variance","Transformed data"),label.x = 0.05)
+
+```
 
 ::::
 
 :::
 
 
-## Artistic approaches to this problem
+
+## Artistic analogues to this problem
 
 ::: columns
 
 :::: column
 
-Picasso's _Demoiselle d'Avignon_
+Picasso's _Demoiselle d'Avignon_ (1907)
 
 ![](picasso_lesDesmoiselles.jpg){width=100%}
 
@@ -419,21 +473,327 @@ Kawasaki rose crease pattern
 
 :::
 
-## Example: full dataset
+## First challenge
+
+Let's try this on some biological data
 
 ::: columns
 
 :::: column
 
+_"After a severe storm on February 1, 1898, a number of moribund sparrows were taken to Hermon Bumpus’ biological laboratory at Brown University, Rhode Island. Subsequently, about half of the birds died, and Bumpus saw this as an opportunity to see whether he could find any support for Charles Darwin’s theory of natural selection..."_
 
+```{r}
+head(birds)
+```
 
 ::::
 
 :::: column
 
+- Take a look at the bird dataset found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/07%20Multivariate%20models)), and perform a PCA decomposition
+
+- Hint: you'll need to transform it into a _matrix_ (using `as.matrix` on the relevant columns) before using `prcomp`
+
+- How many PCs are needed to represent _most_ of the variation?
+
 ::::
 
 :::
+
+
+## First challenge results
+
+::: columns
+
+:::: column
+
+Covariance matrix
+
+```{r}
+round(cov(birdMat),1)
+```
+
+Principal components
+
+```{r}
+round(birdPCA$rotation,2)
+```
+
+Variance per column
+
+```{r}
+round(birdPCA$sdev,1)^2
+```
+
+::::
+
+:::: column
+
+```{r birdPCAresults, fig.height=6.5}
+p1 <- varPlot(birdPCA)
+p2 <- autoplot(birdPCA,scale = 0,loadings=TRUE,loadings.label=TRUE,loadings.color='blue')
+ggarrange(p1,p2,ncol=1)
+```
+
+::::
+
+:::
+
+## What's next?
+
+- Now that we've reduced our data to only a few _uncorrelated_ columns, we can do a couple things:
+
+- Use linear regression (or some other test) on each column, along with some other set of predictor columns
+
+- Use some other test to see if your data are "different" (far away) from each other
+
+
+## First step: plot your data
+
+::: columns
+
+:::: column
+
+```{r plotPCA, fig.height=6.5}
+
+birdPCA_df <- birdPCA$x[,1:2] %>% as.data.frame() %>% 
+  bind_cols(select(birds,Survived,Bird))
+
+p1 <- birdPCA_df %>%
+  ggplot(aes(x=PC1,y=PC2,col=Survived))+
+  geom_point()+
+  scale_colour_manual(values=c('red','black'))
+
+p2 <- birdPCA_df %>% 
+  ggplot(aes(y=PC1,x=Survived))+geom_boxplot()
+  # theme(legend.position = c(0.8,0.8))+
+  # scale_colour_manual(values=c('red','black'))
+
+ggarrange(p1,p2,ncol=1)
+```
+::::
+
+:::: column
+
+- Usually we want to see if some other thing is changing our data "somehow" (usually using a linear model)
+
+- The first step is to plot your data. I've been using `autoplot` from `ggfortify`, but we can also plot things manually
+
+- These data don't look particularly different in their centers, but...
+
+- They are different in variances! What does this mean biologically?  
+
+::::
+
+:::
+
+## Formal tests for differences
+
+::: columns
+
+:::: column
+
+- `envfit` from the `vegan` package is a common way to test for differences between groups (or continuous variables)
+
+- Uses a permutation test to compare "jumbled" data original data. In this case, shows no difference in group averages
+
+```{r, echo=TRUE}
+envfit(birdPCA ~ Survived,data=birds)
+```
+
+::::
+
+:::: column
+
+- `rda` and `cca` from `vegan` are also popular (older) methods. They basically fit linear regression to each row in the data matrix, then decompose the fitted values
+
+- "Constrained" part is related to variables you provided, "Unconstrained" is leftover variance. You can run `anova` on this to get variable importance
+
+```{r, echo=TRUE}
+rda(birdMat ~ Survived,data=birds)
+```
+
+::::
+
+:::
+
+## Plotting your results
+
+::: columns
+
+:::: {.column width='40%'}
+
+- For plotting your results, you generally want to show the _transformed data_ plus the direction of the effects you're interested in
+
+- `ggplot2` has some plotting functionality, but the plots from `vegan` are more purpose-made for these kinds of data
+
+- See the `vegan` vignette (`vignette("intro-vegan")`) for more details
+
+::::
+
+:::: {.column width='40%'}
+
+```{r,echo=TRUE}
+ordiplot(birdPCA,type='points',display='sites')
+plot(envfit(birdPCA ~ Survived,data=birds))
+```
+
+::::
+
+:::
+
+## Other kinds of ordination plots
+
+::: columns
+
+:::: column
+
+```{r}
+ord <- decorana(dune)
+plot(ord, disp="sites", type="text")
+ordihull(ord, dune.env$Management, col=1:4, lwd=3)
+
+```
+::::
+
+:::: column
+
+```{r, message=FALSE}
+
+ord.fit <- with(dune.env,envfit(ord ~ A1 + Management, data=dune.env, perm=999))
+plot(ord, disp="sites", type="points")
+plot(ord.fit,cex=0.75)
+# ordisurf(ord, dune.env$A1, add=TRUE)
+```
+
+::::
+
+:::
+
+## Second challenge
+
+::: columns
+
+:::: column
+
+- Let's try some _community_ data (counts of different species)!
+- [Here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/07%20Multivariate%20models) (`bugDat.csv`) is a dataset I collected during my Master's degree, which I spent catching a lot of bugs
+- I collected bugs using a couple kinds of collection methods across the season
+- Was there a large difference in collection methods?
+
+::::
+
+:::: column
+
+```{r}
+bugdat <- read.csv('./bugDat.csv') 
+bugPreds <- bugdat %>% select(Date:Method) %>% 
+  mutate(across(everything(),as.factor))
+bugMat <- bugdat %>% select(-Date:-Method) %>% as.matrix()
+zeroRows <- which(apply(bugMat,1,sum)==0)
+bugMat <- bugMat[-zeroRows,]
+bugPreds <- bugPreds[-zeroRows,]
+head(bugdat)[,1:5]
+```
+
+::::
+
+:::
+
+# Part 3: NMDS (nonlinear decompositions)
+
+## Problems with linear transformations
+
+::: columns
+
+:::: column
+
+- Recall: PCA and other decomposition methods use a _linear mapping_ onto a new coordinates system
+
+- This doesn't always work well: especially if you have non-normally distributed (e.g. community) data
+
+- Individual species are often normally distributed along a gradient, creating an __arch__ in PCA space (see [here](https://ordination.okstate.edu/PCA.htm) for more details)
+
+- Because of this, the y-axis (2nd PCA) isn't really a useful gradient to compare across
+
+:::: 
+
+:::: column
+
+```{r}
+ordiplot(prcomp(varespec),type='p',display = 'sites')
+```
+
+::::
+
+:::
+
+
+## The arch effect (seen at ESC 2023 poster session!)
+
+![](archEffect.jpg){width=80%}
+
+
+## Non-metric dimensional scaling
+
+::: columns
+
+:::: {.column width='60%'}
+
+- __Non-metric multidimensional scaling__ is another way of decomposing multidimensional data
+
+- Uses rank-order of data: _order_ matters, but not magnitude
+
+- Uses Bray-Curtis distance, not Euclidean (better for community studies)
+
+::::
+
+:::: {.column width='40%'}
+
+```{r pca_nmds, fig.height=6.5,fig.width=4, message=FALSE}
+p1 <- birdPCA_df %>%
+  ggplot(aes(x=PC1,y=PC2,col=Survived))+
+  geom_point()+
+  scale_colour_manual(values=c('red','black'))
+
+p2 <- birdNMDS$points %>% as.data.frame() %>% 
+  bind_cols(select(birds,Survived,Bird)) %>% 
+  ggplot(aes(x=MDS1,y=MDS2,col=Survived))+
+  geom_point()+
+  scale_colour_manual(values=c('red','black'))
+
+ggarrange(p1,p2,ncol=1,labels = c('PCA','NMDS'),label.x = 0.05)
+
+```
+
+::::
+
+:::
+
+
+## Nonlinear "stress" mapping
+
+::: columns
+
+:::: column
+
+```{r}
+stressplot(birdNMDS)
+```
+
+::::
+
+:::: column
+
+- Instead of using a linear transformation
+
+- "
+
+::::
+
+:::
+
 
 
 ## 2-column
