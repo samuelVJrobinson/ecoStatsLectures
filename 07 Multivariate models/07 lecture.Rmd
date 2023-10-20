@@ -38,11 +38,13 @@ library(ggpubr)
 library(vegan)
 library(ggfortify)
 
-varPlot <- function(pcmod){
+varPlot <- function(pcmod,total=FALSE){
   vars <- pcmod$sdev^2 #Eigenvalues (variance per column)
-  data.frame(varPerc=100*vars/sum(vars),pc=1:length(vars)) %>% 
+  vars <- 100*vars/sum(vars)
+  if(total) vars <- cumsum(vars)
+  data.frame(varPerc=vars,pc=1:length(vars)) %>% 
     ggplot(aes(x=pc,y=varPerc))+geom_point()+geom_line()+
-    labs(x="PC",y="Percent variance")
+    labs(x="PC",y=ifelse(total,"Total percent variance","Percent variance")) 
 }
 
 data(dune)
@@ -53,7 +55,25 @@ data(varespec)
 birds <- read.csv('birds.csv')
 birdMat <- as.matrix(birds[,c(-1,-2)])
 birdPCA <- prcomp(birdMat)
-birdNMDS <- metaMDS(birdMat)
+birdMDS <- metaMDS(birdMat)
+
+varePCA <- prcomp(varespec)
+vareMDS <- metaMDS(varespec,k=2)
+vareMDSlist <- lapply(1:10,function(x) metaMDS(varespec,k=x))
+
+bugdat <- read.csv('./bugDat.csv') 
+bugPreds <- bugdat %>% select(Date:Method) %>% 
+  mutate(Method=gsub('Bowl Trap ','',Method)) %>% 
+  mutate(Method=ifelse(Method=='Netting Control','Net',Method)) %>% 
+  mutate(across(everything(),as.factor))
+bugMat <- bugdat %>% select(-Date:-Method) %>% as.matrix()
+zeroRows <- which(apply(bugMat,1,sum)==0)
+bugMat <- bugMat[-zeroRows,]
+bugPreds <- bugPreds[-zeroRows,]
+bugPCA <- prcomp(bugMat)
+bugFit <- envfit(bugPCA ~ Method, data=bugPreds)
+bugMDS <- metaMDS(bugMat,k=2)
+bugMDSlist <- lapply(1:10,function(x) metaMDS(bugMat,k=x))
 
 ```
 
@@ -92,6 +112,8 @@ birdNMDS <- metaMDS(birdMat)
 - "I measured a zillion things. Do certain things group up into clusters?"
 
 - "My supervisor told me to do a PCA or NMDS for my data, but I have no idea what they're talking about"
+
+<!-- \pause -->
 
 If any of these sound like your situation, then you might need to do __multivariate modeling__!
 
@@ -149,11 +171,29 @@ mtcars %>% select(-vs:-carb) %>%
 
 ## Multivariate normal
 
-- Normal distributions\footnotemark don't just have a single $\sigma$, but actually a _matrix_ of values
-- If the columns of our data are _independent_, then it looks like this:
+::: columns
+
+:::: column
+
+- Normal distributions don't just have a single $\sigma$, but actually a _matrix_ of values
+- If the columns of our data ($Y = [y_1, y_2, y_3]$) are _independent_, then it looks like this:
+- Zeros mean "$\textcolor{orange}{\mu_1}, \textcolor{orange}{\mu_2}, \textcolor{orange}{\mu_3}$ aren't related to each other"
+- Diagonal elements = _variance_, off-diagonal = _covariance_
+
+:::: 
+
+:::: column
 
 \begin{equation*}
-Y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
+\begin{split}
+Y \sim & Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma}) \\
+Y = & \begin{bmatrix}
+y_{1a} & y_{1b} & y_{1c} \\
+y_{2a} & y_{2b} & y_{2c} \\
+\vdots & \vdots & \vdots \\
+y_{na} & y_{nb} & y_{nc}
+\end{bmatrix}
+\end{split}
 \end{equation*}
 
 \begin{equation*}
@@ -168,10 +208,13 @@ Y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
 \end{bmatrix}
 \end{equation*}
 
-- Zeros mean "$\mu_1$, $\mu_2$, \& $\mu_3$ aren't related to each other"
-- Diagonal elements = _variance_, off-diagonal = _covariance_
+::::
 
-\footnotetext{Multivariate Normal}
+:::
+
+
+
+
 
 ## Covariance and Correlation
 
@@ -278,11 +321,25 @@ Y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
 
 ## Problem: this doesn't really help
 
+::: columns
+
+:::: column
+
 - We're _still_ stuck with fitting a zillion linear models!
 
 - We also have to estimate the covariance as well as the variance. This might be OK for a few columns, but gets much harder when you've got lots of columns
 
 - We need a better way for dealing with these multivariate normal data...
+
+::::
+
+:::: column
+
+![](../06 Nonlinear models/infomercial.png){width=100%}
+
+::::
+
+:::
 
 
 ## Another approach
@@ -364,17 +421,19 @@ round(prcomp(vc6)$sdev,1)^2
 
 - Principal components are hard to imagine, so let's try it on only 2 dimensions:
 - Rotation Matrix ($V$):
+<!-- \pause -->
+```{r}
+round(prcomp(vc_2)$rotation,2)
+```
   - Columns = _Principal components_
   - Rows = _Factor Loadings_
-  ```{r}
-  round(prcomp(vc_2)$rotation,2)
-  ```
 - SD of principal components ($\sqrt{D}$):
+<!-- \pause -->
+```{r}
+round(prcomp(vc_2)$sdev,2)
+```
   - Tells you _how strong_ the effect of each PC column is
-  ```{r, echo=TRUE}
-  round(prcomp(vc_2)$sdev,2)
-  ```
-
+  
 ::::
 
 :::: {.column width='40%'}
@@ -506,7 +565,7 @@ head(birds)
 
 ::: columns
 
-:::: column
+:::: {.column width='60%'}
 
 Covariance matrix
 
@@ -528,9 +587,9 @@ round(birdPCA$sdev,1)^2
 
 ::::
 
-:::: column
+:::: {.column width='40%'}
 
-```{r birdPCAresults, fig.height=6.5}
+```{r birdPCAresults, fig.height=5.5, fig.width=4}
 p1 <- varPlot(birdPCA)
 p2 <- autoplot(birdPCA,scale = 0,loadings=TRUE,loadings.label=TRUE,loadings.color='blue')
 ggarrange(p1,p2,ncol=1)
@@ -553,9 +612,9 @@ ggarrange(p1,p2,ncol=1)
 
 ::: columns
 
-:::: column
+:::: {.column width='40%'}
 
-```{r plotPCA, fig.height=6.5}
+```{r plotPCA, fig.height=5.5, fig.width=4}
 
 birdPCA_df <- birdPCA$x[,1:2] %>% as.data.frame() %>% 
   bind_cols(select(birds,Survived,Bird))
@@ -574,7 +633,7 @@ ggarrange(p1,p2,ncol=1)
 ```
 ::::
 
-:::: column
+:::: {.column width='60%'}
 
 - Usually we want to see if some other thing is changing our data "somehow" (usually using a linear model)
 
@@ -598,6 +657,8 @@ ggarrange(p1,p2,ncol=1)
 
 - Uses a permutation test to compare "jumbled" data original data. In this case, shows no difference in group averages
 
+<!-- \pause -->
+
 ```{r, echo=TRUE}
 envfit(birdPCA ~ Survived,data=birds)
 ```
@@ -608,7 +669,9 @@ envfit(birdPCA ~ Survived,data=birds)
 
 - `rda` and `cca` from `vegan` are also popular (older) methods. They basically fit linear regression to each row in the data matrix, then decompose the fitted values
 
-- "Constrained" part is related to variables you provided, "Unconstrained" is leftover variance. You can run `anova` on this to get variable importance
+- "Constrained" part is related to variables you provided, "Unconstrained" is leftover variance 
+
+<!-- \pause -->
 
 ```{r, echo=TRUE}
 rda(birdMat ~ Survived,data=birds)
@@ -622,7 +685,7 @@ rda(birdMat ~ Survived,data=birds)
 
 ::: columns
 
-:::: {.column width='40%'}
+:::: {.column width='60%'}
 
 - For plotting your results, you generally want to show the _transformed data_ plus the direction of the effects you're interested in
 
@@ -634,8 +697,11 @@ rda(birdMat ~ Survived,data=birds)
 
 :::: {.column width='40%'}
 
+<!-- \pause -->
+
 ```{r,echo=TRUE}
-ordiplot(birdPCA,type='points',display='sites')
+ordiplot(birdPCA,type='points',
+         display='sites')
 plot(envfit(birdPCA ~ Survived,data=birds))
 ```
 
@@ -650,7 +716,7 @@ plot(envfit(birdPCA ~ Survived,data=birds))
 :::: column
 
 ```{r}
-ord <- decorana(dune)
+ord <- rda(dune)
 plot(ord, disp="sites", type="text")
 ordihull(ord, dune.env$Management, col=1:4, lwd=3)
 
@@ -680,21 +746,55 @@ plot(ord.fit,cex=0.75)
 - Let's try some _community_ data (counts of different species)!
 - [Here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/07%20Multivariate%20models) (`bugDat.csv`) is a dataset I collected during my Master's degree, which I spent catching a lot of bugs
 - I collected bugs using a couple kinds of collection methods across the season
-- Was there a large difference in collection methods?
+- Was there a large difference in collection methods? Maybe date of collection?
 
 ::::
 
 :::: column
 
 ```{r}
-bugdat <- read.csv('./bugDat.csv') 
-bugPreds <- bugdat %>% select(Date:Method) %>% 
-  mutate(across(everything(),as.factor))
-bugMat <- bugdat %>% select(-Date:-Method) %>% as.matrix()
-zeroRows <- which(apply(bugMat,1,sum)==0)
-bugMat <- bugMat[-zeroRows,]
-bugPreds <- bugPreds[-zeroRows,]
 head(bugdat)[,1:5]
+```
+
+::::
+
+:::
+
+## Second challenge results
+
+::: columns
+
+:::: {.column width='40%'}
+
+```{r, fig.height=5.5,fig.width=4}
+bugPCA <- prcomp(bugMat)
+
+# par(mfrow=c(2,1))
+# plot(1:length(bugPCA$sdev),100*bugPCA$sdev^2/sum(bugPCA$sdev^2),
+#      type='b',pch=19,xlab='PC',ylab='% Variance')
+# ordiplot(bugPCA,display = 'sites')
+# plot(bugFit)
+# par(mfrow=c(1,1))
+
+p1 <- varPlot(bugPCA,TRUE)
+
+bugFitCent <- data.frame(names=gsub('Method','',rownames(bugFit$factors$centroids)),bugFit$factors$centroids)
+
+p2 <- data.frame(bugPCA$x[,1:2]) %>% 
+  ggplot(aes(x=PC1,y=PC2))+geom_point()+
+  geom_text(data=bugFitCent,aes(x=PC1,y=PC2,label=names),col='red')
+
+ggarrange(p1,p2,ncol=1)
+
+
+```
+
+::::
+
+:::: {.column width='60%'}
+
+```{r, echo=TRUE}
+(bugFit <- envfit(bugPCA ~ Method, data=bugPreds))
 ```
 
 ::::
@@ -722,7 +822,7 @@ head(bugdat)[,1:5]
 :::: column
 
 ```{r}
-ordiplot(prcomp(varespec),type='p',display = 'sites')
+ordiplot(varePCA,type='p',display = 'sites')
 ```
 
 ::::
@@ -741,29 +841,26 @@ ordiplot(prcomp(varespec),type='p',display = 'sites')
 
 :::: {.column width='60%'}
 
-- __Non-metric multidimensional scaling__ is another way of decomposing multidimensional data
+- __Non-metric multidimensional scaling__ (NMDS) is another way of decomposing multidimensional data
 
-- Uses rank-order of data: _order_ matters, but not magnitude
+- Usually uses _Bray-Curtis_ distance (better for community studies): order matters, but not magnitude
 
-- Uses Bray-Curtis distance, not Euclidean (better for community studies)
+- Transforms data into `k` dimensions (usually 2), compares to original, and "wiggles" the configuration around to minimize stress ([usually](https://doi.org/10.1002/lom3.10257) $<0.2$) and retain rank order
+
 
 ::::
 
 :::: {.column width='40%'}
 
-```{r pca_nmds, fig.height=6.5,fig.width=4, message=FALSE}
-p1 <- birdPCA_df %>%
-  ggplot(aes(x=PC1,y=PC2,col=Survived))+
-  geom_point()+
-  scale_colour_manual(values=c('red','black'))
+```{r pca_nmds, fig.height=5.5,fig.width=4, message=FALSE}
+p1 <- data.frame(varePCA$x[,1:2]) %>% 
+  ggplot(aes(x=PC1,y=PC2))+geom_point()
 
-p2 <- birdNMDS$points %>% as.data.frame() %>% 
-  bind_cols(select(birds,Survived,Bird)) %>% 
-  ggplot(aes(x=MDS1,y=MDS2,col=Survived))+
-  geom_point()+
-  scale_colour_manual(values=c('red','black'))
+p2 <- data.frame(vareMDS$points) %>% 
+  ggplot(aes(x=MDS1,y=MDS2))+
+  geom_point()
 
-ggarrange(p1,p2,ncol=1,labels = c('PCA','NMDS'),label.x = 0.05)
+ggarrange(p1,p2,ncol=1,labels = c('PCA','NMDS'),label.x = 0.1)
 
 ```
 
@@ -778,35 +875,82 @@ ggarrange(p1,p2,ncol=1,labels = c('PCA','NMDS'),label.x = 0.05)
 
 :::: column
 
-```{r}
-stressplot(birdNMDS)
+```{r vareStressPlot}
+stressplot(vareMDS)
 ```
 
 ::::
 
 :::: column
 
-- Instead of using a linear transformation
-
-- "
+```{r vareScreePlot}
+data.frame(k=1:10,stress=sapply(vareMDSlist,function(x) x$stress)) %>% 
+  ggplot(aes(x=k,y=stress))+geom_point()+geom_line()+
+  geom_hline(yintercept = 0.2,linetype='dashed')+
+  scale_x_continuous(breaks=1:10)+labs(ylab='Stress')
+  
+```
 
 ::::
 
 :::
 
-
-
-## 2-column
+## Testing and plotting differences with NMDS
 
 ::: columns
 
 :::: column
 
+- Testing differences is similar: we use `envfit` from `vegan` to do permutations tests between groups or continuous factors
+
+- Plotting is similar, but we can't assign "% variance" to different NMDS columns
+
+```{r, echo=TRUE}
+(vareFit <- envfit(vareMDS ~ N + P + K + Ca + Mg,
+                   data=varechem))
+```
+
 ::::
 
 :::: column
+
+
+```{r}
+plot(vareMDS,display = 'sites')
+plot(vareFit)
+```
 
 ::::
 
 :::
 
+## Third challenge
+
+- One of our comrades here has collected some water quality data (found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/07%20Multivariate%20models)), and we're going to try analyzing it!
+
+- Half of the room can use _nutrientWater_, and the other half will use _fieldWater_. Both have `Treatment` and `Site` columns, and one has a `Depth` column
+
+- Reduce the dimensionality of these data (either PCA or NMDS), check how many dimensions are needed to represent the data, and make some plots
+
+- What causes most of the variation in the data: `Treatment` or `Site` (or `Depth`)?
+
+- Bonus: group the datasets by `Site` and compare the two using a Mantel test. You will need to use:
+  - `dplyr` to group the datasets (more than one way)
+  - Create dissimilarity matrices (use `vegdist(x,method='euclidean')`)
+  - Use `mantel` to compare the matrices. What does this tell you about the two sets of measurements?
+
+## To do: start planning your paper/proposal
+
+Term project: paper or proposal draft
+
+- __Paper__
+  - IMRaD structure, _some_ Supplementary Materials allowed
+- __Proposal__
+  - What data and analysis will you perform? Use data simulation or "example" dataset
+- Peer-review among class, following 
+- Conference-style final presentation to class (and committee, if desired)
+
+<!-- \pause -->
+
+_Rubric to follow next week_
+  
