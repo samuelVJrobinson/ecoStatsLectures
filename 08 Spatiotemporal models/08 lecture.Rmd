@@ -29,13 +29,15 @@ header-includes:
 ```{r setup, include=FALSE}
 library(tidyverse)
 theme_set(theme_classic())
+library(ggpubr)
 library(sf)
+library(gstat)
 library(mgcv)
 library(glmmTMB)
 library(ggeffects)
 
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
-                      warning=TRUE, cache = FALSE, fig.height=5,fig.width=5)
+                      warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
 
 #Example dataframe for date/time conversions
 dExamp <- data.frame(x=c(5,10),
@@ -43,6 +45,15 @@ dExamp <- data.frame(x=c(5,10),
                      d2=c('2010-06-13','2022-10-14'))
 
 set.seed(12)
+
+#Function to make temporally correlated noise (AR1, see https://en.wikipedia.org/wiki/Autoregressive_model)
+makeAR1 <- function(phi=0.5,x0=0,N=100,sigma=1){
+  x <- rep(0,N)
+  sigma <- rnorm(N,0,sigma)
+  x[1] <- x0
+  for(i in 2:N) x[i] <- x[i-1]*phi + sigma[i]
+  return(x)
+}
 
 #Generate data (correlated intercepts/slopes)
 n <- 200
@@ -90,6 +101,24 @@ y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
 lat <- model.matrix(~g-1) %*% lat
 lon <- model.matrix(~g-1) %*% lon
 dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
+
+# Generate temporally correlated random intercepts
+time <- runif(ngroups,-10,10)
+# time <- seq(-20,20,length.out=20)
+distMat <- as.matrix(dist(time,diag=TRUE,upper=TRUE)) #Matrix of distances
+diag(distMat) <- 1e-5
+covMat <- covFun(sigmaG,0.1,distMat) #Covariance matrix
+corMat <- cov2cor(covMat) #Correlation matrix
+cholCorMat <- chol(corMat,pivot = TRUE) #Choleski matrix
+raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
+raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
+yhat <- intercept + slopeX*x + raneff_int  #Expected value
+y <- rnorm(n,yhat,sigmaR) #Data (normal)
+# y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
+# lat <- model.matrix(~g-1) %*% lat
+# lon <- model.matrix(~g-1) %*% lon
+time <- model.matrix(~g-1) %*% time
+dat3 <- data.frame(y,x,site=g,time) #Assemble into data frame
 
 ```
 
@@ -160,10 +189,18 @@ _"...everything is related to everything else, but near things are more related 
 ```{r}
 dExamp
 ```
+
+ 
+
 ```{r, echo=TRUE}
+#Convert data to Date format
+dateForm <- '%Y-%m-%d'
 dExamp %>% 
-  mutate(across(c(d1,d2),~as.Date(.x,format='%Y-%m-%d'))) %>% 
+  mutate(across(c(d1,d2),
+            ~as.Date(.x,format=dateForm))) %>% 
+  #Get day of year
   mutate(doy=format(d1,format='%j')) %>% 
+  #Get difference in time between d2 and d1
   mutate(dChange=difftime(d2,d1,units='days'))
 ```
 
@@ -181,15 +218,16 @@ dExamp %>%
 __Vector__ data: points, lines, and polygons
 
 ```{r}
+# par(mar=c(0,0,0,0))
 exampPoly1 <- data.frame(x=c(0.13,0.10,0.21,0.44,0.62,0.66,0.58,0.37,0.13),
                          y=c(0.47,0.62,0.84,0.91,0.86,0.68,0.55,0.47,0.47))
 exampPoly2 <- data.frame(x=c(0.4,0.53,0.92,0.71,0.4),
                          y=c(0.09,0.31,0.33,0.08,0.09))
 plot(0,0,xlim=c(0,1),ylim=c(0,1),type='n',xlab='x',ylab='y')
 points(exampPoly1); lines(exampPoly1)
-points(exampPoly2); lines(exampPoly2)
+points(exampPoly2)
 ```
-Common R packages: `sf`, `sp`, `gstat`, `spdep`
+R packages: `sf`, `sp`, `gstat`, `spdep`
 
 ::::
 
@@ -201,7 +239,7 @@ __Raster__ data: cells
 image(volcano,xlab='x',ylab='y')
 ```
 
-Common R packages: `stars`, `terra`
+R packages: `stars`, `terra`
  
 ::::
 
@@ -214,7 +252,9 @@ Common R packages: `stars`, `terra`
 - A number of R packages are specifically written for dealing with GIS data, usually specific to raster or vector formats
 - Ecologists mostly deal with vector data (site locations, boundary polygons) but raster data is sometimes used (NDVI, land cover classes)
 - I'll show you a couple practical tips for using the `sf` package (see [here](https://r-spatial.github.io/sf/index.html) also), but there are [many other packages](https://r-spatial.org/book/) out there
+
 \vspace{0.5cm}
+
 If you're dealing with large amounts of spatial data _I would encourage you to take a formal GIS course_, as there is a LOT to learn!
 
 ## Common tasks: making maps
@@ -233,27 +273,28 @@ If you're dealing with large amounts of spatial data _I would encourage you to t
 
 :::: column
 
-```{r abMap}
+```{r abMap, warning=FALSE}
 #Reads AB boundary shapefile
-abBound <- read_sf('./shapefiles/AB_only.shp')
+abBound <- read_sf('./shapefiles/AB_only.shp') %>% 
+  st_transform(4326)
 
 #Reads city csv
 csvPath <- './shapefiles/abCities.csv'
-abCities <- read.csv() %>% 
+abCities <- read.csv(csvPath) %>% 
   #Converts to sf
   st_as_sf(coords = c('lon','lat'),crs=4326) 
 #NOTE: crs 4326 is common lat/lon format
 
 #Make map
-ggplot()+ 
+(p1 <- ggplot()+ 
   #Add boundary
   geom_sf(data=abBound)+ 
   #Add cities
   geom_sf(data=abCities,aes(size=pop),col='red')+
   #Add labels
   geom_sf_text(data=abCities,aes(label=name),
-               size=3,nudge_y=25000)+
-  labs(x=NULL,y=NULL,size="Population")
+  size=3,nudge_y=0.25)+
+  labs(x=NULL,y=NULL,size="Population"))
 ```
 
 ::::
@@ -266,14 +307,14 @@ ggplot()+
 
 :::: column
 
-```{r abMap, echo=TRUE, eval=FALSE}
+```{r abMap, echo=TRUE,eval=FALSE, warning=FALSE}
 ```
 
 ::::
 
 :::: column
 
-```{r abMap}
+```{r abMap, warning=FALSE}
 ```
 
 ::::
@@ -283,23 +324,193 @@ ggplot()+
 
 ## Common tasks: reprojection
 
+::: columns
+
+:::: column
+
+```{r abMapProj, warning=FALSE}
+abBound_utm <- abBound %>% st_transform(3401)
+abCities_utm <- abCities %>% st_transform(3401)
+
+p2 <- ggplot()+ 
+  geom_sf(data=abBound_utm)+ 
+  geom_sf(data=abCities_utm,aes(size=pop),
+          col='red',show.legend = FALSE)+
+    geom_sf_text(data=abCities_utm,aes(label=name),
+               size=3,nudge_y=25000)+
+  labs(x=NULL,y=NULL,size="Population")
+ggarrange(p1+guides(size='none'),
+          p2,ncol=2,labels = c('WGS 84','UTM-10'))
+```
 
 
+::::
+
+:::: column
+
+- The world is not flat: all maps have to "bend" the data somehow. This is called the map __projection__
+- Some map projections preserve _area_, others preserve _distance_. Degrees are not all the same distance apart!
+- Usually we're interested in absolute distance between locations, so _Mercator_ (UTM) is a good choice, but be careful which UTM zone you choose!
+- `sf` uses `crs` codes: __4326__ is for lat/lon (WGS 84), 3401 is an Alberta-specific UTM projection
+- [Many](epsg.io) others are available
 
 
-# Part 2: Spatiotemporal modeling
+::::
 
-## Temporal or Spatial Data
+:::
 
-- Last week we talked about _cross_-correlation (i.e. correlation between columns of data); this week we're mostly talking about _auto_-correlation (i.e. correlation between individual data points in a single column)
-- Correlation is often present in temporal data or spatial data; causes may be unknown or "uninteresting"
-- Usually we are interested in accounting for these patterns, in order to better estimate the "interesting" patterns on top of them
+## First challenge
 
 ::: columns
 
 :::: column
 
-```{r, fig.height=4, fig.width=4}
+- Make this map of bird counts from the ABMI dataset
+- `medDetects` is the median detection rate at each site over several years
+
+
+::::
+
+:::: column
+
+```{r abmiMap}
+abBound <- read_sf('./shapefiles/AB_only.shp') %>% 
+  st_transform(3401)
+birdDat <- read.csv('./shapefiles/birdDat.csv') %>% 
+  st_as_sf(coords = c('lon','lat'),crs=4326) %>% 
+  st_transform(st_crs(abBound))
+abCities <- read.csv('./shapefiles/abCities.csv') %>% 
+  st_as_sf(coords = c('lon','lat'),crs=4326) %>% 
+  st_transform(st_crs(abBound))
+
+ggplot()+
+  geom_sf(data=birdDat,aes(col=log(medDetects)))+
+  geom_sf(data=abBound,fill=NA,col='black')+
+  geom_sf(data=abCities,col='red',size=1)+
+  facet_wrap(~Common.Name)+
+  labs(col='Detection')+
+  theme(axis.text = element_text(size=8),
+        legend.position=c(0.85,0.25))
+  
+```
+
+::::
+
+:::
+
+## First challenge results
+
+::: columns
+
+:::: {.column width='60%'}
+
+```{r abmiMap, eval=FALSE,echo=TRUE}
+```
+
+::::
+
+:::: {.column width='40%'}
+
+```{r abmiMap}
+```
+
+::::
+
+:::
+
+
+# Part 2: Spatiotemporal modeling
+
+## Let's start with an example
+
+::: columns
+
+:::: column
+
+- Say we're fitting a simple linear regression on a dataset collected across space
+
+```{r}
+dat2_small <- dat2 %>% select(y,x,site,lat,lon) %>% 
+  group_by(site) %>% slice(1) %>% ungroup()
+head(dat2_small)
+```
+
+```{r,echo=FALSE}
+m1 <- lm(y~x,data=dat2_small)
+```
+
+```{r, warning=FALSE, message=FALSE}
+plot(ggpredict(m1,terms='x'),residuals = TRUE)+
+  labs(title='Model: lm(y ~ x)')
+```
+
+::::
+
+:::: column
+
+Things look mostly OK, right?
+
+```{r resPlot}
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+plot(m1, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
+par(mfrow=c(2,1),mar=c(5.1,4.1,4.1,2.1))
+```
+
+::::
+
+:::
+
+## Spatial residual plot
+
+::: columns
+
+:::: column
+
+- Residuals are spatially _non-independent_!
+- _Variograms_ are a common tool to examine how variance changes with distance
+- Uncorrelated spatial data will have a _flat_ variogram (no change in semivariance with distance)
+
+```{r vgExample}
+dat2_small %>% mutate(res=residuals(m1)) %>%
+  st_as_sf(coords=c('x','y')) %>% 
+  as_Spatial() %>% #convert to an sp object
+  variogram(res~1,data=.) %>% #calculate covariance at each distance
+  ggplot(aes(x=dist,y=gamma))+geom_line()+geom_point()+labs(x='Distance',y='Semivariance')
+
+```
+
+::::
+
+:::: column
+
+```{r spResPlot}
+dat2_small %>% 
+  mutate(res=residuals(m1)) %>% 
+  ggplot()+
+  geom_point(aes(x=x,y=y,size=abs(res),col=res))+
+  labs(title='Residuals across space')+
+  guides(size='none')+
+  theme(legend.position = c(0.8,0.3))
+```
+
+
+::::
+
+:::
+
+
+
+## Temporal or Spatial Data
+
+- Correlation is often present in temporal data or spatial data; causes may be unknown or "uninteresting"
+- Usually we are interested in accounting for these patterns, in order to better estimate the "interesting" patterns on top of them
+- Last week we talked about _cross_-correlation (i.e. correlation between columns of data); this week we're talking about _auto_-correlation (i.e. correlation between individual data points in a single column)
+
+::: columns
+
+:::: column
+
+```{r, fig.height=3, fig.width=4}
 # data.frame(year=as.numeric(time(lynx)),lynxNum=as.numeric(lynx)) %>%
 #   ggplot(aes(x=year,y=lynxNum))+geom_line()+
 #   labs(x='Year',y='Lynx Numbers')
@@ -310,7 +521,7 @@ plot(sunspots,ylab='Sunspots per year')
 
 :::: column
 
-```{r, fig.height=4, fig.width=4}
+```{r, fig.height=3, fig.width=4}
 # ggplot(seals,aes(x=long,y=lat,fill=delta_long))+
 #   geom_raster()+
 #   scale_fill_continuous(type='viridis')+
