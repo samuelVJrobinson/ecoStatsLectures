@@ -31,13 +31,16 @@ library(tidyverse)
 theme_set(theme_classic())
 library(ggpubr)
 library(sf)
+library(sp)
 library(gstat)
 library(mgcv)
+library(DHARMa)
 library(glmmTMB)
 library(ggeffects)
 
+
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
-                      warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
+                      warning=TRUE, cache = FALSE, fig.height=5,fig.width=5)
 
 #Example dataframe for date/time conversions
 dExamp <- data.frame(x=c(5,10),
@@ -45,6 +48,8 @@ dExamp <- data.frame(x=c(5,10),
                      d2=c('2010-06-13','2022-10-14'))
 
 set.seed(12)
+
+manyLetters <- c(letters,paste0(rep(letters[1:5],each=length(letters)),rep(letters,5)))
 
 #Function to make temporally correlated noise (AR1, see https://en.wikipedia.org/wiki/Autoregressive_model)
 makeAR1 <- function(phi=0.5,x0=0,N=100,sigma=1){
@@ -56,8 +61,8 @@ makeAR1 <- function(phi=0.5,x0=0,N=100,sigma=1){
 }
 
 #Generate data (correlated intercepts/slopes)
-n <- 200
-ngroups <- 20
+n <- 260
+ngroups <- 26
 x <- runif(n,-10,10) #Single fixed effect predictor
 g <- sample(letters[1:ngroups],n,TRUE) #Groups
 intercept <- 1
@@ -79,7 +84,7 @@ raneff_slope <- x * model.matrix(~g-1) %*% raneffs[,2]  #Slope vector
 
 yhat <- intercept + slopeX*x + raneff_int + raneff_slope  #Expected value
 y <- rnorm(n,yhat,sigmaR) #Data (normal)
-y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
+y2 <- rnbinom(n,mu=exp(yhat/4),sigmaR) #Data (NB)
 dat <- data.frame(y,y2,x,site=g) #Assemble into data frame
 
 #Generate spatially correlated random intercepts
@@ -87,10 +92,11 @@ dat <- data.frame(y,y2,x,site=g) #Assemble into data frame
 #Squared-exponential distance function
 covFun <- function(sigma,rho,d) (sigma^2)*exp((-rho^2)*(d^2)) 
 
-lat <- runif(ngroups,-10,10) #"Latitude"
-lon <- runif(ngroups,-10,10) #"Longitude"
+lat <- runif(ngroups,-5,5) #"Latitude"
+lon <- runif(ngroups,-5,5) #"Longitude"
 distMat <- as.matrix(dist(cbind(lat,lon),diag=TRUE,upper=TRUE)) #Matrix of distances
-covMat <- covFun(sigmaG,0.1,distMat) #Covariance matrix
+covMat <- covFun(sigmaG,0.2,distMat) #Covariance matrix
+# curve(covFun(sigmaG,0.2,x),0,10)
 corMat <- cov2cor(covMat) #Correlation matrix
 cholCorMat <- chol(corMat) #Choleski matrix
 raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
@@ -102,23 +108,60 @@ lat <- model.matrix(~g-1) %*% lat
 lon <- model.matrix(~g-1) %*% lon
 dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
 
+# Generate temporally correlated data
+# time <- runif(ngroups,0,10)
+# # time <- seq(-20,20,length.out=20)
+# distMat <- as.matrix(dist(time,diag=TRUE,upper=TRUE)) #Matrix of distances
+# diag(distMat) <- 1e-5
+# covMat <- covFun(sigmaG,0.2,distMat) #Covariance matrix
+# corMat <- cov2cor(covMat) #Correlation matrix
+# cholCorMat <- chol(corMat,pivot = TRUE) #Choleski matrix
+# raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
+# raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
+# yhat <- intercept + slopeX*x + raneff_int  #Expected value
+# # y <- rnorm(n,yhat,sigmaR) #Data (normal)
+# y <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
+# # lat <- model.matrix(~g-1) %*% lat
+# # lon <- model.matrix(~g-1) %*% lon
+# time <- model.matrix(~g-1) %*% time
+# dat3 <- data.frame(count=y,temperature=x+10,location=g,days=time) #Assemble into data frame
+
+set.seed(1)
+
+n <- 160
+ngroups <- 16
+
+x <- runif(n,-10,10) #Single fixed effect predictor
+g <- sample(letters[1:ngroups],n,TRUE) #Groups
+intercept <- 1
+slopeX <- 1.5
+sigmaR <- 3 #Residual sigma 
+sigmaTime <- 10 #Covariance for GP model
+sigmaG <- 3 #Group intercept sigma
+rho <- 0.1
+
 # Generate temporally correlated random intercepts
-time <- runif(ngroups,-10,10)
+time <- round(sort(runif(n,0,30)))
 # time <- seq(-20,20,length.out=20)
 distMat <- as.matrix(dist(time,diag=TRUE,upper=TRUE)) #Matrix of distances
 diag(distMat) <- 1e-5
-covMat <- covFun(sigmaG,0.1,distMat) #Covariance matrix
+covMat <- covFun(sigmaTime,rho,distMat) #Covariance matrix
+curve(covFun(sigmaTime,rho,x),0,10)
 corMat <- cov2cor(covMat) #Correlation matrix
 cholCorMat <- chol(corMat,pivot = TRUE) #Choleski matrix
-raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
-raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
-yhat <- intercept + slopeX*x + raneff_int  #Expected value
-y <- rnorm(n,yhat,sigmaR) #Data (normal)
-# y2 <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
+raneff_time <- (rnorm(n,0,1) %*% cholCorMat)[1,] #Induce correlation
+plot(time,raneff_time)
+raneff_site <- model.matrix(~g-1) %*% rnorm(ngroups,0,sigmaG) #Random intercept for site
+
+yhat <- intercept + slopeX*x + raneff_time + raneff_site  #Expected value
+# y <- rnorm(n,yhat,sigmaR) #Data (normal)
+y <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
 # lat <- model.matrix(~g-1) %*% lat
 # lon <- model.matrix(~g-1) %*% lon
-time <- model.matrix(~g-1) %*% time
-dat3 <- data.frame(y,x,site=g,time) #Assemble into data frame
+# time <- model.matrix(~g-1) %*% time
+dat3 <- data.frame(count=y,temperature=x+10,site=g,days=factor(time)) #Assemble into data frame
+
+write.csv(dat3,'./timeDat.csv',row.names = FALSE)
 
 ```
 
@@ -134,7 +177,6 @@ dat3 <- data.frame(y,x,site=g,time) #Assemble into data frame
   - Plotting
   - Variograms
   - "Continuous" random effects
-  - Kernels and
 - Some common modeling approaches
   - GLS (covariance)
   - Basis functions (GAMs)
@@ -143,7 +185,7 @@ dat3 <- data.frame(y,x,site=g,time) #Assemble into data frame
 
 :::: column
 
-Spaaaaace
+![](minardMap.png){width=100%}
 
 ::::
 
@@ -365,8 +407,8 @@ ggarrange(p1+guides(size='none'),
 
 :::: column
 
-- Make this map of bird counts from the ABMI dataset
-- `medDetects` is the median detection rate at each site over several years
+- Make this map of bird counts from the ABMI dataset, with Alberta cities and provincial boundaries overlaid on top
+- `medDetects` is the median detection rate at each site over several years (I used log(`medDetects`) for this map)
 
 
 ::::
@@ -421,84 +463,6 @@ ggplot()+
 
 # Part 2: Spatiotemporal modeling
 
-## Let's start with an example
-
-::: columns
-
-:::: column
-
-- Say we're fitting a simple linear regression on a dataset collected across space
-
-```{r}
-dat2_small <- dat2 %>% select(y,x,site,lat,lon) %>% 
-  group_by(site) %>% slice(1) %>% ungroup()
-head(dat2_small)
-```
-
-```{r,echo=FALSE}
-m1 <- lm(y~x,data=dat2_small)
-```
-
-```{r, warning=FALSE, message=FALSE}
-plot(ggpredict(m1,terms='x'),residuals = TRUE)+
-  labs(title='Model: lm(y ~ x)')
-```
-
-::::
-
-:::: column
-
-Things look mostly OK, right?
-
-```{r resPlot}
-par(mfrow=c(2,1),mar=c(0,0,0,0))
-plot(m1, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
-par(mfrow=c(2,1),mar=c(5.1,4.1,4.1,2.1))
-```
-
-::::
-
-:::
-
-## Spatial residual plot
-
-::: columns
-
-:::: column
-
-- Residuals are spatially _non-independent_!
-- _Variograms_ are a common tool to examine how variance changes with distance
-- Uncorrelated spatial data will have a _flat_ variogram (no change in semivariance with distance)
-
-```{r vgExample}
-dat2_small %>% mutate(res=residuals(m1)) %>%
-  st_as_sf(coords=c('x','y')) %>% 
-  as_Spatial() %>% #convert to an sp object
-  variogram(res~1,data=.) %>% #calculate covariance at each distance
-  ggplot(aes(x=dist,y=gamma))+geom_line()+geom_point()+labs(x='Distance',y='Semivariance')
-
-```
-
-::::
-
-:::: column
-
-```{r spResPlot}
-dat2_small %>% 
-  mutate(res=residuals(m1)) %>% 
-  ggplot()+
-  geom_point(aes(x=x,y=y,size=abs(res),col=res))+
-  labs(title='Residuals across space')+
-  guides(size='none')+
-  theme(legend.position = c(0.8,0.3))
-```
-
-
-::::
-
-:::
-
-
 
 ## Temporal or Spatial Data
 
@@ -510,7 +474,7 @@ dat2_small %>%
 
 :::: column
 
-```{r, fig.height=3, fig.width=4}
+```{r, fig.height=2.5, fig.width=4}
 # data.frame(year=as.numeric(time(lynx)),lynxNum=as.numeric(lynx)) %>%
 #   ggplot(aes(x=year,y=lynxNum))+geom_line()+
 #   labs(x='Year',y='Lynx Numbers')
@@ -540,11 +504,11 @@ image(volcano)
 - If our data _y_ are _independent_, then it looks like this:
 
 \begin{equation*}
-y \sim Normal(\textcolor{orange}{M},\textcolor{red}{\Sigma})
+y \sim Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\Sigma})
 \end{equation*}
 
 \begin{equation*}
-\textcolor{orange}{M} = [\mu_1, \mu_2, \mu_3]
+\textcolor{orange}{\hat{y}} = [\mu_1, \mu_2, \mu_3]
 \end{equation*}
 
 \begin{equation*}
@@ -589,6 +553,111 @@ In real life, things may not be independent from each other. For example:
 \end{bmatrix}
 \end{equation*}
 
+## Let's start with an example
+
+::: columns
+
+:::: column
+
+- Say we're fitting a simple linear regression on a dataset collected across space
+
+```{r}
+dat2_small <- dat2 %>% select(y,x,site,lat,lon) %>% 
+  group_by(site) %>% slice(1) %>% ungroup() %>% data.frame()
+head(dat2_small,5)
+```
+
+```{r,echo=FALSE}
+m1 <- lm(y~x,data=dat2_small)
+```
+
+```{r, warning=FALSE, message=FALSE, fig.height=3}
+plot(ggpredict(m1,terms='x'),residuals = TRUE)+
+  labs(title='Model: lm(y ~ x)')
+```
+
+::::
+
+:::: column
+
+Things look mostly OK, right?
+
+```{r resPlot}
+par(mfrow=c(2,1),mar=c(0,0,0,0))
+plot(m1, which=c(1,2),caption='',cex=0.75,cex.axis=1e-5,tck=0)
+par(mfrow=c(2,1),mar=c(5.1,4.1,4.1,2.1))
+```
+
+::::
+
+:::
+
+## Spatial residual plot
+
+::: columns
+
+:::: column
+
+- Residuals are spatially _non-independent_!
+- _Variograms_ are a common tool to examine how variance changes with distance
+- Uncorrelated spatial data will have a _flat_ variogram (no change in semivariance with distance)
+
+```{r vgExample, fig.height=3}
+dat2_small %>% mutate(res=residuals(m1)) %>%
+  st_as_sf(coords=c('lon','lat')) %>% 
+  as_Spatial() %>% #convert to an sp object
+  variogram(res~1,data=.,width=0.5) %>% #calculate covariance at each distance
+  ggplot(aes(x=dist,y=gamma))+geom_line()+geom_point()+
+  labs(x='Distance',y='Semivariance')
+
+```
+
+::::
+
+:::: column
+
+```{r spResPlot}
+dat2_small %>% 
+  mutate(res=residuals(m1)) %>% 
+  ggplot()+
+  geom_point(aes(x=lon,y=lat,size=abs(res),col=res))+
+  labs(title='Residuals across space')+
+  guides(size='none')+
+  scale_colour_gradient2(low='blue',mid='purple',high='red',aesthetics = 'col')
+
+```
+
+
+::::
+
+:::
+
+## How do variograms work?
+
+::: columns
+
+:::: column
+
+- Variograms compare the squared difference (variance) between values spaced at different distances
+- If close values are similar, variance increases with increasing distance before leveling off
+- Analysis of the specific shape of the curve is called _variography_, and is important for spatial modeling 
+
+::::
+
+:::: column
+
+```{r vgExample2}
+data(meuse)
+coordinates(meuse) = ~x+y
+variogram(log(zinc)~1, meuse,width=50) %>% 
+  ggplot(aes(x=dist,y=gamma))+geom_point()+
+  geom_smooth(method='gam',formula=y~s(x))+
+  labs(x='Distance',y='Semivariance')
+```
+
+::::
+
+:::
 
 ## Gaussian Process Modelling
 
@@ -596,29 +665,29 @@ In real life, things may not be independent from each other. For example:
 
 :::: column
 
-- We can model covariance between things as a function of _distance_, either in time or space
+- We can model covariance between things as a function of _distance_ and use it to predict what other points in between might be (a.k.a. [Kriging](https://en.wikipedia.org/wiki/Kriging))
 - Squared-exponential is fairly common\footnotemark:
 
 \begin{equation*}
 \begin{split}
 \textcolor{red}{\Sigma} = & covariance \\
 \textcolor{red}{\Sigma} = & variance \times correlation \\
-\textcolor{red}{\Sigma} = & \textcolor{red}{\sigma}^2 \times e^{-\textcolor{green}{\rho}^2 Dist^2}\\
+\textcolor{red}{\Sigma} = & \textcolor{red}{\sigma}^2 \times e^{-\textcolor{ForestGreen}{\rho}^2 Dist^2}\\
 \end{split}
 \end{equation*}
 
-- Instead of finding a single $\textcolor{red}{\sigma}$ value, R now looks for $\textcolor{red}{\sigma}$ (maximum covariance) and $\textcolor{green}{\rho}$ (decay with distance)
+- Instead of finding a single $\textcolor{red}{\sigma}$ value, R now looks for $\textcolor{red}{\sigma}$ (maximum covariance) and $\textcolor{ForestGreen}{\rho}$ (decay with distance)
 
 ::::
 
 :::: column
 
-```{r, fig.height=5,fig.width=4}
+```{r}
 expand.grid(dist=seq(0,5,0.1),rho=c(0.5,1,2),sigma=c(1,2)) %>%
   mutate(cVal=(sigma^2)*exp((-rho^2)*(dist^2))) %>%
   mutate(category=paste0('sigma=',sigma,', rho=',rho)) %>%
   mutate(rho=factor(rho)) %>%
-  ggplot(aes(x=dist,y=cVal,group=category,col=rho))+geom_line(size=1)+
+  ggplot(aes(x=dist,y=cVal,group=category,col=rho))+geom_line(linewidth=1)+
   labs(x='Distance (km)',y='Covariance')+scale_colour_manual(values=c('red','purple','blue'))+
   theme(legend.position = c(0.8,0.8))
 ```
@@ -629,13 +698,51 @@ expand.grid(dist=seq(0,5,0.1),rho=c(0.5,1,2),sigma=c(1,2)) %>%
 
 \footnotetext{Also common: AR-1 (temporal processes), Mat\'{e}rn (spatial processes)}
 
-## Spatial random effects
+## How do we do this in R?
 
 ::: columns
 
 :::: column
 
-- Say that we collected data at 16 sites, and we're interested in the effect of _y_ on _x_
+- For simpler models, you can use a generalized linear system (`gls`)
+- Here I've used `corGaus` to specify a Gaussian (squared-exponential) kernel
+
+```{r, echo=TRUE}
+corForm <- corGaus(form = ~ lat + lon)
+m1_cor <- gls(y ~ x, correlation = corForm, 
+              dat = dat2_small)
+```
+
+```{r}
+summary(m1_cor)
+```
+
+::::
+
+:::: column
+
+```{r, fig.height=4}
+lapply(list(m1,m1_cor),function(x) data.frame(ggpredict(x,terms='x'))) %>% 
+  bind_rows(.id='model') %>% 
+  mutate(model=factor(model,labels=c('m1','m1_cor1'))) %>% 
+  ggplot(aes(x=x,y=predicted))+
+  geom_ribbon(aes(ymax=conf.high,ymin=conf.low,fill=model),alpha=0.2)+
+  geom_line(aes(col=model))
+```
+
+Not too bad in this case, but in general, high spatial correlation effectively means _your sample size is smaller_
+
+::::
+
+:::
+
+## Random effects: standard
+
+::: columns
+
+:::: column
+
+- Say that we collected data at `r ngroups` sites, and we're interested in the effect of _y_ on _x_
 - Let's first fit a model with a random intercept for site
 
 ```{r, echo=TRUE,size='tiny'}
@@ -643,13 +750,13 @@ expand.grid(dist=seq(0,5,0.1),rho=c(0.5,1,2),sigma=c(1,2)) %>%
 lmm2 <- glmmTMB(y~x+(1|site),data=dat2)
 ```
 
+- If we plot the intercepts for each site, we see that they are clustered
+
 ::::
 
 :::: column
 
-- If we plot the intercepts for each site, we see that they are clustered:
-
-```{r,echo=FALSE,fig.height=3,fig.width=4,size='tiny'}
+```{r ranefRegular, size='tiny'}
 dat2 %>% select(site,lat,lon) %>% distinct() %>% arrange(site) %>% mutate(int=lmm2$sdr$par.random) %>%
   ggplot(aes(lon,lat,col=int))+geom_point(aes(size=abs(int)))+
   labs(title='Random intercepts (1|Site)',x='Longitude',y='Latitude',col='Intercept')+
@@ -662,7 +769,7 @@ dat2 %>% select(site,lat,lon) %>% distinct() %>% arrange(site) %>% mutate(int=lm
 :::
 
 
-## Spatial random effects (cont.)
+## Random effects: spatial
 
 ::: columns
 
@@ -681,15 +788,17 @@ dat2$group <- factor(rep(1,nrow(dat2)))
 lmm3 <- glmmTMB(y~x+exp(coords+0|group),data=dat2)
 ```
 
+- The spatial random _field_ is shown in the background, along with individual draws from the field (sites)
+
 ::::
 
 :::: column
 
-- Clustering effect modeled as a spatial random effect
 
-```{r, echo=FALSE, fig.width=4,fig.height=3,size='tiny'}
+
+```{r ranefSpatial, size='tiny'}
 #Spatial random effect field
-spRanEff <- expand.grid(lon=-10:10,lat=-10:10) %>%
+spRanEff <- expand.grid(lon=seq(-5,5,0.5),lat=seq(-5,5,0.5)) %>%
   mutate(coords=numFactor(lon,lat),group=factor(rep(1,nrow(.))),x=0) %>%
   mutate(pred=predict(object=lmm3,newdata=.,type='response',allow.new.levels = TRUE))
 
@@ -714,18 +823,312 @@ ggplot(spRanEff,aes(lon,lat))+
 
 :::
 
-## Challenge
+## How do these differ?
+
+::: columns
+
+:::: column
+
+```{r ranefRegular}
+```
+
+
+::::
+
+:::: column
+
+```{r ranefSpatial}
+```
+
+::::
+
+:::
+
+
+## Second challenge
+
+::: columns
+
+:::: column
+
+```{r}
+head(dat3)
+```
+
+```{r, fig.height=3}
+ggplot(dat3,aes(x=as.numeric(days),y=count))+geom_point()+
+  labs(x='Days',y='Count')
+```
+
+::::
+
+:::: column
+
+- Things can vary in _time_ as well as space
+- There is a dataset found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/08%20Spatiotemporal%20models) (`timeDat.csv`) with count data recorded at each location, along with temperature and a `day` variable
+- How does count change with temperature? Is there `temporal` autocorrelation between the data?
+- Fit a model that accounts for location, as well as any temporal autocorrelation
+
+::::
+
+:::
+
+## Second challenge results
+
+::: columns
+
+:::: column
+
+```{r timeDatExamp,echo=TRUE,eval=FALSE}
+dat3 <- read.csv('./timeDat.csv') %>% 
+  mutate(site=factor(site))
+
+#Naive random effect model
+m2 <- glmmTMB(y~x+(1|site),
+              data=dat3,
+              family='nbinom2')
+
+m2Res <- residuals(m2,'deviance')
+
+dat3 %>% mutate(m2Res) %>% 
+  mutate(days=as.numeric(days)) %>% 
+  ggplot(aes(x=days,y=m2Res))+
+  geom_point()+
+  geom_smooth(method='loess',formula=y~x)+
+  labs(x='Days',y='Residuals')
+```
+
+Looks like a fairly strong pattern in residuals
+
+::::
+
+:::: column
+
+```{r timeDatExamp}
+```
+
+::::
+
+:::
+
+## Second challenge results (cont)
+
+::: columns
+
+:::: column
+
+```{r timeDatExamp2,echo=TRUE,eval=FALSE}
+#Days as "numeric factor"
+dat3$dayF <- numFactor(dat3$days)
+dat3$group <- factor(rep(1,nrow(dat3)))
+
+#Fit model with temporal random effect
+m2_ac <- glmmTMB(y~x+(1|site)+
+                 exp(dayF+0|group),
+              data=dat3,
+              family='nbinom2')
+m2acRes <- residuals(m2_ac,'deviance')
+
+dat3 %>% mutate(m2acRes) %>% 
+  mutate(days=as.numeric(days)) %>% 
+  ggplot(aes(x=days,y=m2acRes))+
+  geom_point()+
+  geom_smooth(method='loess',formula=y~x)+
+  labs(x='Days',y='Residuals')
+
+```
+
+Pattern has largely disappeared
+
+::::
+
+:::: column
+
+```{r timeDatExamp2}
+```
+
+::::
+
+:::
+
+## Second challenge results (cont...)
+
+::: columns
+
+:::: column
+
+```{r}
+nd <- with(dat3,
+   expand.grid(temperature=seq(0,20,1),
+                 site=sort(unique(site)),dayF=dayF[1]))
+
+data.frame(mod=c('1. Actual','2. Standard','3. Autocorr'),
+           coef=c(1.5,fixef(m2)[[1]][2],fixef(m2_ac)[[1]][2]),
+           se=c(0,sqrt(diag(vcov(m2)[[1]]))[1],sqrt(diag(vcov(m2_ac)[[1]]))[1])) %>% 
+  mutate(upr=coef+se*1.96,lwr=coef-se*1.96) %>% 
+  ggplot(aes(x=mod,y=coef))+geom_pointrange(aes(ymax=upr,ymin=lwr))+
+  labs(x=NULL,y='Coefficient')
+
+```
+
+::::
+
+:::: column
+
+::::
+
+:::
+
+
+## What if my data varies over space AND time?
+
+::: columns
+
+:::: column
+
+- You can jointly estimate covariance functions for different types of distances, however...
+- Make sure that these can actually be estimated! Did you actually gather data at all combinations of space and time?
+- In the literature these can be _separable_ or _non-separable_ covariance functions (see [here](https://spacetimewithr.org/) or [here](https://www.wiley.com/en-us/Statistics+for+Spatio+Temporal+Data-p-9780471692744) for more details)
+
+::::
+
+:::: column
+
+![](wickle2019.jpg){width=80%}
+
+::::
+
+:::
 
 ## Problem: hard for large datasets
 
-## Solution: basis function
+- You'll notice that I've only been doing this for correlated random intercepts
+- OK because the covariance matrix for intercepts is small (26 x 26), but the covariance matrix for the entire dataset is large (260 x 260)
+- If data points are all from different times, this can start using a lot of memory and can take a _long time_
+- In general, _covariance-based methods_ do not scale well to larger datasets, so we need a better way of doing things
 
-## A challenger approaches
+## Solution: basis functions
 
-- Ho ho ho! Merry Christmas! In order to maximize the number of presents that you get from Santa Claus, you've decided to apply an analytic approach, and have collected data across Alberta on _number of Christmas presents received_
-- You've also collected data on things that might influence Saint Nick's generosity (_naughtiness_, _presence of milk and cookies_, _chimney width_)
-- Fit a GLMM to the present data, one using spatial random intercepts, and one using "regular" random intercepts
-- Which type of snack should you leave out for Santa? Which area might you consider moving to??
+::: columns
+
+:::: column
+
+- There are quicker ways to deal with spatial and temporal effects, including spatial partial differential equations (`R-INLA` and `TMB`, see here [here](https://pbs-assess.github.io/sdmTMB/index.html)) or Gaussian predictive process (`plgp`) models
+- We're going to use an approach you've already used: additive models!
+- GAMs are a common way to deal with this problem, as they move the ST variation from the covariance matrix into a random effect, which speeds up estimation
+
+::::
+
+:::: column
+
+```{r}
+set.seed(1)
+vdat <- data.frame(x=-30:30,y=volcano[30,])
+vdat$y <- with(vdat,(y-mean(y))/sd(y)+rnorm(length(y),0,0.4))
+gmod1 <- gam(y~s(x,bs='cr'),data=vdat)
+gmodBases1 <- cbind(x=vdat$x,model.matrix(gmod1)[,-1]) %>% 
+  as.data.frame() %>% 
+  setNames(c('x',paste0('b',1:ncol(gmod1$smooth[[1]]$S[[1]])))) 
+gmodBases1a <- cbind(1,outer(rep(1,nrow(vdat)),coef(gmod1)[2:10])) * gmodBases1
+gmodBases1a <- pivot_longer(gmodBases1a,-x)
+gmodPreds1 <- data.frame(x=vdat$x,pred=as.matrix(gmodBases1[,2:10]) %*% coef(gmod1)[2:10])
+
+gmodBases1a %>% 
+  ggplot(aes(x=x,y=value,col=name))+
+  geom_line(show.legend = FALSE,alpha=0.3)+
+  geom_line(data=gmodPreds1,aes(y=pred),col='black',linewidth=1)+
+  geom_point(data=vdat,aes(x=x,y=y),col='black',size=1)+
+  coord_cartesian(ylim=c(-2,2))+
+  labs(x='Distance',y='Value')
+
+```
+
+::::
+
+:::
+
+## Covariance vs Random Effects
+
+::: columns
+
+:::: column
+
+Estimate covariance explicitly
+
+\begin{equation*}
+  \begin{split}
+  \textcolor{orange}{\hat{y}} = & X\beta \\
+  y \sim & Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\Sigma}) \\
+  \Sigma = & 
+  \begin{pmatrix}
+      \textcolor{red}{\textcolor{red}{\sigma}}_{1,1} & \textcolor{red}{\sigma}_{1,2} & \cdots & \textcolor{red}{\sigma}_{1,j} \\
+      \textcolor{red}{\sigma}_{2,1} & \textcolor{red}{\sigma}_{2,2} & \cdots & \textcolor{red}{\sigma}_{2,j} \\
+      \vdots  & \vdots  & \ddots & \vdots  \\
+      \textcolor{red}{\sigma}_{i,1} & \textcolor{red}{\sigma}_{i,2} & \cdots & \textcolor{red}{\sigma}_{i,j} 
+ \end{pmatrix} \\
+ \sigma_{i,j} = & \textcolor{ForestGreen}{\alpha}^2\text{exp}(-\frac{1}{2\textcolor{ForestGreen}{\rho}^2}D^2_{i,j}) 
+ \end{split}
+\end{equation*}
+
+::::
+
+:::: column
+
+Approximate covariance with basis functions
+
+\begin{equation*}
+  \begin{split}
+  \textcolor{orange}{\hat{y}} = & X\beta + Zu \\
+  y \sim & Normal (\textcolor{orange}{\hat{y}}, \sigma) \\
+  u \sim & Normal (0, \lambda S) \\
+  \end{split}
+\end{equation*}
+
+::::
+
+:::
+
+## GAM approach
+
+::: columns
+
+:::: column
+
+```{r}
+
+
+```
+
+::::
+
+:::: column
+
+::::
+
+:::
+
+
+
+
+
+## Third challenge
+
+::: columns
+
+:::: column
+
+- For my PhD work, I studied bees in canola fields. One of the species I studied was _Megachile rotundata_, the alfalfa leafcutting bee. I counted bees visiting flowers at distances away from their shelters ("hives"), and some of the data is found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/08%20Spatiotemporal%20models) (`seedFieldDat.csv`).
+- Using a GAM, model how visitation changes with distance from shelter (`sDist`), edge of field (`eDist`), while controlling for observation time (`time`), day of year (`StartTime`), and different Fields. You can either do a model for each `Year` separately, or have `Year` as a term in the model
+
+::::
+
+:::: column
+
+![](seedfieldBays.jpg){width=100%}
+
+::::
+
+:::
 
 ## Two-column slide
 

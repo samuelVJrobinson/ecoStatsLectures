@@ -19,3 +19,6 @@ lattice
 vegan
 ggfortify
 cluster
+sf
+gstat
+glmmTMB
