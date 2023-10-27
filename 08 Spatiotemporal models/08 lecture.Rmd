@@ -40,7 +40,7 @@ library(ggeffects)
 
 
 knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
-                      warning=TRUE, cache = FALSE, fig.height=5,fig.width=5)
+                      warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
 
 #Example dataframe for date/time conversions
 dExamp <- data.frame(x=c(5,10),
@@ -108,60 +108,7 @@ lat <- model.matrix(~g-1) %*% lat
 lon <- model.matrix(~g-1) %*% lon
 dat2 <- data.frame(y,y2,x,site=g,lat,lon) #Assemble into data frame
 
-# Generate temporally correlated data
-# time <- runif(ngroups,0,10)
-# # time <- seq(-20,20,length.out=20)
-# distMat <- as.matrix(dist(time,diag=TRUE,upper=TRUE)) #Matrix of distances
-# diag(distMat) <- 1e-5
-# covMat <- covFun(sigmaG,0.2,distMat) #Covariance matrix
-# corMat <- cov2cor(covMat) #Correlation matrix
-# cholCorMat <- chol(corMat,pivot = TRUE) #Choleski matrix
-# raneffs <- rnorm(ngroups,0,1) %*% cholCorMat #Induce correlation
-# raneff_int <- model.matrix(~g-1) %*% raneffs[1,] #Intercept vector
-# yhat <- intercept + slopeX*x + raneff_int  #Expected value
-# # y <- rnorm(n,yhat,sigmaR) #Data (normal)
-# y <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
-# # lat <- model.matrix(~g-1) %*% lat
-# # lon <- model.matrix(~g-1) %*% lon
-# time <- model.matrix(~g-1) %*% time
-# dat3 <- data.frame(count=y,temperature=x+10,location=g,days=time) #Assemble into data frame
-
-set.seed(1)
-
-n <- 160
-ngroups <- 16
-
-x <- runif(n,-10,10) #Single fixed effect predictor
-g <- sample(letters[1:ngroups],n,TRUE) #Groups
-intercept <- 1
-slopeX <- 1.5
-sigmaR <- 3 #Residual sigma 
-sigmaTime <- 10 #Covariance for GP model
-sigmaG <- 3 #Group intercept sigma
-rho <- 0.1
-
-# Generate temporally correlated random intercepts
-time <- round(sort(runif(n,0,30)))
-# time <- seq(-20,20,length.out=20)
-distMat <- as.matrix(dist(time,diag=TRUE,upper=TRUE)) #Matrix of distances
-diag(distMat) <- 1e-5
-covMat <- covFun(sigmaTime,rho,distMat) #Covariance matrix
-curve(covFun(sigmaTime,rho,x),0,10)
-corMat <- cov2cor(covMat) #Correlation matrix
-cholCorMat <- chol(corMat,pivot = TRUE) #Choleski matrix
-raneff_time <- (rnorm(n,0,1) %*% cholCorMat)[1,] #Induce correlation
-plot(time,raneff_time)
-raneff_site <- model.matrix(~g-1) %*% rnorm(ngroups,0,sigmaG) #Random intercept for site
-
-yhat <- intercept + slopeX*x + raneff_time + raneff_site  #Expected value
-# y <- rnorm(n,yhat,sigmaR) #Data (normal)
-y <- rnbinom(n,mu=exp(yhat/5),sigmaR) #Data (NB)
-# lat <- model.matrix(~g-1) %*% lat
-# lon <- model.matrix(~g-1) %*% lon
-# time <- model.matrix(~g-1) %*% time
-dat3 <- data.frame(count=y,temperature=x+10,site=g,days=factor(time)) #Assemble into data frame
-
-write.csv(dat3,'./timeDat.csv',row.names = FALSE)
+rm(x,g,y,y2,lat,lon,yhat)
 
 ```
 
@@ -169,7 +116,7 @@ write.csv(dat3,'./timeDat.csv',row.names = FALSE)
 
 ::: columns
 
-:::: column
+:::: {.column width='40%'}
 
 - Spatial and temporal data
   - Some basic GIS (`sf`)
@@ -183,7 +130,7 @@ write.csv(dat3,'./timeDat.csv',row.names = FALSE)
 
 ::::
 
-:::: column
+:::: {.column width='60%'}
 
 ![](minardMap.png){width=100%}
 
@@ -672,11 +619,11 @@ variogram(log(zinc)~1, meuse,width=50) %>%
 \begin{split}
 \textcolor{red}{\Sigma} = & covariance \\
 \textcolor{red}{\Sigma} = & variance \times correlation \\
-\textcolor{red}{\Sigma} = & \textcolor{red}{\sigma}^2 \times e^{-\textcolor{ForestGreen}{\rho}^2 Dist^2}\\
+\textcolor{red}{\Sigma} = & \textcolor{red}{\sigma}^2 \times e^{-\textcolor{magenta}{\rho}^2 Dist^2}\\
 \end{split}
 \end{equation*}
 
-- Instead of finding a single $\textcolor{red}{\sigma}$ value, R now looks for $\textcolor{red}{\sigma}$ (maximum covariance) and $\textcolor{ForestGreen}{\rho}$ (decay with distance)
+- Instead of finding a single $\textcolor{red}{\sigma}$ value, R now looks for $\textcolor{red}{\sigma}$ (maximum covariance) and $\textcolor{magenta}{\rho}$ (decay with distance)
 
 ::::
 
@@ -751,6 +698,7 @@ lmm2 <- glmmTMB(y~x+(1|site),data=dat2)
 ```
 
 - If we plot the intercepts for each site, we see that they are clustered
+- `Moran's I` is a commonly test for spatial autocorrelation (see `ape` and `spdep` packages)
 
 ::::
 
@@ -852,11 +800,12 @@ ggplot(spRanEff,aes(lon,lat))+
 :::: column
 
 ```{r}
-head(dat3)
+dat <- read.csv('./timeDat.csv')
+head(dat)
 ```
 
 ```{r, fig.height=3}
-ggplot(dat3,aes(x=as.numeric(days),y=count))+geom_point()+
+ggplot(dat,aes(x=as.numeric(days),y=count))+geom_point()+
   labs(x='Days',y='Count')
 ```
 
@@ -880,17 +829,17 @@ ggplot(dat3,aes(x=as.numeric(days),y=count))+geom_point()+
 :::: column
 
 ```{r timeDatExamp,echo=TRUE,eval=FALSE}
-dat3 <- read.csv('./timeDat.csv') %>% 
+dat <- read.csv('./timeDat.csv') %>%
   mutate(site=factor(site))
 
 #Naive random effect model
-m2 <- glmmTMB(y~x+(1|site),
-              data=dat3,
+m2 <- glmmTMB(count~temperature+(1|site),
+              data=dat,
               family='nbinom2')
 
 m2Res <- residuals(m2,'deviance')
 
-dat3 %>% mutate(m2Res) %>% 
+dat %>% mutate(m2Res) %>% 
   mutate(days=as.numeric(days)) %>% 
   ggplot(aes(x=days,y=m2Res))+
   geom_point()+
@@ -919,17 +868,17 @@ Looks like a fairly strong pattern in residuals
 
 ```{r timeDatExamp2,echo=TRUE,eval=FALSE}
 #Days as "numeric factor"
-dat3$dayF <- numFactor(dat3$days)
-dat3$group <- factor(rep(1,nrow(dat3)))
+dat$dayF <- numFactor(dat$days)
+dat$group <- factor(rep(1,nrow(dat)))
 
 #Fit model with temporal random effect
-m2_ac <- glmmTMB(y~x+(1|site)+
+m2_ac <- glmmTMB(count~temperature+(1|site)+
                  exp(dayF+0|group),
-              data=dat3,
+              data=dat,
               family='nbinom2')
 m2acRes <- residuals(m2_ac,'deviance')
 
-dat3 %>% mutate(m2acRes) %>% 
+dat %>% mutate(m2acRes) %>% 
   mutate(days=as.numeric(days)) %>% 
   ggplot(aes(x=days,y=m2acRes))+
   geom_point()+
@@ -958,12 +907,8 @@ Pattern has largely disappeared
 :::: column
 
 ```{r}
-nd <- with(dat3,
-   expand.grid(temperature=seq(0,20,1),
-                 site=sort(unique(site)),dayF=dayF[1]))
-
 data.frame(mod=c('1. Actual','2. Standard','3. Autocorr'),
-           coef=c(1.5,fixef(m2)[[1]][2],fixef(m2_ac)[[1]][2]),
+           coef=c(0.5,fixef(m2)[[1]][2],fixef(m2_ac)[[1]][2]),
            se=c(0,sqrt(diag(vcov(m2)[[1]]))[1],sqrt(diag(vcov(m2_ac)[[1]]))[1])) %>% 
   mutate(upr=coef+se*1.96,lwr=coef-se*1.96) %>% 
   ggplot(aes(x=mod,y=coef))+geom_pointrange(aes(ymax=upr,ymin=lwr))+
@@ -974,6 +919,17 @@ data.frame(mod=c('1. Actual','2. Standard','3. Autocorr'),
 ::::
 
 :::: column
+
+- Model with autocorrelation has greater uncertainty in prediction
+- Unfortunately, neither model could separate the effect from zero
+- Covariance function can be used to _plan future sampling_
+
+```{r, fig.height=3}
+data.frame(d=0:15,co=covFun(1,0.1,0:15)) %>% 
+  ggplot(aes(x=d,y=co*100))+geom_line()+
+  labs(x='Distance',y='% Correlation')
+```
+
 
 ::::
 
@@ -1059,14 +1015,14 @@ Estimate covariance explicitly
   \begin{split}
   \textcolor{orange}{\hat{y}} = & X\beta \\
   y \sim & Normal(\textcolor{orange}{\hat{y}},\textcolor{red}{\Sigma}) \\
-  \Sigma = & 
+  \textcolor{red}{\Sigma} = & 
   \begin{pmatrix}
       \textcolor{red}{\textcolor{red}{\sigma}}_{1,1} & \textcolor{red}{\sigma}_{1,2} & \cdots & \textcolor{red}{\sigma}_{1,j} \\
       \textcolor{red}{\sigma}_{2,1} & \textcolor{red}{\sigma}_{2,2} & \cdots & \textcolor{red}{\sigma}_{2,j} \\
       \vdots  & \vdots  & \ddots & \vdots  \\
       \textcolor{red}{\sigma}_{i,1} & \textcolor{red}{\sigma}_{i,2} & \cdots & \textcolor{red}{\sigma}_{i,j} 
  \end{pmatrix} \\
- \sigma_{i,j} = & \textcolor{ForestGreen}{\alpha}^2\text{exp}(-\frac{1}{2\textcolor{ForestGreen}{\rho}^2}D^2_{i,j}) 
+ \textcolor{red}{\sigma}_{i,j} = & \textcolor{magenta}{\alpha}^2\text{exp}(-\frac{1}{2\textcolor{magenta}{\rho}^2}D^2_{i,j}) 
  \end{split}
 \end{equation*}
 
@@ -1079,7 +1035,7 @@ Approximate covariance with basis functions
 \begin{equation*}
   \begin{split}
   \textcolor{orange}{\hat{y}} = & X\beta + Zu \\
-  y \sim & Normal (\textcolor{orange}{\hat{y}}, \sigma) \\
+  y \sim & Normal (\textcolor{orange}{\hat{y}}, \textcolor{red}{\sigma}) \\
   u \sim & Normal (0, \lambda S) \\
   \end{split}
 \end{equation*}
@@ -1095,52 +1051,68 @@ Approximate covariance with basis functions
 :::: column
 
 ```{r}
+dat$days <- as.numeric(dat$days)
+```
 
-
+```{r fitGam, echo=TRUE}
+m3 <- gam(count~temperature+
+            s(days,bs='cr'),
+          data=dat,family='nb')
+summary(m3)
 ```
 
 ::::
 
 :::: column
 
+- Continuous variables (time) can be specified as a smoother `s(time)`
+- 2D distances (e.g. E & N) also possible: `s(E,N)`
+  - Be careful that units are on the same length scale!
+- Same caveats as other GAMs apply: do you have enough basis dimensions (`k`)? See [Lecture 6](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/06%20Nonlinear%20models)
+- Test for residual autocorrelation OR do sensitivity analysis for `k`
+
 ::::
 
 :::
 
+## GAM results
 
+Default GAM plots:
 
-
+```{r plotGam, fig.width=8,fig.height=4}
+par(mfrow=c(1,2))
+plot(m3,all.terms=TRUE,mar=c(5.1,4.1,0.5,2.1))
+```
 
 ## Third challenge
 
 ::: columns
 
-:::: column
+:::: {.column width='60%'}
 
-- For my PhD work, I studied bees in canola fields. One of the species I studied was _Megachile rotundata_, the alfalfa leafcutting bee. I counted bees visiting flowers at distances away from their shelters ("hives"), and some of the data is found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/08%20Spatiotemporal%20models) (`seedFieldDat.csv`).
-- Using a GAM, model how visitation changes with distance from shelter (`sDist`), edge of field (`eDist`), while controlling for observation time (`time`), day of year (`StartTime`), and different Fields. You can either do a model for each `Year` separately, or have `Year` as a term in the model
-
-::::
-
-:::: column
-
-![](seedfieldBays.jpg){width=100%}
+- During my PhD, I studied alfalfa leafcutting bees (_Megachile rotundata_) in canola fields. I counted bees visiting flowers at distances away from their shelters ("hives"); some of these data are found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/08%20Spatiotemporal%20models) (`seedFieldDat.csv`).
+- Using a GAM, model how visitation changes with: distance from shelter (`sDist`), edge of field (`eDist`), while controlling for observation time (`time`), day of year (`StartTime`), and different Fields. You can either do a model for each `Year` separately, or have `Year` as a term in the model
 
 ::::
 
-:::
+:::: {.column width='40%'}
 
-## Two-column slide
-
-::: columns
-
-:::: column
-
-::::
-
-:::: column
+![](leafcutterCanola.jpg){width=80%}
 
 ::::
 
 :::
+
+## Seed canola field
+
+![](seedfieldBays.jpg){width=80%}
+
+## To do for next week
+
+- Find a paper that is important for your field and read it (preferably not a methods paper)
+- In the Methods section, pay attention to how they write about their data collection and data analysis
+  - How many samples did they gather? Was this easy to figure out?
+  - Do they describe any models? If you had to write these models in R, what might they look like?
+- How do they show the results of these models in the Results section?
+- Was this paper easy to read? What would make it easier to understand?
 
