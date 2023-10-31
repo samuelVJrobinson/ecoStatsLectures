@@ -341,7 +341,7 @@ ggarrange(p1+guides(size='none'),
 - Some map projections preserve _area_, others preserve _distance_. Degrees are not all the same distance apart!
 - Usually we're interested in absolute distance between locations, so _Mercator_ (UTM) is a good choice, but be careful which UTM zone you choose!
 - `sf` uses `crs` codes: __4326__ is for lat/lon (WGS 84), 3401 is an Alberta-specific UTM projection
-- [Many](epsg.io) others are available
+- [Many](https://epsg.io/) others are available
 
 
 ::::
@@ -355,6 +355,7 @@ ggarrange(p1+guides(size='none'),
 :::: column
 
 - Make this map of bird counts from the ABMI dataset, with Alberta cities and provincial boundaries overlaid on top
+- Data are found [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/08%20Spatiotemporal%20models/shapefiles); you'll need to download the whole set of `AB_only` files, not just the `.shp` one
 - `medDetects` is the median detection rate at each site over several years (I used log(`medDetects`) for this map)
 
 
