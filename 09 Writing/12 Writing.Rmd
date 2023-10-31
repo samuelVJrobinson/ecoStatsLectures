@@ -2,7 +2,7 @@
 title: "Statistics Writing"
 subtitle: "How to write more gooder"
 author: "Samuel Robinson, Ph.D."
-date: "March 4, 2021"
+date: "Nov 3, 2023"
 output: 
   beamer_presentation:
     theme: "default"
