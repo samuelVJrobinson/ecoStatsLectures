@@ -10,6 +10,9 @@ output:
     highlight: "tango"
 df_print: kable
 header-includes: 
+header-includes: 
+  - \usepackage{tikz}
+  - \usepackage{pgfplots}
   - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
   - \useinnertheme{circles}
 ---
@@ -43,10 +46,10 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 ## Motivation
 
-- Translating Model Results
+- How writing works
+  - Translating Model Results
 - IMRaD Papers
 - Figures and Tables
-- Practice!
 
 ## Where do I start?
 
@@ -68,35 +71,36 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 - Would figures or tables help to prove my point more concisely or easily?
 - How do these numbers relate to the rest of the literature?
 
-Show the _bare minimum_ number of statistics needed to convince people. If it's not relevant to your story, move it somewhere else.
+## A bit of history
 
-## Models as reflections of reality
+- (European) Universities are largely offshoots of the Christian monastic tradition
+- What we now call science started in about the 1600s, largely as offshoots of astrology and alchemy
+  - Biology began slightly later (1700s-1800s), as offshoots of medicine and natural history
+- "Natural philosophers" (scientists) would write letters to each other about what they were up to 
+- Eventually, organizations of scientists began publishing research results publicly (e.g. _Philosophical Transactions of the Royal Society_, 1665)
+- Peer review was sparse, and was usually done by the editor or a board. External peer review didn't become widespread until 1950-1970
+- Early science writing is _extremely_ varied, and is much different from modern science writing
+
+## What is science writing for?
 
 ::: columns
 
 :::: column
 
-- Models are meant to reflect an underlying process
-- Things like effect size (mean/SE) reflect the relative strength of the factors involved
-- Things like $R^2$ reflect how well the model fits the data _overall_
-- Causality is implied, but has to be justified
-
-\vspace{1em}
-"Keep your eye on the biology!" 
+- "Recording secret knowledge" (Newton)
+- "Describing _exactly_ how an experiment proceeded" (Bacon)
+- Modern science writing does mostly the latter
 
 ::::
 
 :::: column
 
-```{r, fig.width=5, fig.height=5} 
-ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
-  geom_smooth(method='lm',formula=y~x)
-```
-What might the underlying physical process be here?
+![](newton_bacon.jpg){width=80%}
 
 ::::
 
 :::
+
 
 ## Models as evidence for arguments
 
@@ -104,6 +108,8 @@ What might the underlying physical process be here?
 - When making an argument, you bring evidence to support your claims
 - We use experiments/observations, mathematics, and previous literature to support our claims
 - Models act as a _form of evidence_, translating raw data into "ammunition" for your claim
+
+Show the _bare minimum_ number of statistics needed to convince people. If it's not relevant to your story, move it somewhere else.
 
 ## Example arguments:
 
@@ -137,6 +143,35 @@ Example 2:
 
 \footnotetext[1]{Inductive reasoning}
 \footnotetext[2]{Or my model is wrong or the data are weird somehow}
+
+
+## Models as reflections of reality
+
+::: columns
+
+:::: column
+
+- Models are meant to reflect an underlying process
+- Things like effect size (mean/SE) reflect the relative strength of the factors involved
+- Things like $R^2$ reflect how well the model fits the data _overall_
+- Causality is implied, but has to be justified
+
+\vspace{1em}
+"Keep your eye on the biology!" 
+
+::::
+
+:::: column
+
+```{r, fig.width=5, fig.height=5} 
+ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
+  geom_smooth(method='lm',formula=y~x)
+```
+What might the underlying physical process be here?
+
+::::
+
+:::
 
 ## Evidence type 1: coefficients
 
