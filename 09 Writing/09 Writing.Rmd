@@ -396,10 +396,10 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
 
 - Journals can be society publications (BES, ESA, IEEE) or from academic publishing companies (Wiley, Elsevier, Taylor \& Francis)
 - Most journals have a _lead editor_ and an _editorial board_. These will be the people who will first see your submitted manuscript
-- Peer review is done for free by working scientists
+  - Peer review is done for free by working scientists
 - Traditional publishing: costs you nothing, costs the U of C library \$ (depending on subscription)
 - Open-access publishing: costs you \$1000-5000 depending on the journal, but then anyone can read it
-- Keep an eye out for predatory or "papermill" journals! Some sets of open-access journals (MDPI) have a _suspiciously fast_ peer review process
+  - Keep an eye out for predatory or "papermill" journals! Some sets of open-access journals (MDPI) have a _suspiciously fast_ peer review process
 
 ## OK, you've got a paper written! Now what?
 
@@ -415,7 +415,32 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
   - Think about who you might recommend as a reviewer. Who would you want to read your paper?
   - A _cover letter_ helps convince the editor they should give your paper a chance
   
-## How to peer review
+## What the editor will do
+
+- An editor will skim the paper and make sure that the topic is relevant. If not, your paper gets a _desk reject_
+- If it looks generally OK, the editor will contact peer reviewers and ask them to review the paper
+- Once they've gotten the comments back, the editor will assemble the comments, and read the paper a bit more to see if they agree with them
+- They will contact you with their decision based on the reviewer's comments: _reject_, _accept with major revisions_, or _accept with minor revisions_
+  - They may use _reject and resubmit_, depending on the journal
+  - They may temper the claims from _bad or rude peer reviewers_, or may remove them entirely!
+
+## My (personal) style of peer review
+
+- Read the paper once through without writing anything down
+- Go back through each section and write general "overall" comments
+  - e.g. "Intro needs to be trimmed down", "Results section is disorganized", "I don't understand the relevance of X"
+  - Make sure to provide a suggested way forward, where possible! (e.g. "I suggest moving this paragraph to here...")
+- Write line-by-line comments where needed
+  - e.g. "L40: change `insect` to `arthropod`", "L89: How does this test work, and is it commonly used?", "L112: Citation needed, perhaps Smith et al. 2020?"
+- Put all the comments together in a single document split into overall and line-by-line, and re-read your comments. 
+  - _Do you need to tone things down a bit?_ (or tone them up)
+- Make a reject/accept decision on the paper. Try to be as objective as possible:
+  - "This person didn't do exactly what I would have, but does it matter to the results or overall story?"
+  - "Maybe I don't think these results are very interesting, but are they believable given the evidence?"
+- If the paper is accepted, how much time will it take to do revisions? (Major vs Minor)
+
+There are many other ways to do peer review, such as [this](https://doi.org/10.1007/s00264-020-04504-1)
+  
 
 ## Final remarks
 
