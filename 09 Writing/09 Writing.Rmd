@@ -5,11 +5,14 @@ author: "Samuel Robinson, Ph.D."
 date: "Nov 3, 2023"
 output: 
   beamer_presentation:
+    incremental: false
     theme: "default"
     colortheme: "lily"
     highlight: "tango"
+    fig_caption: false
+urlcolor: blue
 df_print: kable
-header-includes: 
+classoption: aspectratio=169 
 header-includes: 
   - \usepackage{tikz}
   - \usepackage{pgfplots}
@@ -44,12 +47,16 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 ```
 
-## Motivation
+## Outline
 
-- How writing works
-  - Translating Model Results
-- IMRaD Papers
-- Figures and Tables
+- Types of scientific writing
+  - IMRaD manuscripts
+  - Figures and tables
+- Writing about statistics
+  - Translating model results
+- How peer review works
+
+# Part 1: Types of scientific writing
 
 ## Where do I start?
 
@@ -60,10 +67,9 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 ## Answer: "It depends"
 
-\textsc{What is your story?}
+\textbf{What is your story?}
 \vspace{1em}
-
-\textsc{Who is your audience?}
+\textbf{Who is your audience?}
 \vspace{1em}
 
 - How do these numbers serve the questions I'm asking?
@@ -78,7 +84,7 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
   - Biology began slightly later (1700s-1800s), as offshoots of medicine and natural history
 - "Natural philosophers" (scientists) would write letters to each other about what they were up to 
 - Eventually, organizations of scientists began publishing research results publicly (e.g. _Philosophical Transactions of the Royal Society_, 1665)
-- Peer review was sparse, and was usually done by the editor or a board. External peer review didn't become widespread until 1950-1970
+- Peer review was sparse, and was usually done by the editor or a board. External peer review wasn't widespread until 1950-1970
 - Early science writing is _extremely_ varied, and is much different from modern science writing
 
 ## What is science writing for?
@@ -101,17 +107,177 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 :::
 
+## How does this relate to statistics?
 
+::: columns
+
+:::: column
+
+- Early use of statistics in science was fairly "vibes-based", at least until computers became more readily available (1950s onward)
+  - Not necessarily a bad thing!
+- More complex and extensive data collection requires more complex modeling approaches
+  - Trade-off between realism and "explainability"
+- Pushback from some quarters: One aspect of the ongoing [replication crisis](https://en.wikipedia.org/wiki/Replication_crisis)
+  - _Statistics are political_
+  
+::::
+
+:::: column
+
+"I have heard from graduate students opting out of academia, assistant professors afraid to come up for tenure, mid-career people wondering how to protect their labs, and senior faculty retiring early, all because of methodological terrorism" - [Susan Fiske, APS Past President](http://datacolada.org/wp-content/uploads/2016/09/Fiske-presidential-guest-column_APS-Observer_copy-edited.pdf)
+
+\vspace{0.5cm}
+
+"[Fiske is] seeing her professional world collapsing... her work and the work of her friends and colleagues is being questioned in a way that no one could’ve imagined ten years ago. It’s scary, and it’s gotta be a lot easier for her to blame some unnamed "terrorists" than to confront the gaps in her own understanding of research methods." - [Andrew Gelman](https://statmodeling.stat.columbia.edu/2016/09/21/what-has-happened-down-here-is-the-winds-have-changed/)
+
+::::
+
+:::
+
+
+## Common types of scientific writing
+
+1. IMRaD papers: "standard" scientific papers
+  - __I__ntroduction, __M__ethods, __R__esults, and __D__iscussion
+2. Meta-analyses
+3. Review papers
+4. Perspective/opinion pieces
+5. Theses 
+6. Proposals
+7. Data papers
+8. Books/book chapters
+9. "Grey" or "white" papers
+10. Blogs
+
+
+## IMRaD Paper Structure
+
+::: columns
+
+:::: column
+
+![](heard2016_adapted.png)
+
+::::
+
+:::: column
+
+- Most scientific papers follow the IMRaD canon
+- Allows the reader to quickly assess whether this paper is useful and skip to important sections only
+- Generally, statistics are discussed in the _Methods_ and _Results_ sections only
+
+::::
+  
+:::
+
+
+## Exercise: pick apart a paper
+
+- We're going to go through the IMRaD paper you read this week
+  - You did read it... didn't you? 
+- In each of the sections, we'll identify how the author follows (or doesn't follow) the form described below
+- I recommend highlighting, underline, or otherwise annotate the paper for later reference
+
+## Introduction
+
+- Set up your research question, using the literature
+  - Moves from general ("Animals need food") to specific premises ("Bats need bugs") 
+  - Explain why we should care ("Bats are really cute! Don't you like cute things?")
+- Establish the _knowledge gap_ or _question_ that your research will address
+  - "Forest have lots of bugs, but nobody has checked whether there are bats there too!"
+- Last paragraph: strong statement that sums up what you're expecting to see
+  - Hypothesis: "Bats eat bugs, and forests have lots of bugs. Therefore, ..."
+  - Prediction: "... we should see more bat foraging activity in forests"
+  
+## Methods
+
+- Establish how you collected the data, and how you analyzed it
+  - This defends against criticism of your model or your data, and makes your results more believable
+- The detail you use depends how "unusual" your model is, which depends on your audience
+- Clarify what the dependent, independent variables, and random effects in your models are
+- Sometimes you can just use the actual R model formula:
+  -  "I fit the model using `lme4` in R using the following model structure for bat counts (while accounting for frogs and unicorns):"
+
+\small
+
+`lmer(batCounts ~ forest + frogs + unicorns + (1|site))`
+
+## Results
+
+- Brief summary of what you collected\footnote{Can sometimes go at the end of the Methods}
+  - "I caught 420 bats at my 69 sampling sites."
+- Present your results as an answer to the questions that you posed in the Introduction. 
+  - "Forest cover caused an increase of 3 bats for each 10% of forest (p<0.001), while frogs had no effect (p=0.7)"
+  - Try to keep the language as normal and direct as possible 
+  - Having tons of p-values and other numbers can make the text hard to read
+- If something weird happened, just say it and move on. Speculate on _why_ in the Discussion.
+  - "Surprisingly, unicorns had a negative effect on bat counts."
+  
+## Discussion
+
+- Relate your results to your research question. Did your results match your expectations?
+- Move from specific ("Bats need bugs") to general ("Animals need food"); opposite of the Introduction
+- Put the Results you found into the context of the rest of the literature.  If your results contradict other studies, why do you think that occurred?
+  - "Barclay et al. (2017) showed that bats don't like forests, but our results may differ because..."
+- \textbf{So what?} What new things have we learned? How might this affect theory or practice? Should non-bat people pay attention to this paper?
+  
+## Figures and Tables
+
+- Figures can be excellent tools for telling your story, but...
+  - Figures take up lots of room, cost $ in publications, and can overwhelm the reader if there are too many
+  - Many resources for good figure design
+- Tables are kind of boring, but are great for conveying lots of numbers at once
+  - Useful for showing information on large numbers of coefficients
+  - If you have lots of models, `library(broom)` provides summaries of all of them at once
+- Tables and figures (+ captions) should be readable without knowing the rest of the text
+
+\large
+Suggestions:
+
+1. Choose 2 or 3 figures and tables to be the __Main Characters__ in your Results section.
+2. Use them to illustrate what your models show  and move the rest into a supplemental or appendix.
+
+## Title and Abstract 
+
+- Title: "Advertisement" of your study topic and results
+  - _Why should the reader read any further? _
+- Abstract: quickly and effectively tells the reader what the paper is about
+  - Usually follows the IMRaD format order
+  - Not a movie trailer: spoilers are expected!
+- Keywords: extra words that could help search engine results
+
+## Style
+
+- I try to write everything in point form in order to see the heirarchical document structure (sections, paragraphs, sentences)
+
+## My (personal) order of writing a paper
+
+1. Methods: I usually write this section first, as it gets me "warmed up" for the rest of it\footnote{You can even write it before you collect your data!}
+2. Results: I write this section after I write the Methods section
+3. Discussion: I write this after my model Results. Here you can name-drop all the relevant papers you've read (make sure they're setup in the Introduction first)
+4. Introduction: I find this section the trickiest to write, so I usually write it last
+5. Title and Abstract: After everything else is done, you can _advertise and summarize_!
+
+# Part 2: Writing about statistics
+
+
+  
 ## Models as evidence for arguments
 
 - Scientific discourse can be thought of as a series of logical arguments
 - When making an argument, you bring evidence to support your claims
 - We use experiments/observations, mathematics, and previous literature to support our claims
-- Models act as a _form of evidence_, translating raw data into "ammunition" for your claim
+  - None of these are assumption-free: The reader must be convinced that these are appropriate!
+- Models also act as a _piece of evidence_, translating raw data into "ammunition" for your claim
+  - Model structure and performance checks (residual plots, etc.) should _also_ convince the reader that this is believable
 
 Show the _bare minimum_ number of statistics needed to convince people. If it's not relevant to your story, move it somewhere else.
 
 ## Example arguments:
+
+- Premise 1: Bats eat bugs
+- Premise 2: Forests have lots of bugs
+- Claim: Therefore, bats should prefer forests \footnotemark
 
 ::: columns
 
@@ -119,9 +285,6 @@ Show the _bare minimum_ number of statistics needed to convince people. If it's 
 
 Example 1:
 
-- Premise 1: Bats eat bugs
-- Premise 2: Forests have lots of bugs
-- Claim: Therefore, bats should prefer forests \footnotemark
 - Evidence: The model of my data __supports this claim__ 
 - Conclusion: This means that our understanding of bugs, bats, and forests is pretty good
 
@@ -131,19 +294,14 @@ Example 1:
 
 Example 2:
 
-- Premise 1: Bats eat bugs
-- Premise 2: Forests have lots of bugs
-- Claim: Therefore, bats should prefer forests
 - Evidence: The model of my data __does not support this claim__
-- Conclusion: Either one of these premises is wrong, or we left one out \footnotemark
+- Conclusion: One of these premises is wrong, or we left out an important premise
 
 ::::
 
 :::
 
 \footnotetext[1]{Inductive reasoning}
-\footnotetext[2]{Or my model is wrong or the data are weird somehow}
-
 
 ## Models as reflections of reality
 
@@ -151,7 +309,7 @@ Example 2:
 
 :::: column
 
-- Models are meant to reflect an underlying process
+- Models are meant to reflect an _underlying biological process_
 - Things like effect size (mean/SE) reflect the relative strength of the factors involved
 - Things like $R^2$ reflect how well the model fits the data _overall_
 - Causality is implied, but has to be justified
@@ -167,6 +325,7 @@ Example 2:
 ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
   geom_smooth(method='lm',formula=y~x)
 ```
+
 What might the underlying physical process be here?
 
 ::::
@@ -210,9 +369,10 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
 
 - Variance has a physical interpretation
   - What is the variation in bat counts at a given level of forest?
-- $R^2$ relates actual to modelled variance: what % of variance does your model explain?
+- $R^2$ relates actual to modeled variance: what % of variance does your model explain?
 - GLMs: different distributions model variance differently
 - Hierarchical models deal with many levels of variance
+  - Tells you where the variance in your system is coming from
 
 ::::
 
@@ -230,93 +390,32 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
   
 :::
 
+# Part 3: Peer review
 
-## IMRaD Paper Structure
+## How do journals work?
 
-::: columns
+- Journals can be society publications (BES, ESA, IEEE) or from academic publishing companies (Wiley, Elsevier, Taylor \& Francis)
+- Most journals have a _lead editor_ and an _editorial board_. These will be the people who will first see your submitted manuscript
+- Peer review is done for free by working scientists
+- Traditional publishing: costs you nothing, costs the U of C library \$ (depending on subscription)
+- Open-access publishing: costs you \$1000-5000 depending on the journal, but then anyone can read it
+- Keep an eye out for predatory or "papermill" journals! Some sets of open-access journals (MDPI) have a _suspiciously fast_ peer review process
 
-:::: column
+## OK, you've got a paper written! Now what?
 
-![](heard2016_adapted.png)
-
-::::
-
-:::: column
-
-- Most scientific papers follow the IMRaD canon
-- Allows the reader to quickly assess whether this paper is useful and skip to important sections only
-- Generally, statistics are discussed in the _Methods_ and _Results_ sections only
-
-::::
+- Identify a journal you'd like to submit it to
+  - Which journals do you cite the most in the paper? Maybe one of those? Check their [Aims and Scope](https://besjournals.onlinelibrary.wiley.com/hub/journal/13652664/aims-and-scope/read-full-aims-and-scope)
+  - Helps to start thinking about it earlier, and have a tier-list
+  - __Ask your supervisor!__ They will have good experience with this
+- Assemble the document in the way that the journal wants. Check their [Guidelines for Authors](https://besjournals.onlinelibrary.wiley.com/hub/journal/13652664/about/author-guidelines)
+  - Check that the document conforms to the types of papers they publish
+  - Some journals are more lenient about the first submissions (e.g. just a pdf with simple formatting)
+  - Double-blind journals require you to remove all identifying info (separate title page that the reviewer never sees)
+- Submit the article and wait for a response!
+  - Think about who you might recommend as a reviewer. Who would you want to read your paper?
+  - A _cover letter_ helps convince the editor they should give your paper a chance
   
-:::
-
-
-## Introduction
-
-_I find this section the trickiest to write, so I usually write it last._
-
-- Set up your research question, using the literature
-  - Moves from general ("Animals need food") to specific premises ("Bats need bugs") 
-- Establish the _knowledge gap_ that your research will address
-  - "Forest have lots of bugs, but nobody has checked whether there are bats there too!"
-- Last paragraph: strong statement that sums up what you're expecting to see
-  - "Bats eat bugs, and forests have lots of bugs. Therefore, bats should prefer forests."
-  
-## Methods
-
-_I usually write this section first, as it gets me "warmed up" for the rest of it._\footnote{You can even write it before you collect your data!}
-
-- Establish how you collected the data, and how you analyzed it
-  - This defends against criticism of your model or your data, and makes your results more believable
-- The detail you use depends how "unusual" your model is, which depends on your audience
-- Clarify what the dependent, independent variables, and random effects in your models are
-- Sometimes you can just use the actual R model formula:
-  -  "I fit the model using `lme4` in R using the following model structure for bat counts (while accounting for frogs and unicorns):"
-
-\small
-
-`lmer(batCounts ~ forest + frogs + unicorns + (1|site))`
-
-## Results
-
-_I write this section after I write the Methods section_
-
-- Brief summary of what you collected\footnote{Can sometimes go at the end of the Methods}
-  - "I caught 420 bats at my 69 sampling sites."
-- Present your results as an answer to the questions that you posed in the Introduction. 
-  - "Forest cover caused an increase of 3 bats for each 10% of forest (p<0.001), while frogs had no effect (p=0.7)"
-  - Try to keep the language as normal and direct as possible 
-  - Having tons of p-values and other numbers can make the text hard to read
-- If something weird happened, just say it and move on. Speculate on _why_ in the Discussion.
-  - "Surprisingly, unicorns had a negative effect on bat counts."
-  
-## Discussion
-
-_I write this after my model Results. Here you can name-drop all the relevant papers you've read._
-
-- Relate your results to your research question. Did your results match your expectations?
-- Move from specific ("Bats need bugs") to general ("Animals need food"); opposite of the Introduction
-- Put the Results you found into the context of the rest of the literature.  If your results contradict other studies, why do you think that occurred?
-  - "Barclay et al. (2017) showed that bats don't like forests, but our results may differ because..."
-- \textbf{So what?} What new things have we learned? How might this affect theory or practice? Should non-bat people pay attention to this paper?
-  
-## Figures and Tables
-
-- Figures can be excellent tools for telling your story, but...
-  - Figures take up lots of room, cost $ in publications, and can overwhelm the reader if there are too many
-  - Many resources for good figure design
-- Tables are kind of boring, but are great for conveying lots of numbers at once
-  - Useful for showing information on large numbers of coefficients
-  - If you have lots of models, `library(broom)` provides summaries of all of them at once
-- Tables and figures (+ captions) should be readable without knowing the rest of the text
-
-\large
-Suggestions:
-
-1. Choose 2 or 3 figures and tables to be the __Main Characters__ in your Results section.
-2. Use them to illustrate what your models show. 
-3. Move the rest into a supplemental or appendix.
+## How to peer review
 
 ## Final remarks
 
@@ -344,4 +443,18 @@ Pull up a blank text document. Using a model that you have fit to some data, wri
 - Short summary of what the model is telling you for the Results 
 
 Point form is fine, but try to find important points that you could convert into topic sentences in an actual paragraph
+
+## 2-column slide
+
+::: columns
+
+:::: column
+
+::::
+
+:::: column
+
+::::
+
+:::
   
