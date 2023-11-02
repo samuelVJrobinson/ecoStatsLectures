@@ -18,6 +18,9 @@ header-includes:
   - \usepackage{pgfplots}
   - \definecolor{darkturquoise}{rgb}{0.0, 0.81, 0.82}
   - \useinnertheme{circles}
+  - \let\oldverbatim\verbatim %Change fontsize of code chunk output
+  - \let\endoldverbatim\endverbatim
+  - \renewenvironment{verbatim}{\tiny\oldverbatim}{\endoldverbatim}
 ---
 
 ```{r setup, include=FALSE}
@@ -42,7 +45,7 @@ x <- runif(n,0,100)
 yhat <- 5 + 0.3*x #Expected value
 # y1 <- rpois(n,exp(yhat))  #Poisson process
 y1 <- abs(rnorm(n,yhat,3)) #Normal process
-d1 <- data.frame(x,yhat,y1) #Dataframe
+d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
 # ggplot(d1,aes(x,y1))+geom_point()
 
 ```
@@ -91,17 +94,20 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 ::: columns
 
-:::: column
+:::: {.column width='60%'}
 
 - "Recording secret knowledge" (Newton)
 - "Describing _exactly_ how an experiment proceeded" (Bacon)
-- Modern science writing does mostly the latter
+- Modern science writing does mostly the latter:
+  - Text should be understood by your peers, not obscured
+  - Not _all_ details are needed, only those that help make your arguments (e.g. I don't need to know the brand of pipette tips)
+- More recent push for _replicability_, with data and code being stored in online repositories
 
 ::::
 
-:::: column
+:::: {.column width='40%'}
 
-![](newton_bacon.jpg){width=80%}
+![](newton_bacon.jpg){width=100%}
 
 ::::
 
@@ -111,7 +117,7 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 ::: columns
 
-:::: column
+:::: {.column width='40%'}
 
 - Early use of statistics in science was fairly "vibes-based", at least until computers became more readily available (1950s onward)
   - Not necessarily a bad thing!
@@ -122,7 +128,7 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
   
 ::::
 
-:::: column
+:::: {.column width='60%'}
 
 "I have heard from graduate students opting out of academia, assistant professors afraid to come up for tenure, mid-career people wondering how to protect their labs, and senior faculty retiring early, all because of methodological terrorism" - [Susan Fiske, APS Past President](http://datacolada.org/wp-content/uploads/2016/09/Fiske-presidential-guest-column_APS-Observer_copy-edited.pdf)
 
@@ -138,7 +144,7 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 ## Common types of scientific writing
 
 1. IMRaD papers: "standard" scientific papers
-  - __I__ntroduction, __M__ethods, __R__esults, and __D__iscussion
+  - Introduction, Methods, Results, and Discussion
 2. Meta-analyses
 3. Review papers
 4. Perspective/opinion pieces
@@ -171,7 +177,7 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 :::
 
 
-## Exercise: pick apart a paper
+## Group exercise: pick apart a paper
 
 - We're going to go through the IMRaD paper you read this week
   - You did read it... didn't you? 
@@ -196,22 +202,22 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 - The detail you use depends how "unusual" your model is, which depends on your audience
 - Clarify what the dependent, independent variables, and random effects in your models are
 - Sometimes you can just use the actual R model formula:
-  -  "I fit the model using `lme4` in R using the following model structure for bat counts (while accounting for frogs and unicorns):"
+  -  "I fit the model using `lm` in R using the following model structure for bat counts (while accounting for unicorns):"
 
 \small
 
-`lmer(batCounts ~ forest + frogs + unicorns + (1|site))`
+`lm(batCounts ~ forest + unicorns)`
 
 ## Results
 
 - Brief summary of what you collected\footnote{Can sometimes go at the end of the Methods}
   - "I caught 420 bats at my 69 sampling sites."
 - Present your results as an answer to the questions that you posed in the Introduction. 
-  - "Forest cover caused an increase of 3 bats for each 10% of forest (p<0.001), while frogs had no effect (p=0.7)"
+  - "Forest cover caused an increase of 3 bats for each 10% of forest (p<0.001), while unicorns had no effect (p=0.19)"
   - Try to keep the language as normal and direct as possible 
   - Having tons of p-values and other numbers can make the text hard to read
 - If something weird happened, just say it and move on. Speculate on _why_ in the Discussion.
-  - "Surprisingly, unicorns had a negative effect on bat counts."
+  - "Surprisingly, frogs had a negative effect on bat counts."
   
 ## Discussion
 
@@ -225,7 +231,7 @@ d1 <- data.frame(x,yhat,y1) #Dataframe
 
 - Figures can be excellent tools for telling your story, but...
   - Figures take up lots of room, cost $ in publications, and can overwhelm the reader if there are too many
-  - Many resources for good figure design
+  - Many resources for good figure design: aim to minimize extra information
 - Tables are kind of boring, but are great for conveying lots of numbers at once
   - Useful for showing information on large numbers of coefficients
   - If you have lots of models, `library(broom)` provides summaries of all of them at once
@@ -246,22 +252,8 @@ Suggestions:
   - Not a movie trailer: spoilers are expected!
 - Keywords: extra words that could help search engine results
 
-## Style
-
-- I try to write everything in point form in order to see the heirarchical document structure (sections, paragraphs, sentences)
-
-## My (personal) order of writing a paper
-
-1. Methods: I usually write this section first, as it gets me "warmed up" for the rest of it\footnote{You can even write it before you collect your data!}
-2. Results: I write this section after I write the Methods section
-3. Discussion: I write this after my model Results. Here you can name-drop all the relevant papers you've read (make sure they're setup in the Introduction first)
-4. Introduction: I find this section the trickiest to write, so I usually write it last
-5. Title and Abstract: After everything else is done, you can _advertise and summarize_!
-
 # Part 2: Writing about statistics
 
-
-  
 ## Models as evidence for arguments
 
 - Scientific discourse can be thought of as a series of logical arguments
@@ -321,9 +313,9 @@ Example 2:
 
 :::: column
 
-```{r, fig.width=5, fig.height=5} 
-ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
-  geom_smooth(method='lm',formula=y~x)
+```{r batFig1, fig.width=5, fig.height=5} 
+(p1 <- ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
+  geom_smooth(method='lm',formula=y~x))
 ```
 
 What might the underlying physical process be here?
@@ -350,9 +342,9 @@ What might the underlying physical process be here?
 
 :::: column
 
-```{r, fig.width=5, fig.height=5} 
-ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
-  geom_smooth(method='lm',se=FALSE,formula=y~x)
+```{r batFig2, fig.width=5, fig.height=5} 
+(ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
+  geom_smooth(method='lm',se=FALSE,formula=y~x))
 ```
 
 ::::
@@ -378,23 +370,114 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
 
 :::: column
 
-```{r, warning = FALSE, fig.width=5, fig.height=5} 
+```{r batFig3, warning = FALSE, fig.width=5, fig.height=5} 
+
+predInt1 <- data.frame(d1, predict(lm(y1~x,data=d1), interval = "confidence"))
+predInt2 <- data.frame(d1, predict(lm(y1~x,data=d1), interval = "prediction"))
+
 ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
-  geom_ribbon(data=data.frame(d1, predict(lm(y1~x,data=d1), interval = "confidence")),
-              aes(x=x,ymax=upr,ymin=lwr),alpha=0.2)+
-  geom_ribbon(data=data.frame(d1, predict(lm(y1~x,data=d1), interval = "prediction")),
-              aes(x=x,ymax=upr,ymin=lwr),alpha=0.1)
+  geom_ribbon(data=predInt1,aes(x=x,ymax=upr,ymin=lwr),alpha=0.2)+
+  geom_ribbon(data=predInt2,aes(x=x,ymax=upr,ymin=lwr),alpha=0.1)
 ```
 
 ::::
   
 :::
 
+## Example write-up
+
+::: columns
+
+:::: column
+
+Say we fit a model of bat counts that looks like this
+
+```{r batMod}
+m1 <- lm(batAbund ~ forest + unicorns, data=d1)
+summary(m1)
+
+```
+
+::::
+
+:::: column
+
+\tiny
+
+Methods:
+
+"I collected data from 100 sites around Calgary, and recorded..."
+
+"I used a linear model to estimate the effect of forest cover and unicorns on bat abundance. Models were fit using `lm()` in R and were checked for..." 
+
+\vspace{1em}
+
+Results:
+
+"My model identified a strong, positive effect of forest cover, with each additional $10\%$ of forest cover adding an additional 3 bats (Figure 1, $p<0.0001$), while the effect of unicorns was weak ($p=0.19$). The model also explained $\sim88\%$ of the variance in bat abundance, further highlighting the importance of forest cover to bats..."
+
+
+```{r, fig.height=3,fig.width=5}
+p1
+```
+
+::::
+
+:::
+  
+
+
+## Challenge: analyse and explain
+
+::: columns
+
+:::: column
+
+- I have a dataset of plant abundance `plantDat.csv` (see [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/09%20Writing)) containing records of plant presence/absence, deer browsing, soil depth, and slope
+- Come up with a reasonable set of hypotheses about plant presence/absence (given the available data)
+- Fit a model that tests those hypotheses, verify the model, and explain the model approach in plain English 
+- Explain the model results, and make an accompanying "Figure 1" to go with the results
+
+::::
+
+:::: column
+
+```{r plantMod, fig.width=5,fig.height=6}
+plantDat <- read.csv('./plantDat.csv')
+
+plantDat %>% pivot_longer(-plantPres) %>% 
+    ggplot(aes(x=value,y=plantPres))+geom_point()+
+    facet_wrap(~name,scales = 'free',ncol=1)+
+    geom_smooth(method='gam',formula=y~s(x),
+                method.args=list(family='binomial'))+
+  theme()+labs(x='Predictor',y='Plant presence')
+
+```
+
+::::
+
+:::
+
+<!-- ## Further advice: style -->
+
+<!-- - I try to write everything in point form in order to see the hierarchical document structure (sections, paragraphs, sentences) -->
+<!--   - Use topic sentences to structure your paragraphs, and make sure they flow together logically -->
+<!-- - Avoid breaking up sentences with excessive stats. Use tables and figures to your advantage, and reduce the amount of writing! -->
+<!-- - Make sure that spelling and grammar is correct. Avoid the excessive use of passive voice (e.g. "data were collected") -->
+
+## My (personal) order of writing a paper
+
+1. Methods: I usually write this section first, as it gets me "warmed up" for the rest of it\footnote{You can even write it before you collect your data!}
+2. Results: I write this section after I write the Methods section
+3. Discussion: I write this after my model Results. Here you can name-drop all the relevant papers you've read (make sure they're setup in the Introduction first)
+4. Introduction: I find this section the trickiest to write, so I usually write it last
+5. Title and Abstract: After everything else is done, you can _advertise and summarize_!
+
 # Part 3: Peer review
 
 ## How do journals work?
 
-- Journals can be society publications (BES, ESA, IEEE) or from academic publishing companies (Wiley, Elsevier, Taylor \& Francis)
+- Journals are usually society publications (BES, ESA, IEEE) run out of academic publishing companies (Wiley, Elsevier, Taylor \& Francis)
 - Most journals have a _lead editor_ and an _editorial board_. These will be the people who will first see your submitted manuscript
   - Peer review is done for free by working scientists
 - Traditional publishing: costs you nothing, costs the U of C library \$ (depending on subscription)
@@ -415,6 +498,14 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
   - Think about who you might recommend as a reviewer. Who would you want to read your paper?
   - A _cover letter_ helps convince the editor they should give your paper a chance
   
+## 
+
+\centering
+
+\vspace{1em}
+
+![](Peer-Review-Process-Wiley.pdf){width=100%}
+  
 ## What the editor will do
 
 - An editor will skim the paper and make sure that the topic is relevant. If not, your paper gets a _desk reject_
@@ -429,17 +520,34 @@ ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') +
 - Read the paper once through without writing anything down
 - Go back through each section and write general "overall" comments
   - e.g. "Intro needs to be trimmed down", "Results section is disorganized", "I don't understand the relevance of X"
-  - Make sure to provide a suggested way forward, where possible! (e.g. "I suggest moving this paragraph to here...")
 - Write line-by-line comments where needed
   - e.g. "L40: change `insect` to `arthropod`", "L89: How does this test work, and is it commonly used?", "L112: Citation needed, perhaps Smith et al. 2020?"
-- Put all the comments together in a single document split into overall and line-by-line, and re-read your comments. 
+- Think about what could improve the paper, and provide a suggested way forward where possible! (e.g. "I suggest moving this paragraph to here...")
+
+## My (personal) style of peer review (cont.)
+
+::: columns
+
+:::: {.column width='60%'}
+
+- Put all the comments together in a single document, split into overall and line-by-line, and re-read your comments. 
   - _Do you need to tone things down a bit?_ (or tone them up)
 - Make a reject/accept decision on the paper. Try to be as objective as possible:
   - "This person didn't do exactly what I would have, but does it matter to the results or overall story?"
   - "Maybe I don't think these results are very interesting, but are they believable given the evidence?"
 - If the paper is accepted, how much time will it take to do revisions? (Major vs Minor)
 
-There are many other ways to do peer review, such as [this](https://doi.org/10.1007/s00264-020-04504-1)
+There are many other appproaches to doing peer review: see [here](https://doi.org/10.1007/s00264-020-04504-1), [here](https://www.britishecologicalsociety.org/wp-content/uploads/2019/06/BES-Guide-Peer-Review-2019.pdf?utm_source=web&utm_medium=web&utm_campaign=better_science), or [here](https://authorservices.wiley.com/Reviewers/journal-reviewers/how-to-perform-a-peer-review/step-by-step-guide-to-reviewing-a-manuscript.html))  
+
+::::
+
+:::: {.column width='40%'}
+
+![](plos_peerReview.png){width=100%}
+
+::::
+
+:::
   
 
 ## Final remarks
@@ -447,10 +555,8 @@ There are many other ways to do peer review, such as [this](https://doi.org/10.1
 - Good writing is re-writing
   - What is obvious to you may not be obvious to your readers. Revision is annoying and painful, but it __will__ help!
   - "[Good writing is:] Telepathy, of course" (Stephen King)
-  - I find writing in point form useful, as it lets me hash out the general paragraph and section structure
 - Use the literature
-  - There are tons of poorly-written papers out there, but...
-  - Was there a paper that you found easy to understand? Re-read it, and figure out why!
+  - There are tons of poorly-written papers out there, but was there a paper that you found easy to understand? Re-read it, and figure out why!
   - Check out how other scientists display their statistics, and imitate/avoid their style
 - Use your supervisor and committee members 
   - They have a much wider picture of the field, and have lots of writing and editing experience
@@ -458,28 +564,19 @@ There are many other ways to do peer review, such as [this](https://doi.org/10.1
   
 Remember: \textsc{Good writing is good storytelling}
 
-## Practice
+## Here are some examples from my work
 
-\large
-Pull up a blank text document. Using a model that you have fit to some data, write:
+- I'm usually not allowed to publicly share peer reviews that I've done on other papers...
+- But here are some of the reviews I've received!
 
-- Description of your research question for the Introduction. What do you expect to see, and why?
-- Short description of the model for the Methods
-- Short summary of what the model is telling you for the Results 
+<!-- ## Practice -->
 
-Point form is fine, but try to find important points that you could convert into topic sentences in an actual paragraph
+<!-- \large -->
+<!-- Pull up a blank text document. Using a model that you have fit to some data, write: -->
 
-## 2-column slide
+<!-- - Description of your research question for the Introduction. What do you expect to see, and why? -->
+<!-- - Short description of the model for the Methods -->
+<!-- - Short summary of what the model is telling you for the Results -->
 
-::: columns
+<!-- Point form is fine, but try to find important points that you could convert into topic sentences in an actual paragraph -->
 
-:::: column
-
-::::
-
-:::: column
-
-::::
-
-:::
-  
