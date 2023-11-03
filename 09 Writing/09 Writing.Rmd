@@ -24,14 +24,8 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-#Trick to get smaller R code size with out resorting to LaTeX text sizes
-def.chunk.hook  <- knitr::knit_hooks$get("chunk")
-knitr::knit_hooks$set(chunk = function(x, options) {
-  x <- def.chunk.hook(x, options)
-  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
-})
-
-knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, warning=TRUE, size = 'footnotesize')
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message=TRUE, 
+                      warning=TRUE, cache = TRUE, fig.height=5,fig.width=5)
 library(MASS) #glm.nb
 library(tidyverse)
 theme_set(theme_classic())
@@ -52,12 +46,28 @@ d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
 
 ## Outline
 
+::: columns
+
+:::: {.column width='60%'}
+
+\vspace{1cm}
+
 - Types of scientific writing
   - IMRaD manuscripts
   - Figures and tables
 - Writing about statistics
   - Translating model results
 - How peer review works
+
+::::
+
+:::: {.column width='40%'}
+
+![](calvinAndHobbes.png){width=100%}
+
+::::
+
+:::
 
 # Part 1: Types of scientific writing
 
@@ -82,13 +92,43 @@ d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
 
 ## A bit of history
 
+::: columns
+
+:::: column
+
 - (European) Universities are largely offshoots of the Christian monastic tradition
 - What we now call science started in about the 1600s, largely as offshoots of astrology and alchemy
   - Biology began slightly later (1700s-1800s), as offshoots of medicine and natural history
 - "Natural philosophers" (scientists) would write letters to each other about what they were up to 
+
+::::
+
+:::: column
+
+![](wright1771alchemist.png){width=100%}
+::::
+
+:::
+
+## A bit of history (cont.)
+
+::: columns
+
+:::: column
+
+![](royalSociety.jpg){width=80%}
+
+::::
+
+:::: column
+
 - Eventually, organizations of scientists began publishing research results publicly (e.g. _Philosophical Transactions of the Royal Society_, 1665)
 - Peer review was sparse, and was usually done by the editor or a board. External peer review wasn't widespread until 1950-1970
 - Early science writing is _extremely_ varied, and is much different from modern science writing
+
+::::
+
+:::
 
 ## What is science writing for?
 
@@ -130,9 +170,13 @@ d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
 
 :::: {.column width='60%'}
 
+<!-- \pause -->
+
 "I have heard from graduate students opting out of academia, assistant professors afraid to come up for tenure, mid-career people wondering how to protect their labs, and senior faculty retiring early, all because of methodological terrorism" - [Susan Fiske, APS Past President](http://datacolada.org/wp-content/uploads/2016/09/Fiske-presidential-guest-column_APS-Observer_copy-edited.pdf)
 
 \vspace{0.5cm}
+
+<!-- \pause -->
 
 "[Fiske is] seeing her professional world collapsing... her work and the work of her friends and colleagues is being questioned in a way that no one could’ve imagined ten years ago. It’s scary, and it’s gotta be a lot easier for her to blame some unnamed "terrorists" than to confront the gaps in her own understanding of research methods." - [Andrew Gelman](https://statmodeling.stat.columbia.edu/2016/09/21/what-has-happened-down-here-is-the-winds-have-changed/)
 
@@ -162,7 +206,7 @@ d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
 
 :::: column
 
-![](heard2016_adapted.png)
+![](heard2016_adapted.png){width=100%}
 
 ::::
 
@@ -176,13 +220,12 @@ d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
   
 :::
 
-
-## Group exercise: pick apart a paper
+## Group exercise: "pick apart a paper"
 
 - We're going to go through the IMRaD paper you read this week
   - You did read it... didn't you? 
 - In each of the sections, we'll identify how the author follows (or doesn't follow) the form described below
-- I recommend highlighting, underline, or otherwise annotate the paper for later reference
+- I recommend highlighting, underlining, or annotating the paper for later reference
 
 ## Introduction
 
@@ -203,10 +246,7 @@ d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
 - Clarify what the dependent, independent variables, and random effects in your models are
 - Sometimes you can just use the actual R model formula:
   -  "I fit the model using `lm` in R using the following model structure for bat counts (while accounting for unicorns):"
-
-\small
-
-`lm(batCounts ~ forest + unicorns)`
+  - `lm(batCounts ~ forest + unicorns)`
 
 ## Results
 
@@ -238,6 +278,9 @@ d1 <- data.frame(forest=x,batAbund=y1,unicorns=round(runif(n,0,300))) #Dataframe
 - Tables and figures (+ captions) should be readable without knowing the rest of the text
 
 \large
+
+<!-- \pause -->
+
 Suggestions:
 
 1. Choose 2 or 3 figures and tables to be the __Main Characters__ in your Results section.
@@ -251,6 +294,43 @@ Suggestions:
   - Usually follows the IMRaD format order
   - Not a movie trailer: spoilers are expected!
 - Keywords: extra words that could help search engine results
+
+## Give your paper a score!
+
+- How did they do on each section? Did any of them not live up to expectations?
+- How is the style of the paper? 
+  - Did the writing make it difficult to read? Was it too long/short?
+
+## Note on research proposals
+
+::: columns
+
+:::: {.column width='40%'}
+
+- Similar structure to the Introduction and Methods of an IMRaD manuscript
+- Results and Discussion are shorter, and focus on _what you think you will find_, and _why that matters_
+- In the assignment for this class, the Results and Discussion will include an analysis of simulated or archived data, both aimed at answering the same questions as above
+
+::::
+
+:::: {.column width='60%'}
+
+<!-- \pause -->
+
+Overall, a proposal must convince the reader that:
+
+1. The question is important
+  - "Other people have asked these questions, but they haven't answered this one..."
+  - This is a relevant question, either practically or theoretically
+2. The question can be answered
+  - "If you did such-and-such an experiment or observation..."
+3. You can do the work to answer it
+  - "I have a plan to carry out this experiment or observation..."
+  - Formal proposals include a timeline and a budget, as well as a list of personnel
+
+::::
+
+:::
 
 # Part 2: Writing about statistics
 
@@ -271,9 +351,13 @@ Show the _bare minimum_ number of statistics needed to convince people. If it's 
 - Premise 2: Forests have lots of bugs
 - Claim: Therefore, bats should prefer forests \footnotemark
 
+\vspace{1em}
+
 ::: columns
 
 :::: column
+
+<!-- \pause -->
 
 Example 1:
 
@@ -283,6 +367,8 @@ Example 1:
 ::::
 
 :::: column
+
+<!-- \pause -->
 
 Example 2:
 
@@ -305,13 +391,13 @@ Example 2:
 - Things like effect size (mean/SE) reflect the relative strength of the factors involved
 - Things like $R^2$ reflect how well the model fits the data _overall_
 - Causality is implied, but has to be justified
-
-\vspace{1em}
-"Keep your eye on the biology!" 
+- "Keep your eye on the biology!" 
 
 ::::
 
 :::: column
+
+<!-- \pause -->
 
 ```{r batFig1, fig.width=5, fig.height=5} 
 (p1 <- ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
@@ -342,6 +428,8 @@ What might the underlying physical process be here?
 
 :::: column
 
+<!-- \pause -->
+
 ```{r batFig2, fig.width=5, fig.height=5} 
 (ggplot(d1,aes(x,y1))+geom_point() + labs(x='Forest cover (%)',y='Bat counts') + 
   geom_smooth(method='lm',se=FALSE,formula=y~x))
@@ -369,6 +457,8 @@ What might the underlying physical process be here?
 ::::
 
 :::: column
+
+<!-- \pause -->
 
 ```{r batFig3, warning = FALSE, fig.width=5, fig.height=5} 
 
@@ -433,6 +523,8 @@ p1
 
 :::: column
 
+\vspace{1em}
+
 - I have a dataset of plant abundance `plantDat.csv` (see [here](https://github.com/samuelVJrobinson/ecoStatsLectures/tree/fall2023/09%20Writing)) containing records of plant presence/absence, deer browsing, soil depth, and slope
 - Come up with a reasonable set of hypotheses about plant presence/absence (given the available data)
 - Fit a model that tests those hypotheses, verify the model, and explain the model approach in plain English 
@@ -447,10 +539,14 @@ plantDat <- read.csv('./plantDat.csv')
 
 plantDat %>% pivot_longer(-plantPres) %>% 
     ggplot(aes(x=value,y=plantPres))+geom_point()+
-    facet_wrap(~name,scales = 'free',ncol=1)+
+    facet_wrap(~name,scales = 'free',ncol=1,
+              strip.position = 'bottom')+
     geom_smooth(method='gam',formula=y~s(x),
                 method.args=list(family='binomial'))+
-  theme()+labs(x='Predictor',y='Plant presence')
+  labs(x=NULL,y='Plant presence')+
+  theme(strip.background = element_blank(),
+           strip.placement = "outside",
+        panel.spacing = unit(0, "lines"))
 
 ```
 
@@ -537,8 +633,6 @@ plantDat %>% pivot_longer(-plantPres) %>%
   - "Maybe I don't think these results are very interesting, but are they believable given the evidence?"
 - If the paper is accepted, how much time will it take to do revisions? (Major vs Minor)
 
-There are many other appproaches to doing peer review: see [here](https://doi.org/10.1007/s00264-020-04504-1), [here](https://www.britishecologicalsociety.org/wp-content/uploads/2019/06/BES-Guide-Peer-Review-2019.pdf?utm_source=web&utm_medium=web&utm_campaign=better_science), or [here](https://authorservices.wiley.com/Reviewers/journal-reviewers/how-to-perform-a-peer-review/step-by-step-guide-to-reviewing-a-manuscript.html))  
-
 ::::
 
 :::: {.column width='40%'}
@@ -548,6 +642,10 @@ There are many other appproaches to doing peer review: see [here](https://doi.or
 ::::
 
 :::
+
+<!-- \pause -->
+
+There are many other appproaches to doing peer review: see [here](https://doi.org/10.1007/s00264-020-04504-1), [here](https://www.britishecologicalsociety.org/wp-content/uploads/2019/06/BES-Guide-Peer-Review-2019.pdf?utm_source=web&utm_medium=web&utm_campaign=better_science), or [here](https://authorservices.wiley.com/Reviewers/journal-reviewers/how-to-perform-a-peer-review/step-by-step-guide-to-reviewing-a-manuscript.html))  
   
 
 ## Final remarks
@@ -558,16 +656,19 @@ There are many other appproaches to doing peer review: see [here](https://doi.or
 - Use the literature
   - There are tons of poorly-written papers out there, but was there a paper that you found easy to understand? Re-read it, and figure out why!
   - Check out how other scientists display their statistics, and imitate/avoid their style
+  - Read books about science writing, and use techniques from other books you've read
 - Use your supervisor and committee members 
   - They have a much wider picture of the field, and have lots of writing and editing experience
   - This means that they can be a good stand-in for your audience
   
+<!-- \pause -->
+  
 Remember: \textsc{Good writing is good storytelling}
 
-## Here are some examples from my work
+<!-- ## Here are some examples from my work -->
 
-- I'm usually not allowed to publicly share peer reviews that I've done on other papers...
-- But here are some of the reviews I've received!
+<!-- - I'm usually not allowed to publicly share peer reviews that I've done on other papers... -->
+<!-- - But here are some of the reviews I've received! -->
 
 <!-- ## Practice -->
 
