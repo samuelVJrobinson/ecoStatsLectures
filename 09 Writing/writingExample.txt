@@ -1,0 +1,12 @@
+Methods:
+
+Models were fit using a binomial GLM, with proportion deer, soil depth, and their interaction used as predictors.
+The model fit was tested using DHARMa (ref here), and met the assumptions of linear regression.
+
+Results:
+There was a strong interaction between proportion deer and soil depth, with large numbers of deer having a negative effect on plant present, but only at deep soils.
+Quasi-R2 for the model was (X), indicating...
+
+Results (wrong):
+Soil depth and proportion deer had a strong negative effect on plant presence (both p<0.02, see Figure 1), and the effect of slope was weaker (p=0.054).
+Soil depth was the strongest predictor of plant presence (Z=-3.56, p=0.0004), followed by proportion deer (Z=-2.49, p=0.01)...
