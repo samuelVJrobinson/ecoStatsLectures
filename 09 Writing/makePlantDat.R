@@ -34,8 +34,11 @@ Nrep <- 200
 slope <- trgamma(Nrep,1,0.05,c(0,90)) #Generate slopes
 mu_propDeer <- leq(slope,deerLeqPars[1],deerLeqPars[2]) #Avg deer presence
 mu_soilDepth <- expFun1(slope,soilExpPars[1],soilExpPars[2]) #Avg soil depth
-
-mu_plantPres <- 0.5 + scale(mu_propDeer)*-2 + scale(mu_soilDepth)*1 + scale(mu_propDeer)*scale(mu_soilDepth)*-1 
+plantPresPars <- c(0.5,-2,1,-1) #Parameters for generating plant presence
+mu_plantPres <- plantPresPars[1] + 
+  scale(mu_propDeer)*plantPresPars[2] + 
+  scale(mu_soilDepth)*plantPresPars[3] + 
+  scale(mu_propDeer)*scale(mu_soilDepth)*plantPresPars[4] 
 mu_plantPres <- invLogit(mu_plantPres*5)
   
 hist(slope)
@@ -97,8 +100,18 @@ ggpredict(mod1,terms=c('propDeer[0:1 by=0.1]','soilDepth[0:400 by=20]')) %>%
   data.frame() %>% mutate(group=as.numeric(as.character(group))) %>% 
   ggplot(aes(x=x,y=group))+
   geom_raster(aes(fill=predicted))+
-  geom_point(data=dat,aes(x=propDeer,y=soilDepth))+
-  labs(x='propDeer',y='SoilDepth')+
+  geom_point(data=dat,aes(x=propDeer,y=soilDepth,col=factor(plantPres)))+
+  labs(x='propDeer',y='SoilDepth',col='Plant\nPresent')+
   theme_bw()+
-  scale_fill_distiller()
+  scale_fill_distiller()+
+  scale_colour_manual(values=c('red','black'))
+
+data.frame(actual=plantPresPars,estMu=coef(mod1),estSE=diag(vcov(mod1))) %>% 
+  mutate(upr=estMu+estSE*1.96,lwr=estMu-estSE*1.96) %>% 
+  rownames_to_column('coef') %>% mutate(coef=factor(coef,levels=coef)) %>% 
+  ggplot(aes(x=coef))+
+  geom_pointrange(aes(y=estMu,ymax=upr,ymin=lwr),col='red')+
+  geom_point(aes(y=actual))
+  
+
 

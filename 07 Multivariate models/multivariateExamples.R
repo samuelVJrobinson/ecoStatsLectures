@@ -105,6 +105,9 @@ varPlot(fWatPCA)
 ordiplot(fWatPCA,display = 'site',type = 'point')
 ordihull(fWatPCA,fWatDat$Treatment,col=1:4) #Looks like some treatments are different than others
 
+# ordiplot(fWatPCA,display = 'species',type = 'text',ylim=c(-2,2),xlim=c(-2,2))
+# ordihull(fWatPCA,fWatDat$Treatment,col=1:4) #Looks like some treatments are different than others
+
 #How does depth change field water?
 ordiplot(fWatPCA,display = 'site',type = 'point')
 ordihull(fWatPCA,fWatDat$Depth,col=1:4) #Looks like both are about the same
@@ -113,7 +116,7 @@ envfit(fWatPCA ~ Treatment + Depth, data=fWatDat) #Large difference between trea
 
 #Nutrient
 nWatDat <- read.csv('./07 Multivariate models/nutrientWater.csv')
-nWatDat <- nWatDat[,-1:-3] #Choose only data columns
+nWatMat <- nWatDat[,-1:-3] #Choose only data columns
 chooseThese <- is.na(nWatMat) #Which data points are NA?
 nWatMat[chooseThese] <- 0 #Replace NAs with zeros
 nWatPCA <- prcomp(nWatMat,scale. = TRUE)
